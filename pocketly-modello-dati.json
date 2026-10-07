@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "categories": [
+    { "id": "00000000-0000-4000-8000-000000000001", "name": "Cibo e bevande", "color": "#f59e0b" },
+    { "id": "00000000-0000-4000-8000-000000000002", "name": "Trasporti", "color": "#3b82f6" },
+    { "id": "00000000-0000-4000-8000-000000000003", "name": "Altro", "color": "#64748b" },
+    { "id": "00000000-0000-4000-8000-000000000004", "name": "Salute e benessere", "color": "#ec4899" },
+    { "id": "00000000-0000-4000-8000-000000000005", "name": "Finanza", "color": "#10b981" },
+    { "id": "00000000-0000-4000-8000-000000000006", "name": "Digitale", "color": "#8b5cf6" },
+    { "id": "00000000-0000-4000-8000-000000000007", "name": "Auto", "color": "#f97316" },
+    { "id": "00000000-0000-4000-8000-000000000008", "name": "Vacanze", "color": "#06b6d4" },
+    { "id": "00000000-0000-4000-8000-000000000009", "name": "Stipendio", "color": "#6366f1" }
+  ],
+  "paymentMethods": [
+    { "id": "00000000-0000-4000-8000-000000000011", "name": "Bonifico", "color": "#0284c7" },
+    { "id": "00000000-0000-4000-8000-000000000012", "name": "Contanti", "color": "#ef4444" },
+    { "id": "00000000-0000-4000-8000-000000000013", "name": "Carta di debito", "color": "#84cc16" },
+    { "id": "00000000-0000-4000-8000-000000000014", "name": "Carta di credito", "color": "#14b8a6" },
+    { "id": "00000000-0000-4000-8000-000000000015", "name": "PayPal", "color": "#a855f7" }
+  ],
+  "oneTimeExpenses": [
+    {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "name": "Spesa supermercato",
+      "amount": 8750,
+      "date": "2026-03-14",
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000013",
+      "notes": "Spesa settimanale"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000022",
+      "name": "Visita dentista",
+      "amount": 6000,
+      "date": "2026-04-02",
+      "categoryId": "00000000-0000-4000-8000-000000000004",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000012",
+      "notes": ""
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000023",
+      "name": "Biglietti treno",
+      "amount": 4590,
+      "date": "2026-05-20",
+      "categoryId": "00000000-0000-4000-8000-000000000002",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000014",
+      "notes": "Milano - Roma"
+    }
+  ],
+  "recurringExpenses": [
+    {
+      "id": "00000000-0000-4000-8000-000000000031",
+      "name": "Affitto",
+      "amount": 85000,
+      "frequency": "monthly",
+      "startDate": "2026-01-01",
+      "endDate": null,
+      "categoryId": "00000000-0000-4000-8000-000000000003",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000011"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000032",
+      "name": "Abbonamento streaming",
+      "amount": 1299,
+      "frequency": "monthly",
+      "startDate": "2026-01-15",
+      "endDate": null,
+      "categoryId": "00000000-0000-4000-8000-000000000006",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000014"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000033",
+      "name": "Assicurazione auto",
+      "amount": 48000,
+      "frequency": "semiannual",
+      "startDate": "2026-02-01",
+      "endDate": null,
+      "categoryId": "00000000-0000-4000-8000-000000000007",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000011"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000034",
+      "name": "Abbonamento palestra",
+      "amount": 3500,
+      "frequency": "monthly",
+      "startDate": "2025-09-01",
+      "endDate": "2026-08-31",
+      "categoryId": "00000000-0000-4000-8000-000000000004",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000013"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000035",
+      "name": "Dominio web",
+      "amount": 1500,
+      "frequency": "annual",
+      "startDate": "2026-06-10",
+      "endDate": null,
+      "categoryId": "00000000-0000-4000-8000-000000000006",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000015"
+    }
+  ],
+  "incomes": [
+    {
+      "id": "00000000-0000-4000-8000-000000000041",
+      "name": "Stipendio",
+      "amount": 180000,
+      "date": "2026-03-27",
+      "categoryId": "00000000-0000-4000-8000-000000000009",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000011"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000042",
+      "name": "Rimborso spese",
+      "amount": 12000,
+      "date": "2026-04-10",
+      "categoryId": "00000000-0000-4000-8000-000000000003",
+      "paymentMethodId": "00000000-0000-4000-8000-000000000015"
+    }
+  ],
+  "loans": [
+    {
+      "id": "00000000-0000-4000-8000-000000000051",
+      "name": "Prestito ad amico",
+      "amount": 30000,
+      "type": "given",
+      "date": "2026-02-10",
+      "notes": "Da restituire entro giugno",
+      "repayments": [
+        { "id": "00000000-0000-4000-8000-000000000061", "amount": 10000, "date": "2026-03-10" },
+        { "id": "00000000-0000-4000-8000-000000000062", "amount": 10000, "date": "2026-04-10" }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000052",
+      "name": "Prestito dal fratello",
+      "amount": 50000,
+      "type": "received",
+      "date": "2026-01-20",
+      "notes": "",
+      "repayments": []
+    }
+  ],
+  "simulations": [
+    {
+      "id": "00000000-0000-4000-8000-000000000071",
+      "name": "Nuovo portatile",
+      "amount": 120000,
+      "year": 2026,
+      "month": 8
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000072",
+      "name": "Vacanza estiva",
+      "amount": 150000,
+      "year": 2026,
+      "month": 7
+    }
+  ]
+}
