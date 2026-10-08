@@ -1,16 +1,34 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
+
+/**
+ * Incorpora l'icona per iOS nella pagina come dato `data:`. iOS la scarica con un processo di sistema che,
+ * con un certificato HTTPS emesso da una CA locale, può fallire: la tessera sulla Home resta con una "P".
+ * Così non c'è nulla da scaricare. Il file PNG resta la fonte: l'icona incorporata ne segue le modifiche.
+ */
+function inlineAppleTouchIcon(): Plugin {
+  const file = 'apple-touch-icon-180x180.png'
+  return {
+    name: 'inline-apple-touch-icon',
+    transformIndexHtml(html) {
+      const png = readFileSync(fileURLToPath(new URL(`./public/${file}`, import.meta.url)))
+      return html.replace(`href="/${file}"`, `href="data:image/png;base64,${png.toString('base64')}"`)
+    },
+  }
+}
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [
+    inlineAppleTouchIcon(),
     vue(),
     tailwindcss(),
     VitePWA({
