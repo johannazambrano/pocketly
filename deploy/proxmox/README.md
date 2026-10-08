@@ -57,12 +57,17 @@ nginx -v ; git --version ; openssl version ; node -v
 if [ -d /opt/pocketly ]; then
   git -C /opt/pocketly pull
 else
-  git clone -b deploy/proxmox https://github.com/johannazambrano/pocketly.git /opt/pocketly
+  git clone https://github.com/johannazambrano/pocketly.git /opt/pocketly
 fi
 ```
 
-Se `/opt/pocketly` esiste già, il comando lo aggiorna invece di clonarlo di nuovo. Finché il ramo non è
-unito a `main` serve `-b deploy/proxmox`; dopo l'unione si può omettere.
+Se `/opt/pocketly` esiste già, il comando lo aggiorna invece di clonarlo di nuovo.
+
+Se avevi clonato il ramo `deploy/proxmox` (come indicava una versione precedente di questa guida), passa a `main`:
+
+```bash
+cd /opt/pocketly && git fetch && git checkout main && git pull
+```
 
 Se git chiede nome utente e password, il repository è privato: come password non vale quella dell'account,
 serve un *personal access token* (GitHub → Settings → Developer settings → Personal access tokens, con
@@ -75,7 +80,7 @@ ls /opt/pocketly/deploy/proxmox
 ```
 
 Devono comparire `make-cert.sh`, `update.sh`, `nginx` e `README.md`. Se manca `update.sh`, hai una copia
-vecchia del ramo: rilancia `git -C /opt/pocketly pull`.
+vecchia del progetto: rilancia `git -C /opt/pocketly pull`.
 
 ## 4. Certificato e configurazione di nginx
 
