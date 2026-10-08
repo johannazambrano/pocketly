@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { newId } from './id'
 import { toCents, formatCents } from './money'
 import { isValidIsoDate, parseIsoDate } from './dates'
 import { PALETTE, pickUniqueColor, readableTextColor } from './colors'
@@ -44,5 +45,24 @@ describe('readableTextColor', () => {
     expect(readableTextColor('#87FAB1')).toBe('#0f172a')
     expect(readableTextColor('#221675')).toBe('#ffffff')
     expect(readableTextColor('#356F6B')).toBe('#ffffff')
+  })
+})
+
+describe('newId', () => {
+  const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('genera UUID v4 univoci', () => {
+    const ids = new Set(Array.from({ length: 100 }, newId))
+    expect(ids.size).toBe(100)
+    for (const id of ids) expect(id).toMatch(UUID_V4)
+  })
+
+  it('funziona anche senza crypto.randomUUID (contesto non sicuro, es. HTTP in rete locale)', () => {
+    vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) })
+    const a = newId()
+    expect(a).toMatch(UUID_V4)
+    expect(newId()).not.toBe(a)
   })
 })
