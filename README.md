@@ -49,6 +49,11 @@ Dal prototipo HTML: *Settings → Esporta Backup*, poi in Pocketly *Impostazioni
 La conversione è automatica. Le spese ricorrenti del prototipo vengono importate come attive dal
 1° gennaio dell'anno in cui erano inserite: se serve, correggi la data del primo addebito.
 
+## Dati dall'Excel "Expense Tracker"
+
+Lo script `scripts/xlsx_to_pocketly.py` converte il foglio Excel in un backup JSON da importare
+nell'app. La procedura completa è in [`docs/IMPORTA_DA_EXCEL.md`](docs/IMPORTA_DA_EXCEL.md).
+
 ## Pubblicazione
 
 La cartella `dist/` è un sito statico. Su **Netlify** o **Vercel** basta collegare il repository
