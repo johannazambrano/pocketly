@@ -101,7 +101,7 @@ function submit() {
           <input v-model="form.endDate" type="date" :min="form.startDate" class="field" />
         </label>
       </div>
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect v-model="form.paymentMethodId" kind="paymentMethods" :label="t('common.paymentMethod')" />
       </div>

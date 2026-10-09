@@ -43,7 +43,7 @@ onBeforeUnmount(() => {
           role="dialog"
           aria-modal="true"
           :aria-label="title"
-          class="pb-safe max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:rounded-xl"
+          class="pb-safe max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-xl"
         >
           <div class="p-5">
             <div class="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">

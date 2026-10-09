@@ -6,6 +6,8 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply min-h-dvh font-sans antialiased;
@@ -14,10 +16,43 @@
   select {
     @apply min-w-0;
   }
+  /* Navigazione da tastiera: l'elemento attivo è sempre visibile. */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--color-emerald-600);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Fuori da @layer di proposito: così batte le classi di dimensione del testo.
+ * Safari su iPhone/iPad ingrandisce la pagina quando si tocca un campo con testo
+ * sotto i 16 px, e non torna indietro da solo.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='color'], [type='file'], [type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @utility field {
   @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20;
+  min-height: 2.5rem;
 }
 
 @utility field-label {
@@ -29,17 +64,22 @@
 }
 
 @utility btn-primary {
-  @apply rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50;
 }
 
+/* Bersaglio di tocco di almeno 40 px: con le dita 32 px sono troppo piccoli. */
 @utility icon-btn {
-  @apply inline-flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-slate-100;
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-slate-100;
 }
 
-/* Spazio per la barra di sistema dei telefoni con notch / home indicator. */
+/* Spazio per la barra di sistema dei telefoni con notch / home indicator (anche in orizzontale). */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
+}
+@utility px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }

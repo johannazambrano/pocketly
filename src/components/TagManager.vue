@@ -62,8 +62,8 @@ function confirmDelete() {
   <div class="card space-y-3">
     <h3 class="text-sm font-semibold text-slate-700">{{ title }}</h3>
     <form class="flex gap-2" @submit.prevent="add">
-      <input v-model="newName" maxlength="40" :placeholder="placeholder" class="field flex-grow !py-1.5 !text-xs" />
-      <button type="submit" class="rounded bg-slate-800 px-3 py-1.5 text-xs whitespace-nowrap text-white">{{ t('app.add') }}</button>
+      <input v-model="newName" maxlength="40" :placeholder="placeholder" class="field flex-grow" />
+      <button type="submit" class="min-h-10 rounded-lg bg-slate-800 px-4 text-sm whitespace-nowrap text-white hover:bg-slate-700">{{ t('app.add') }}</button>
     </form>
     <ul class="divide-y divide-slate-100 text-xs">
       <li v-for="tag in tags" :key="tag.id" class="flex items-center justify-between gap-2 px-1 py-2">
@@ -72,12 +72,12 @@ function confirmDelete() {
             type="color"
             :value="tag.color"
             :aria-label="t('settings.pickColor')"
-            class="h-6 w-6 shrink-0 cursor-pointer rounded border border-slate-300 bg-transparent p-0"
+            class="h-8 w-8 shrink-0 cursor-pointer rounded border border-slate-300 bg-transparent p-0"
             @change="finance.setTagColor(kind, tag.id, ($event.target as HTMLInputElement).value)"
           />
           <button
             type="button"
-            class="shrink-0 p-1 text-slate-500 hover:text-emerald-600"
+            class="icon-btn shrink-0 text-slate-500 hover:text-emerald-600"
             :title="t('settings.randomColor')"
             :aria-label="t('settings.randomColor')"
             @click="finance.randomizeTagColor(kind, tag.id)"
@@ -89,7 +89,7 @@ function confirmDelete() {
             ref="editInput"
             v-model="editingName"
             maxlength="40"
-            class="field !py-1 !text-xs"
+            class="field"
             @keydown.enter.prevent="commitRename"
             @keydown.esc="editingId = null"
             @blur="commitRename"

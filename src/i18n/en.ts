@@ -19,6 +19,8 @@ const en: typeof it = {
     loans: 'Loans',
     forecast: 'Forecast',
     settings: 'Settings',
+    more: 'More',
+    menu: 'Main menu',
   },
   common: {
     save: 'Save',

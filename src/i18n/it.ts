@@ -17,6 +17,8 @@ export default {
     loans: 'Prestiti',
     forecast: 'Previsioni',
     settings: 'Impostazioni',
+    more: 'Altro',
+    menu: 'Menu principale',
   },
   common: {
     save: 'Salva',

@@ -13,7 +13,7 @@ const background = computed(() => tag.value?.color ?? '#94a3b8')
 
 <template>
   <span
-    class="inline-block max-w-[9rem] truncate rounded px-1.5 py-0.5 text-[9px] font-medium"
+    class="inline-block max-w-[9rem] truncate rounded px-1.5 py-0.5 text-[11px] font-medium"
     :style="{ backgroundColor: background, color: readableTextColor(background) }"
   >
     {{ tag?.name ?? t('common.unknown') }}

@@ -10,10 +10,10 @@ const { t } = useI18n()
   <li class="flex items-center gap-2 p-3">
     <div class="min-w-0 flex-1">
       <div class="truncate text-sm font-bold text-slate-700">{{ name }}</div>
-      <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+      <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
         <slot name="meta" />
       </div>
-      <div v-if="subtitle" class="mt-0.5 truncate text-[10px] text-slate-400">{{ subtitle }}</div>
+      <div v-if="subtitle" class="mt-0.5 truncate text-[11px] text-slate-400">{{ subtitle }}</div>
     </div>
     <div class="shrink-0 text-right text-sm font-semibold" :class="amountClass">{{ amount }}</div>
     <div class="flex shrink-0">
