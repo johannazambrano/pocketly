@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import AppHeader from '@/components/AppHeader.vue'
+import BackupReminder from '@/components/BackupReminder.vue'
 import BottomNav from '@/components/BottomNav.vue'
 import ConfirmHost from '@/components/ConfirmHost.vue'
 import ToastHost from '@/components/ToastHost.vue'
@@ -23,7 +24,10 @@ const ui = useUiStore()
       <div class="mx-auto flex w-full max-w-xl md:max-w-6xl md:gap-6 md:px-6 md:py-6">
         <main class="min-w-0 flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-0">
           <p v-if="!finance.ready" class="py-10 text-center text-sm text-slate-400">{{ t('app.loading') }}</p>
-          <RouterView v-else />
+          <template v-else>
+            <BackupReminder />
+            <RouterView />
+          </template>
         </main>
         <BottomNav />
       </div>
