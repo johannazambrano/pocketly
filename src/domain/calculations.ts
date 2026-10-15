@@ -203,6 +203,34 @@ export function forecast(data: FinanceData, year: number, today: string = todayI
   return rows
 }
 
+export interface VariableSpending {
+  /** Mese di oggi (0–11). */
+  month: number
+  /** Spese una tantum del mese di oggi. */
+  total: Cents
+  /** Media mensile delle spese una tantum dei mesi precedenti dell'anno, o null se non ce ne sono. */
+  previousAverage: Cents | null
+}
+
+/**
+ * Spese variabili (una tantum) del mese di oggi, da confrontare con la media dei mesi precedenti dell'anno.
+ * I mesi contano dal primo movimento registrato: quelli prima dell'inizio dell'uso dell'app non fanno media.
+ */
+export function variableSpending(data: FinanceData, today: string): VariableSpending {
+  const t = parseIsoDate(today)
+  const oneTime = inYear(data.oneTimeExpenses, t.year)
+  const ofMonth = (m: number) => sum(oneTime.filter((e) => parseIsoDate(e.date).month === m).map((e) => e.amount))
+  const previous: Cents[] = []
+  // Senza alcun movimento nell'anno non c'è un "primo mese" da cui far partire la media.
+  const hasMovements = oneTime.length > 0 || inYear(data.incomes, t.year).length > 0
+  if (hasMovements) for (let m = periodStartMonth(data, t.year); m < t.month; m++) previous.push(ofMonth(m))
+  return {
+    month: t.month,
+    total: ofMonth(t.month),
+    previousAverage: previous.length ? Math.round(sum(previous) / previous.length) : null,
+  }
+}
+
 export interface UpcomingCharge {
   id: Id
   name: string

@@ -57,6 +57,8 @@ const en: typeof it = {
     projectedHint: 'Including scheduled expenses until December',
     projectedHintEstimate: 'With expenses until December and estimated income',
     monthlyRecurring: 'Recurring / month',
+    variable: 'Variable spending in {month}',
+    variableHint: 'Average of previous months: {amount}',
     byCategory: 'Expenses by category',
     byPayment: 'Expenses by payment method',
     empty: 'No expenses recorded.',

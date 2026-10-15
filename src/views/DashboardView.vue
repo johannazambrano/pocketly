@@ -8,10 +8,17 @@ import KpiCard from '@/components/KpiCard.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 
 const finance = useFinanceStore()
-const { t, money, month, date } = useFormat()
+const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
 /** Per un anno passato "a oggi" coincide con tutto l'anno e il previsto non aggiunge nulla. */
+/** In italiano il mese va in minuscolo ("di ottobre"), in inglese resta maiuscolo ("in October"). */
+const variableLabel = computed(() => {
+  const v = finance.variableThisMonth
+  if (!v) return ''
+  const name = month(v.month)
+  return t('dashboard.variable', { month: locale.value === 'it' ? name.toLocaleLowerCase('it') : name })
+})
 const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
 const grandTotal = computed(() => s.value.totalExpenses || 1)
 const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
@@ -43,6 +50,17 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
         :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
       />
       <KpiCard :label="t('dashboard.monthlyRecurring')" :value="money(Math.round(s.monthlyRecurring))" color="text-indigo-600" />
+      <KpiCard
+        v-if="finance.variableThisMonth"
+        :label="variableLabel"
+        :value="money(finance.variableThisMonth.total)"
+        color="text-orange-600"
+        :hint="
+          finance.variableThisMonth.previousAverage === null
+            ? undefined
+            : t('dashboard.variableHint', { amount: money(finance.variableThisMonth.previousAverage) })
+        "
+      />
     </div>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

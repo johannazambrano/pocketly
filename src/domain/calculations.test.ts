@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, estimateMonthlyIncome, forecast, upcomingCharges, yearSummary } from './calculations'
+import { availableYears, estimateMonthlyIncome, forecast, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -184,6 +184,41 @@ describe('entrate non ricorrenti', () => {
       expect(rows).toHaveLength(12)
       expect(rows.every((r) => r.income === 200000 && r.incomeEstimated)).toBe(true)
     })
+  })
+})
+
+describe('variableSpending', () => {
+  const spend = (id: string, date: string, amount: number) =>
+    ({ id, name: id, amount, date, categoryId: 'c', paymentMethodId: 'p', notes: '' }) as const
+
+  it('somma le spese una tantum del mese di oggi e le confronta con la media dei mesi precedenti', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(
+      spend('a', '2026-03-10', 10000),
+      spend('b', '2026-04-10', 20000),
+      spend('c', '2026-06-01', 30000),
+      spend('d', '2026-06-20', 5000),
+      spend('e', '2026-07-01', 99999), // mese futuro: non conta
+      spend('f', '2025-12-31', 99999), // altro anno: non conta
+    )
+    // mesi precedenti dal primo movimento: marzo 100, aprile 200, maggio 0 → media 100
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 35000, previousAverage: 10000 })
+  })
+
+  it('i mesi prima del primo movimento non fanno media', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(spend('a', '2026-05-10', 20000), spend('b', '2026-06-02', 5000))
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, previousAverage: 20000 })
+  })
+
+  it('il primo mese non ha una media di confronto', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(spend('a', '2026-06-02', 5000))
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, previousAverage: null })
+  })
+
+  it('senza spese il mese vale 0', () => {
+    expect(variableSpending(createEmptyData(), '2026-06-15')).toEqual({ month: 5, total: 0, previousAverage: null })
   })
 })
 

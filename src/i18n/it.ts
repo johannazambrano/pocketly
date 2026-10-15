@@ -55,6 +55,8 @@ export default {
     projectedHint: 'Comprese le uscite programmate fino a dicembre',
     projectedHintEstimate: 'Con le uscite fino a dicembre e le entrate stimate',
     monthlyRecurring: 'Ricorrenti / mese',
+    variable: 'Spese variabili di {month}',
+    variableHint: 'Media dei mesi precedenti: {amount}',
     byCategory: 'Spese per categoria',
     byPayment: 'Spese per metodo di pagamento',
     empty: 'Nessuna spesa registrata.',

@@ -12,7 +12,7 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
-import { availableYears, estimateMonthlyIncome, forecast, yearSummary } from '@/domain/calculations'
+import { availableYears, estimateMonthlyIncome, forecast, variableSpending, yearSummary } from '@/domain/calculations'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
@@ -99,6 +99,10 @@ export const useFinanceStore = defineStore('finance', () => {
   const summary = computed(() => yearSummary(data.value, selectedYear.value, today.value))
   const forecastRows = computed(() => forecast(data.value, selectedYear.value, today.value))
   const estimatedMonthlyIncome = computed(() => estimateMonthlyIncome(data.value, today.value))
+  /** Solo per l'anno corrente: negli altri anni non c'è un "mese di oggi". */
+  const variableThisMonth = computed(() =>
+    selectedYear.value === yearOf(today.value) ? variableSpending(data.value, today.value) : null,
+  )
 
   const oneTimeOfYear = computed(() =>
     data.value.oneTimeExpenses.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
@@ -246,6 +250,7 @@ export const useFinanceStore = defineStore('finance', () => {
     summary,
     forecastRows,
     estimatedMonthlyIncome,
+    variableThisMonth,
     setForecastSettings,
     oneTimeOfYear,
     incomesOfYear,
