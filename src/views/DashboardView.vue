@@ -19,6 +19,12 @@ const variableLabel = computed(() => {
   const name = month(v.month)
   return t('dashboard.variable', { month: locale.value === 'it' ? name.toLocaleLowerCase('it') : name })
 })
+const variableHint = computed(() => {
+  const v = finance.variableThisMonth
+  if (!v) return undefined
+  const note = t('dashboard.variableNote')
+  return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
+})
 const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
 const grandTotal = computed(() => s.value.totalExpenses || 1)
 const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
@@ -35,7 +41,12 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
 
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
       <KpiCard :label="t('dashboard.income')" :value="money(s.incomeToDate)" color="text-emerald-600" />
-      <KpiCard :label="t('dashboard.expenses')" :value="money(s.expensesToDate)" color="text-rose-600" />
+      <KpiCard
+        :label="t(isPastYear ? 'dashboard.expenses' : 'dashboard.expensesToDate')"
+        :value="money(s.expensesToDate)"
+        color="text-rose-600"
+        :hint="isPastYear ? undefined : t('dashboard.expensesHint')"
+      />
       <KpiCard
         :label="t(isPastYear ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')"
         :value="money(s.balanceToDate)"
@@ -49,17 +60,18 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
         :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
         :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
       />
-      <KpiCard :label="t('dashboard.monthlyRecurring')" :value="money(Math.round(s.monthlyRecurring))" color="text-indigo-600" />
+      <KpiCard
+        :label="t('dashboard.monthlyRecurring')"
+        :value="money(Math.round(s.monthlyRecurring))"
+        color="text-indigo-600"
+        :hint="t('dashboard.monthlyRecurringHint')"
+      />
       <KpiCard
         v-if="finance.variableThisMonth"
         :label="variableLabel"
         :value="money(finance.variableThisMonth.total)"
         color="text-orange-600"
-        :hint="
-          finance.variableThisMonth.previousAverage === null
-            ? undefined
-            : t('dashboard.variableHint', { amount: money(finance.variableThisMonth.previousAverage) })
-        "
+        :hint="variableHint"
       />
     </div>
 
