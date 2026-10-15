@@ -86,6 +86,20 @@ describe('parseBackup – schema v2', () => {
     expect(data.oneTimeExpenses.map((e) => e.id)).toEqual(['a'])
   })
 
+  it('le impostazioni di previsione hanno un valore predefinito e si conservano', () => {
+    expect(parseBackup({ schemaVersion: 2 }).forecast).toEqual({ estimateIncome: false, incomeCategoryIds: [] })
+    expect(parseBackup(prototypeBackup).forecast).toEqual({ estimateIncome: false, incomeCategoryIds: [] })
+    const saved = parseBackup({ schemaVersion: 2, forecast: { estimateIncome: true, incomeCategoryIds: ['a', 'b'] } })
+    expect(saved.forecast).toEqual({ estimateIncome: true, incomeCategoryIds: ['a', 'b'] })
+    expect(parseBackup(JSON.parse(JSON.stringify(saved)))).toEqual(saved)
+  })
+
+  it('ignora impostazioni di previsione malformate', () => {
+    const data = parseBackup({ schemaVersion: 2, forecast: { estimateIncome: 'sì', incomeCategoryIds: ['a', 5, null] } })
+    expect(data.forecast).toEqual({ estimateIncome: false, incomeCategoryIds: ['a'] })
+    expect(parseBackup({ schemaVersion: 2, forecast: 'boh' }).forecast.estimateIncome).toBe(false)
+  })
+
   it('rifiuta formati sconosciuti', () => {
     expect(() => parseBackup({ foo: 1 })).toThrow(BackupFormatError)
     expect(() => parseBackup('ciao')).toThrow(BackupFormatError)

@@ -1,5 +1,6 @@
 import type {
   FinanceData,
+  ForecastSettings,
   Frequency,
   Id,
   Income,
@@ -11,6 +12,7 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
+import { defaultForecastSettings } from '@/domain/defaults'
 import { FREQUENCIES } from '@/domain/recurrence'
 import { pickUniqueColor } from '@/utils/colors'
 import { isValidIsoDate, todayIso } from '@/utils/dates'
@@ -82,6 +84,7 @@ export function migrateV1(raw: Obj): FinanceData {
     incomes: [],
     loans: [],
     simulations: [],
+    forecast: defaultForecastSettings(),
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -172,6 +175,15 @@ function normalizeTags(source: unknown): Tag[] {
 }
 
 /** Valida un backup v2: le voci malformate vengono scartate invece di corrompere i dati. */
+function normalizeForecast(raw: unknown): ForecastSettings {
+  const defaults = defaultForecastSettings()
+  if (!isObj(raw)) return defaults
+  return {
+    estimateIncome: raw.estimateIncome === true,
+    incomeCategoryIds: arr(raw.incomeCategoryIds).filter((x): x is string => typeof x === 'string'),
+  }
+}
+
 function normalizeV2(raw: Obj): FinanceData {
   const today = todayIso()
   const valid = <T>(items: unknown, map: (o: Obj) => T | null): T[] =>
@@ -246,6 +258,7 @@ function normalizeV2(raw: Obj): FinanceData {
       if (amount === null || !Number.isInteger(year) || !Number.isInteger(month) || month < 0 || month > 11) return null
       return { id: id(o.id), name: str(o.name), amount, year, month }
     }),
+    forecast: normalizeForecast(raw.forecast),
   }
 }
 

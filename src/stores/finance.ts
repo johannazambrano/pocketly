@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type {
   FinanceData,
+  ForecastSettings,
   Id,
   Income,
   Loan,
@@ -11,12 +12,12 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
-import { availableYears, forecast, yearSummary } from '@/domain/calculations'
+import { availableYears, estimateMonthlyIncome, forecast, yearSummary } from '@/domain/calculations'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { pickUniqueColor, randomUniqueColor } from '@/utils/colors'
-import { yearOf } from '@/utils/dates'
+import { todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export type TagKind = 'categories' | 'paymentMethods'
@@ -44,6 +45,8 @@ export const useFinanceStore = defineStore('finance', () => {
   const ready = ref(false)
   const saveError = ref(false)
   const selectedYear = ref(new Date().getFullYear())
+  /** Oggi, per separare ciò che è già successo da ciò che è previsto. Si aggiorna quando l'app torna in primo piano. */
+  const today = ref(todayIso())
   const dataStore: DataStore = deviceDataStore
 
   // --- persistenza -------------------------------------------------------
@@ -79,6 +82,7 @@ export const useFinanceStore = defineStore('finance', () => {
     watch(data, scheduleSave, { deep: true })
     // Salva subito se l'app va in background (es. l'utente chiude la scheda).
     document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') today.value = todayIso()
       if (document.visibilityState === 'hidden' && saveTimer) void flush()
     })
     ready.value = true
@@ -92,8 +96,9 @@ export const useFinanceStore = defineStore('finance', () => {
   // --- viste derivate ----------------------------------------------------
 
   const years = computed(() => availableYears(data.value, new Date().getFullYear()))
-  const summary = computed(() => yearSummary(data.value, selectedYear.value))
-  const forecastRows = computed(() => forecast(data.value, selectedYear.value))
+  const summary = computed(() => yearSummary(data.value, selectedYear.value, today.value))
+  const forecastRows = computed(() => forecast(data.value, selectedYear.value, today.value))
+  const estimatedMonthlyIncome = computed(() => estimateMonthlyIncome(data.value, today.value))
 
   const oneTimeOfYear = computed(() =>
     data.value.oneTimeExpenses.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
@@ -166,6 +171,12 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const deleteSimulation = (id: Id) => remove(data.value.simulations, id)
 
+  // --- previsioni --------------------------------------------------------
+
+  function setForecastSettings(patch: Partial<ForecastSettings>) {
+    Object.assign(data.value.forecast, patch)
+  }
+
   // --- categorie e metodi di pagamento -----------------------------------
 
   function allColors() {
@@ -218,6 +229,9 @@ export const useFinanceStore = defineStore('finance', () => {
       }
     }
     remove(d[kind], id)
+    if (kind === 'categories') {
+      d.forecast.incomeCategoryIds = d.forecast.incomeCategoryIds.filter((c) => c !== id)
+    }
   }
 
   return {
@@ -231,6 +245,8 @@ export const useFinanceStore = defineStore('finance', () => {
     years,
     summary,
     forecastRows,
+    estimatedMonthlyIncome,
+    setForecastSettings,
     oneTimeOfYear,
     incomesOfYear,
     recurringOfYear,

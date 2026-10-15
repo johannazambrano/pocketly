@@ -28,6 +28,16 @@ export function occursIn(r: RecurringExpense, year: number, month: number): bool
   return true
 }
 
+/**
+ * Data dell'addebito nel mese indicato, o null se quel mese non ne ha. Il giorno è quello della data
+ * di inizio, limitato all'ultimo giorno del mese (es. 31 → 30 aprile).
+ */
+export function dueDateIn(r: RecurringExpense, year: number, month: number): IsoDate | null {
+  if (!occursIn(r, year, month)) return null
+  const day = Math.min(parseIsoDate(r.startDate).day, new Date(year, month + 1, 0).getDate())
+  return toIsoDate(year, month, day)
+}
+
 export function amountInMonth(r: RecurringExpense, year: number, month: number): Cents {
   return occursIn(r, year, month) ? r.amount : 0
 }

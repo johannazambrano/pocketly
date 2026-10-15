@@ -83,6 +83,16 @@ export interface Simulation {
   month: number
 }
 
+/**
+ * Impostazioni della proiezione. Le entrate non sono ricorrenti: per default i mesi senza entrate
+ * registrate valgono 0. La stima dei mesi futuri è facoltativa e usa solo le categorie scelte
+ * (es. Stipendio), così regali e entrate occasionali non finiscono nelle previsioni.
+ */
+export interface ForecastSettings {
+  estimateIncome: boolean
+  incomeCategoryIds: Id[]
+}
+
 export interface FinanceData {
   schemaVersion: 2
   categories: Tag[]
@@ -92,6 +102,7 @@ export interface FinanceData {
   incomes: Income[]
   loans: Loan[]
   simulations: Simulation[]
+  forecast: ForecastSettings
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

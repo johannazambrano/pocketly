@@ -1,4 +1,4 @@
-import type { FinanceData, Tag } from '@/types/models'
+import type { FinanceData, ForecastSettings, Tag } from '@/types/models'
 import { PALETTE } from '@/utils/colors'
 import { newId } from '@/utils/id'
 
@@ -16,6 +16,10 @@ function toTags(names: string[], colorOffset = 0): Tag[] {
   return names.map((name, i) => ({ id: newId(), name, color: PALETTE[(i + colorOffset) % PALETTE.length]! }))
 }
 
+export function defaultForecastSettings(): ForecastSettings {
+  return { estimateIncome: false, incomeCategoryIds: [] }
+}
+
 export function createDefaultData(locale: string): FinanceData {
   const lang = locale in DEFAULT_CATEGORIES ? locale : 'en'
   return {
@@ -27,6 +31,7 @@ export function createDefaultData(locale: string): FinanceData {
     incomes: [],
     loans: [],
     simulations: [],
+    forecast: defaultForecastSettings(),
   }
 }
 
@@ -40,5 +45,6 @@ export function createEmptyData(): FinanceData {
     incomes: [],
     loans: [],
     simulations: [],
+    forecast: defaultForecastSettings(),
   }
 }

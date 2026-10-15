@@ -1,6 +1,6 @@
 import type { Cents, FinanceData, Id, Loan } from '@/types/models'
-import { parseIsoDate, yearOf } from '@/utils/dates'
-import { amountInMonth, isActiveInYear, monthlyEquivalent, nextDueDate } from './recurrence'
+import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent, nextDueDate } from './recurrence'
 
 export interface TagTotal {
   id: Id
@@ -10,12 +10,21 @@ export interface TagTotal {
 export interface YearSummary {
   /** Primo mese del periodo attivo (0–11); il periodo arriva sempre a dicembre. */
   periodStartMonth: number
+  /** Entrate registrate nell'anno (comprese quelle con data futura). */
   totalIncome: Cents
   oneTimeTotal: Cents
   /** Addebiti ricorrenti che cadono nel periodo attivo. */
   recurringInPeriod: Cents
+  /** Uscite dell'anno: una tantum registrate e ricorrenze programmate fino a dicembre. */
   totalExpenses: Cents
-  balance: Cents
+  /** Quanto è già successo: solo movimenti con data fino a oggi (per un anno passato, tutto l'anno). */
+  incomeToDate: Cents
+  expensesToDate: Cents
+  balanceToDate: Cents
+  /** Entrate dell'anno più, se attivata, la stima dei mesi da oggi in poi. */
+  projectedIncome: Cents
+  /** Saldo a fine anno: entrate previste meno tutte le uscite programmate (simulazioni escluse). */
+  projectedBalance: Cents
   /** Somma dei costi mensili equivalenti delle ricorrenze attive nell'anno. */
   monthlyRecurring: number
   byCategory: TagTotal[]
@@ -25,7 +34,7 @@ export interface YearSummary {
 export interface ForecastRow {
   month: number
   income: Cents
-  /** True se non ci sono entrate registrate nel mese e il valore è una media. */
+  /** True se al valore è stata aggiunta la stima delle entrate (funzione facoltativa). */
   incomeEstimated: boolean
   expenses: Cents
   balance: Cents
@@ -60,8 +69,69 @@ function sortedTotals(map: Map<Id, Cents>): TagTotal[] {
     .sort((a, b) => b.total - a.total)
 }
 
-export function yearSummary(data: FinanceData, year: number): YearSummary {
+/** Quanti mesi con entrate nelle categorie scelte servono a calcolare la stima. */
+export const ESTIMATE_MONTHS = 3
+
+/**
+ * Stima dell'entrata mensile: media degli ultimi mesi (fino a `ESTIMATE_MONTHS`) in cui ci sono state
+ * entrate nelle categorie scelte dall'utente. Conta solo ciò che è già successo (data fino a oggi).
+ * Restituisce 0 se la stima è disattivata, se non ci sono categorie o se non c'è ancora nulla su cui basarla.
+ */
+export function estimateMonthlyIncome(data: FinanceData, today: string): Cents {
+  const { estimateIncome, incomeCategoryIds } = data.forecast
+  if (!estimateIncome || !incomeCategoryIds.length) return 0
+  const chosen = new Set(incomeCategoryIds)
+  const perMonth = new Map<number, Cents>()
+  for (const i of data.incomes) {
+    if (!chosen.has(i.categoryId) || i.date > today) continue
+    const { year, month } = parseIsoDate(i.date)
+    const key = monthIndex(year, month)
+    perMonth.set(key, (perMonth.get(key) ?? 0) + i.amount)
+  }
+  const latest = [...perMonth.entries()].sort((a, b) => b[0] - a[0]).slice(0, ESTIMATE_MONTHS)
+  return latest.length ? Math.round(sum(latest.map(([, total]) => total)) / latest.length) : 0
+}
+
+interface IncomeOfMonth {
+  income: Cents
+  estimated: boolean
+}
+
+/**
+ * Entrate mese per mese, dal mese di inizio del periodo attivo a dicembre.
+ * Le entrate non sono ricorrenti: ogni mese vale ciò che è stato registrato, e un mese senza entrate vale 0.
+ * L'unica eccezione è la stima facoltativa, che si aggiunge solo al mese corrente e a quelli futuri
+ * quando in quel mese non c'è ancora un'entrata delle categorie scelte. I mesi passati non si stimano mai.
+ */
+function incomeByMonth(data: FinanceData, year: number, today: string): Map<number, IncomeOfMonth> {
+  const t = parseIsoDate(today)
+  const currentMonth = monthIndex(t.year, t.month)
+  const estimate = estimateMonthlyIncome(data, today)
+  const chosen = new Set(data.forecast.incomeCategoryIds)
+  const incomes = inYear(data.incomes, year)
+
+  const result = new Map<number, IncomeOfMonth>()
+  for (let m = periodStartMonth(data, year); m < 12; m++) {
+    const inMonth = incomes.filter((i) => parseIsoDate(i.date).month === m)
+    const registered = sum(inMonth.map((i) => i.amount))
+    const hasChosen = inMonth.some((i) => chosen.has(i.categoryId))
+    const stimable = monthIndex(year, m) >= currentMonth && !hasChosen && estimate > 0
+    result.set(m, { income: registered + (stimable ? estimate : 0), estimated: stimable })
+  }
+  return result
+}
+
+/** Ultimo giorno già "avvenuto" nell'anno indicato, rispetto a oggi. */
+function cutoffDate(year: number, today: string): string {
+  const current = yearOf(today)
+  if (year < current) return `${year}-12-31`
+  if (year > current) return `${year - 1}-12-31`
+  return today
+}
+
+export function yearSummary(data: FinanceData, year: number, today: string = todayIso()): YearSummary {
   const start = periodStartMonth(data, year)
+  const cutoff = cutoffDate(year, today)
   const oneTime = inYear(data.oneTimeExpenses, year)
   const byCategory = new Map<Id, Cents>()
   const byPayment = new Map<Id, Cents>()
@@ -72,19 +142,26 @@ export function yearSummary(data: FinanceData, year: number): YearSummary {
   }
 
   let recurringInPeriod = 0
+  let recurringToDate = 0
   for (const r of data.recurringExpenses) {
     for (let m = start; m < 12; m++) {
-      const amount = amountInMonth(r, year, m)
-      if (!amount) continue
-      recurringInPeriod += amount
-      addTo(byCategory, r.categoryId, amount)
-      addTo(byPayment, r.paymentMethodId, amount)
+      const due = dueDateIn(r, year, m)
+      if (!due) continue
+      recurringInPeriod += r.amount
+      if (due <= cutoff) recurringToDate += r.amount
+      addTo(byCategory, r.categoryId, r.amount)
+      addTo(byPayment, r.paymentMethodId, r.amount)
     }
   }
 
-  const totalIncome = sum(inYear(data.incomes, year).map((i) => i.amount))
+  const incomes = inYear(data.incomes, year)
+  const totalIncome = sum(incomes.map((i) => i.amount))
   const oneTimeTotal = sum(oneTime.map((e) => e.amount))
   const totalExpenses = oneTimeTotal + recurringInPeriod
+
+  const incomeToDate = sum(incomes.filter((i) => i.date <= cutoff).map((i) => i.amount))
+  const expensesToDate = sum(oneTime.filter((e) => e.date <= cutoff).map((e) => e.amount)) + recurringToDate
+  const projectedIncome = sum([...incomeByMonth(data, year, today).values()].map((v) => v.income))
 
   return {
     periodStartMonth: start,
@@ -92,7 +169,11 @@ export function yearSummary(data: FinanceData, year: number): YearSummary {
     oneTimeTotal,
     recurringInPeriod,
     totalExpenses,
-    balance: totalIncome - totalExpenses,
+    incomeToDate,
+    expensesToDate,
+    balanceToDate: incomeToDate - expensesToDate,
+    projectedIncome,
+    projectedBalance: projectedIncome - totalExpenses,
     monthlyRecurring: sum(data.recurringExpenses.filter((r) => isActiveInYear(r, year)).map(monthlyEquivalent)),
     byCategory: sortedTotals(byCategory),
     byPaymentMethod: sortedTotals(byPayment),
@@ -101,33 +182,23 @@ export function yearSummary(data: FinanceData, year: number): YearSummary {
 
 /**
  * Proiezione mese per mese, dal mese di inizio del periodo attivo a dicembre.
- * Per i mesi senza entrate registrate si usa la media dei mesi che ne hanno.
+ * Entrate: solo quelle registrate (vedi `incomeByMonth`), più la stima se l'utente l'ha attivata.
  */
-export function forecast(data: FinanceData, year: number): ForecastRow[] {
-  const start = periodStartMonth(data, year)
-  const incomes = inYear(data.incomes, year)
+export function forecast(data: FinanceData, year: number, today: string = todayIso()): ForecastRow[] {
+  const incomes = incomeByMonth(data, year, today)
   const oneTime = inYear(data.oneTimeExpenses, year)
   const simulations = data.simulations.filter((s) => s.year === year)
 
-  const incomeByMonth = new Map<number, Cents>()
-  for (const i of incomes) {
-    const m = parseIsoDate(i.date).month
-    incomeByMonth.set(m, (incomeByMonth.get(m) ?? 0) + i.amount)
-  }
-  const average = incomeByMonth.size ? Math.round(sum([...incomeByMonth.values()]) / incomeByMonth.size) : 0
-
   const rows: ForecastRow[] = []
   let cumulative = 0
-  for (let m = start; m < 12; m++) {
-    const actual = incomeByMonth.get(m)
-    const income = actual ?? average
+  for (const [m, { income, estimated }] of incomes) {
     const expenses =
       sum(oneTime.filter((e) => parseIsoDate(e.date).month === m).map((e) => e.amount)) +
       sum(data.recurringExpenses.map((r) => amountInMonth(r, year, m))) +
       sum(simulations.filter((s) => s.month === m).map((s) => s.amount))
     const balance = income - expenses
     cumulative += balance
-    rows.push({ month: m, income, incomeEstimated: actual === undefined, expenses, balance, cumulative })
+    rows.push({ month: m, income, incomeEstimated: estimated, expenses, balance, cumulative })
   }
   return rows
 }

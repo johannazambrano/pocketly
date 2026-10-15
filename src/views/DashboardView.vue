@@ -11,6 +11,8 @@ const finance = useFinanceStore()
 const { t, money, month, date } = useFormat()
 
 const s = computed(() => finance.summary)
+/** Per un anno passato "a oggi" coincide con tutto l'anno e il previsto non aggiunge nulla. */
+const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
 const grandTotal = computed(() => s.value.totalExpenses || 1)
 const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
 </script>
@@ -24,13 +26,21 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
       </span>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <KpiCard :label="t('dashboard.income')" :value="money(s.totalIncome)" color="text-emerald-600" />
-      <KpiCard :label="t('dashboard.expenses')" :value="money(s.totalExpenses)" color="text-rose-600" />
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <KpiCard :label="t('dashboard.income')" :value="money(s.incomeToDate)" color="text-emerald-600" />
+      <KpiCard :label="t('dashboard.expenses')" :value="money(s.expensesToDate)" color="text-rose-600" />
       <KpiCard
-        :label="t('dashboard.balance')"
-        :value="money(s.balance)"
-        :color="s.balance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :label="t(isPastYear ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')"
+        :value="money(s.balanceToDate)"
+        :color="s.balanceToDate >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :hint="isPastYear ? undefined : t('dashboard.balanceHint')"
+      />
+      <KpiCard
+        v-if="!isPastYear"
+        :label="t('dashboard.projected')"
+        :value="money(s.projectedBalance)"
+        :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
       />
       <KpiCard :label="t('dashboard.monthlyRecurring')" :value="money(Math.round(s.monthlyRecurring))" color="text-indigo-600" />
     </div>
