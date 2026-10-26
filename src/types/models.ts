@@ -93,6 +93,14 @@ export interface ForecastSettings {
   incomeCategoryIds: Id[]
 }
 
+/**
+ * Budget mensile: un limite di spesa per categoria, uguale per ogni mese.
+ * Le categorie senza limite non fanno parte del budget.
+ */
+export interface BudgetSettings {
+  limits: Record<Id, Cents>
+}
+
 export interface FinanceData {
   schemaVersion: 2
   categories: Tag[]
@@ -103,6 +111,7 @@ export interface FinanceData {
   loans: Loan[]
   simulations: Simulation[]
   forecast: ForecastSettings
+  budget: BudgetSettings
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

@@ -181,6 +181,14 @@ export const useFinanceStore = defineStore('finance', () => {
     Object.assign(data.value.forecast, patch)
   }
 
+  // --- budget ------------------------------------------------------------
+
+  /** Importo nullo o non positivo = nessun limite per quella categoria. */
+  function setBudgetLimit(categoryId: Id, amount: number | null) {
+    if (amount !== null && amount > 0) data.value.budget.limits[categoryId] = amount
+    else delete data.value.budget.limits[categoryId]
+  }
+
   // --- categorie e metodi di pagamento -----------------------------------
 
   function allColors() {
@@ -235,6 +243,8 @@ export const useFinanceStore = defineStore('finance', () => {
     remove(d[kind], id)
     if (kind === 'categories') {
       d.forecast.incomeCategoryIds = d.forecast.incomeCategoryIds.filter((c) => c !== id)
+      // Con la categoria spostata altrove il suo limite non ha più senso: i soldi ora contano in quella di destinazione.
+      delete d.budget.limits[id]
     }
   }
 
@@ -252,6 +262,8 @@ export const useFinanceStore = defineStore('finance', () => {
     estimatedMonthlyIncome,
     variableThisMonth,
     setForecastSettings,
+    setBudgetLimit,
+    today,
     oneTimeOfYear,
     incomesOfYear,
     recurringOfYear,

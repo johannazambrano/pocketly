@@ -69,7 +69,7 @@
 
 /* Bersaglio di tocco di almeno 40 px: con le dita 32 px sono troppo piccoli. */
 @utility icon-btn {
-  @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-slate-100;
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-30;
 }
 
 /* Spazio per la barra di sistema dei telefoni con notch / home indicator (anche in orizzontale). */

@@ -100,6 +100,34 @@ describe('parseBackup – schema v2', () => {
     expect(parseBackup({ schemaVersion: 2, forecast: 'boh' }).forecast.estimateIncome).toBe(false)
   })
 
+  it('il budget è vuoto nei vecchi backup e si conserva in quelli nuovi', () => {
+    expect(parseBackup({ schemaVersion: 2 }).budget).toEqual({ limits: {} })
+    expect(parseBackup(prototypeBackup).budget).toEqual({ limits: {} })
+    const raw = {
+      schemaVersion: 2,
+      categories: [{ id: 'c1', name: 'Cibo', color: '#112233' }],
+      budget: { limits: { c1: 30000 } },
+    }
+    const saved = parseBackup(raw)
+    expect(saved.budget.limits).toEqual({ c1: 30000 })
+    expect(parseBackup(JSON.parse(JSON.stringify(saved)))).toEqual(saved)
+  })
+
+  it('scarta limiti di budget non validi o di categorie che non esistono', () => {
+    const data = parseBackup({
+      schemaVersion: 2,
+      categories: [
+        { id: 'a', name: 'A', color: '#112233' },
+        { id: 'b', name: 'B', color: '#112233' },
+        { id: 'c', name: 'C', color: '#112233' },
+        { id: 'd', name: 'D', color: '#112233' },
+      ],
+      budget: { limits: { a: 1000, b: -5, c: 'tanto', d: 12.5, gone: 2000 } },
+    })
+    expect(data.budget.limits).toEqual({ a: 1000 })
+    expect(parseBackup({ schemaVersion: 2, budget: 'boh' }).budget).toEqual({ limits: {} })
+  })
+
   it('rifiuta formati sconosciuti', () => {
     expect(() => parseBackup({ foo: 1 })).toThrow(BackupFormatError)
     expect(() => parseBackup('ciao')).toThrow(BackupFormatError)

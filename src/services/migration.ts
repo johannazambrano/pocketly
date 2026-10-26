@@ -1,4 +1,5 @@
 import type {
+  BudgetSettings,
   FinanceData,
   ForecastSettings,
   Frequency,
@@ -12,7 +13,7 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
-import { defaultForecastSettings } from '@/domain/defaults'
+import { defaultBudgetSettings, defaultForecastSettings } from '@/domain/defaults'
 import { FREQUENCIES } from '@/domain/recurrence'
 import { pickUniqueColor } from '@/utils/colors'
 import { isValidIsoDate, todayIso } from '@/utils/dates'
@@ -85,6 +86,7 @@ export function migrateV1(raw: Obj): FinanceData {
     loans: [],
     simulations: [],
     forecast: defaultForecastSettings(),
+    budget: defaultBudgetSettings(),
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -184,8 +186,21 @@ function normalizeForecast(raw: unknown): ForecastSettings {
   }
 }
 
+/** Tiene solo i limiti positivi di categorie che esistono ancora. */
+function normalizeBudget(raw: unknown, categories: Tag[]): BudgetSettings {
+  if (!isObj(raw) || !isObj(raw.limits)) return defaultBudgetSettings()
+  const known = new Set(categories.map((c) => c.id))
+  const entries: [string, number][] = []
+  for (const [categoryId, value] of Object.entries(raw.limits)) {
+    const amount = cents(value)
+    if (known.has(categoryId) && amount !== null && amount > 0) entries.push([categoryId, amount])
+  }
+  return { limits: Object.fromEntries(entries) }
+}
+
 function normalizeV2(raw: Obj): FinanceData {
   const today = todayIso()
+  const categories = normalizeTags(raw.categories)
   const valid = <T>(items: unknown, map: (o: Obj) => T | null): T[] =>
     arr(items)
       .filter(isObj)
@@ -194,7 +209,7 @@ function normalizeV2(raw: Obj): FinanceData {
 
   return {
     schemaVersion: 2,
-    categories: normalizeTags(raw.categories),
+    categories,
     paymentMethods: normalizeTags(raw.paymentMethods),
     oneTimeExpenses: valid<OneTimeExpense>(raw.oneTimeExpenses, (o) => {
       const amount = cents(o.amount)
@@ -259,6 +274,7 @@ function normalizeV2(raw: Obj): FinanceData {
       return { id: id(o.id), name: str(o.name), amount, year, month }
     }),
     forecast: normalizeForecast(raw.forecast),
+    budget: normalizeBudget(raw.budget, categories),
   }
 }
 

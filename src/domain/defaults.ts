@@ -1,4 +1,4 @@
-import type { FinanceData, ForecastSettings, Tag } from '@/types/models'
+import type { BudgetSettings, FinanceData, ForecastSettings, Tag } from '@/types/models'
 import { PALETTE } from '@/utils/colors'
 import { newId } from '@/utils/id'
 
@@ -20,6 +20,10 @@ export function defaultForecastSettings(): ForecastSettings {
   return { estimateIncome: false, incomeCategoryIds: [] }
 }
 
+export function defaultBudgetSettings(): BudgetSettings {
+  return { limits: {} }
+}
+
 export function createDefaultData(locale: string): FinanceData {
   const lang = locale in DEFAULT_CATEGORIES ? locale : 'en'
   return {
@@ -32,6 +36,7 @@ export function createDefaultData(locale: string): FinanceData {
     loans: [],
     simulations: [],
     forecast: defaultForecastSettings(),
+    budget: defaultBudgetSettings(),
   }
 }
 
@@ -46,5 +51,6 @@ export function createEmptyData(): FinanceData {
     loans: [],
     simulations: [],
     forecast: defaultForecastSettings(),
+    budget: defaultBudgetSettings(),
   }
 }
