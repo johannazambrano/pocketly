@@ -6,6 +6,7 @@ import { useUiStore } from '@/stores/ui'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
+import AccountManager from '@/components/AccountManager.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import TagManager from '@/components/TagManager.vue'
 
@@ -184,6 +185,7 @@ function changeLocale(code: LocaleCode) {
         </label>
       </div>
 
+      <AccountManager />
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
 

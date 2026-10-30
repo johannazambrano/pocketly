@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
-import { todayIso } from '@/utils/dates'
+import { todayIso, yearOf } from '@/utils/dates'
 import KpiCard from '@/components/KpiCard.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 
@@ -26,6 +26,20 @@ const variableHint = computed(() => {
   return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
 })
 const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
+/**
+ * Con almeno un conto, nell'anno in corso il saldo a oggi è quello reale dei conti (saldo di partenza compreso)
+ * e il previsto a fine anno ci aggiunge ciò che deve ancora entrare e uscire fino a dicembre.
+ */
+const useAccounts = computed(() => finance.balances.length > 0 && finance.selectedYear === yearOf(finance.today))
+const accountsTotal = computed(() => finance.balances.reduce((acc, b) => acc + b.balance, 0))
+const balanceToDate = computed(() => (useAccounts.value ? accountsTotal.value : s.value.balanceToDate))
+const projected = computed(() =>
+  useAccounts.value ? accountsTotal.value + s.value.projectedBalance - s.value.balanceToDate : s.value.projectedBalance,
+)
+const balanceHint = computed(() => {
+  if (isPastYear.value) return undefined
+  return t(useAccounts.value ? 'dashboard.balanceHintAccounts' : 'dashboard.balanceHint')
+})
 const grandTotal = computed(() => s.value.totalExpenses || 1)
 const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
 </script>
@@ -49,15 +63,15 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
       />
       <KpiCard
         :label="t(isPastYear ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')"
-        :value="money(s.balanceToDate)"
-        :color="s.balanceToDate >= 0 ? 'text-blue-600' : 'text-rose-600'"
-        :hint="isPastYear ? undefined : t('dashboard.balanceHint')"
+        :value="money(balanceToDate)"
+        :color="balanceToDate >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :hint="balanceHint"
       />
       <KpiCard
         v-if="!isPastYear"
         :label="t('dashboard.projected')"
-        :value="money(s.projectedBalance)"
-        :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :value="money(projected)"
+        :color="projected >= 0 ? 'text-blue-600' : 'text-rose-600'"
         :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
       />
       <KpiCard
@@ -76,6 +90,18 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
     </div>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div v-if="finance.balances.length" class="card space-y-3 md:col-span-2">
+        <h3 class="text-sm font-semibold text-slate-700">
+          <i class="fa-solid fa-building-columns mr-1 text-blue-600"></i> {{ t('dashboard.accounts') }}
+        </h3>
+        <ul class="divide-y divide-slate-100 text-xs">
+          <li v-for="b in finance.balances" :key="b.id" class="flex items-center justify-between gap-2 py-1.5">
+            <span class="truncate font-medium">{{ b.name }}</span>
+            <span class="shrink-0 font-semibold" :class="b.balance >= 0 ? 'text-blue-600' : 'text-rose-600'">{{ money(b.balance) }}</span>
+          </li>
+        </ul>
+      </div>
+
       <div class="card space-y-3 md:col-span-2">
         <h3 class="text-sm font-semibold text-slate-700">
           <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}

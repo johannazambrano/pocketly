@@ -101,6 +101,19 @@ export interface BudgetSettings {
   limits: Record<Id, Cents>
 }
 
+/**
+ * Un conto (es. il conto in banca, i contanti): saldo di partenza a una data più i movimenti successivi
+ * fatti con i suoi metodi di pagamento. Ogni metodo di pagamento appartiene al massimo a un conto.
+ */
+export interface Account {
+  id: Id
+  name: string
+  /** Saldo a fine giornata di `openingDate`: i movimenti di quel giorno sono già compresi. */
+  openingAmount: Cents
+  openingDate: IsoDate
+  paymentMethodIds: Id[]
+}
+
 export interface FinanceData {
   schemaVersion: 2
   categories: Tag[]
@@ -112,6 +125,7 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  accounts: Account[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

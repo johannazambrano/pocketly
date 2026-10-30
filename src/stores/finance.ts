@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type {
+  Account,
   FinanceData,
   ForecastSettings,
   Id,
@@ -13,6 +14,7 @@ import type {
   Tag,
 } from '@/types/models'
 import { availableYears, estimateMonthlyIncome, forecast, variableSpending, yearSummary } from '@/domain/calculations'
+import { accountBalances } from '@/domain/accounts'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
@@ -104,6 +106,9 @@ export const useFinanceStore = defineStore('finance', () => {
     selectedYear.value === yearOf(today.value) ? variableSpending(data.value, today.value) : null,
   )
 
+  /** Saldi dei conti a oggi: indipendenti dall'anno selezionato. */
+  const balances = computed(() => accountBalances(data.value, today.value))
+
   const oneTimeOfYear = computed(() =>
     data.value.oneTimeExpenses.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
   )
@@ -189,6 +194,19 @@ export const useFinanceStore = defineStore('finance', () => {
     else delete data.value.budget.limits[categoryId]
   }
 
+  // --- conti -------------------------------------------------------------
+
+  /** Un metodo di pagamento sta in un solo conto: se era in un altro, viene tolto da lì. */
+  function saveAccount(item: WithOptionalId<Account>) {
+    const saved = upsert(data.value.accounts, item)
+    const mine = new Set(saved.paymentMethodIds)
+    for (const a of data.value.accounts) {
+      if (a.id !== saved.id) a.paymentMethodIds = a.paymentMethodIds.filter((p) => !mine.has(p))
+    }
+  }
+
+  const deleteAccount = (id: Id) => remove(data.value.accounts, id)
+
   // --- categorie e metodi di pagamento -----------------------------------
 
   function allColors() {
@@ -245,6 +263,9 @@ export const useFinanceStore = defineStore('finance', () => {
       d.forecast.incomeCategoryIds = d.forecast.incomeCategoryIds.filter((c) => c !== id)
       // Con la categoria spostata altrove il suo limite non ha più senso: i soldi ora contano in quella di destinazione.
       delete d.budget.limits[id]
+    } else {
+      // Le voci spostate su `reassignTo` contano già nel conto di quel metodo, se ne ha uno.
+      for (const a of d.accounts) a.paymentMethodIds = a.paymentMethodIds.filter((p) => p !== id)
     }
   }
 
@@ -263,6 +284,9 @@ export const useFinanceStore = defineStore('finance', () => {
     variableThisMonth,
     setForecastSettings,
     setBudgetLimit,
+    balances,
+    saveAccount,
+    deleteAccount,
     today,
     oneTimeOfYear,
     incomesOfYear,

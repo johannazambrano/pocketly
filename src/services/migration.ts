@@ -1,4 +1,5 @@
 import type {
+  Account,
   BudgetSettings,
   FinanceData,
   ForecastSettings,
@@ -87,6 +88,7 @@ export function migrateV1(raw: Obj): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    accounts: [],
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -198,9 +200,28 @@ function normalizeBudget(raw: unknown, categories: Tag[]): BudgetSettings {
   return { limits: Object.fromEntries(entries) }
 }
 
+/** Tiene solo i metodi di pagamento esistenti, e ciascuno in un solo conto (il primo che lo cita). */
+function normalizeAccounts(raw: unknown, paymentMethods: Tag[], today: IsoDate): Account[] {
+  const known = new Set(paymentMethods.map((p) => p.id))
+  const taken = new Set<Id>()
+  const accounts: Account[] = []
+  for (const o of arr(raw).filter(isObj)) {
+    const openingAmount = cents(o.openingAmount)
+    const name = str(o.name).trim()
+    if (openingAmount === null || !name) continue
+    const paymentMethodIds = arr(o.paymentMethodIds).filter(
+      (x): x is string => typeof x === 'string' && known.has(x) && !taken.has(x),
+    )
+    paymentMethodIds.forEach((x) => taken.add(x))
+    accounts.push({ id: id(o.id), name, openingAmount, openingDate: date(o.openingDate, today), paymentMethodIds })
+  }
+  return accounts
+}
+
 function normalizeV2(raw: Obj): FinanceData {
   const today = todayIso()
   const categories = normalizeTags(raw.categories)
+  const paymentMethods = normalizeTags(raw.paymentMethods)
   const valid = <T>(items: unknown, map: (o: Obj) => T | null): T[] =>
     arr(items)
       .filter(isObj)
@@ -210,7 +231,7 @@ function normalizeV2(raw: Obj): FinanceData {
   return {
     schemaVersion: 2,
     categories,
-    paymentMethods: normalizeTags(raw.paymentMethods),
+    paymentMethods,
     oneTimeExpenses: valid<OneTimeExpense>(raw.oneTimeExpenses, (o) => {
       const amount = cents(o.amount)
       if (amount === null || !isValidIsoDate(o.date)) return null
@@ -275,6 +296,7 @@ function normalizeV2(raw: Obj): FinanceData {
     }),
     forecast: normalizeForecast(raw.forecast),
     budget: normalizeBudget(raw.budget, categories),
+    accounts: normalizeAccounts(raw.accounts, paymentMethods, today),
   }
 }
 

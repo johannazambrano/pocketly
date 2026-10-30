@@ -37,6 +37,7 @@ export function createDefaultData(locale: string): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    accounts: [],
   }
 }
 
@@ -52,5 +53,6 @@ export function createEmptyData(): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    accounts: [],
   }
 }

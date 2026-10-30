@@ -128,6 +128,29 @@ describe('parseBackup – schema v2', () => {
     expect(parseBackup({ schemaVersion: 2, budget: 'boh' }).budget).toEqual({ limits: {} })
   })
 
+  it('i conti mancano nei vecchi backup e si conservano in quelli nuovi', () => {
+    expect(parseBackup({ schemaVersion: 2 }).accounts).toEqual([])
+    expect(parseBackup(prototypeBackup).accounts).toEqual([])
+    const saved = parseBackup({
+      schemaVersion: 2,
+      paymentMethods: [
+        { id: 'p1', name: 'Bancomat', color: '#112233' },
+        { id: 'p2', name: 'Contanti', color: '#445566' },
+      ],
+      accounts: [
+        { id: 'a1', name: 'Conto', openingAmount: 26697, openingDate: '2026-10-30', paymentMethodIds: ['p1', 'sparito'] },
+        { id: 'a2', name: 'Contanti', openingAmount: -500, openingDate: '2026-10-01', paymentMethodIds: ['p1', 'p2'] },
+        { id: 'a3', name: 'Senza importo', openingDate: '2026-10-01', paymentMethodIds: [] },
+        { id: 'a4', name: '', openingAmount: 0, openingDate: '2026-10-01', paymentMethodIds: [] },
+      ],
+    })
+    expect(saved.accounts).toEqual([
+      { id: 'a1', name: 'Conto', openingAmount: 26697, openingDate: '2026-10-30', paymentMethodIds: ['p1'] },
+      { id: 'a2', name: 'Contanti', openingAmount: -500, openingDate: '2026-10-01', paymentMethodIds: ['p2'] },
+    ])
+    expect(parseBackup(JSON.parse(JSON.stringify(saved)))).toEqual(saved)
+  })
+
   it('rifiuta formati sconosciuti', () => {
     expect(() => parseBackup({ foo: 1 })).toThrow(BackupFormatError)
     expect(() => parseBackup('ciao')).toThrow(BackupFormatError)
