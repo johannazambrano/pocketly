@@ -6,11 +6,73 @@ import { upcomingCharges } from '@/domain/calculations'
 import { todayIso } from '@/utils/dates'
 import KpiCard from '@/components/KpiCard.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
+import MonthSelector from '@/components/MonthSelector.vue'
 
 const finance = useFinanceStore()
 const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
+const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
+const grandTotal = computed(() => s.value.totalExpenses || 1)
+const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
+
+const selectedMonthName = computed(() => {
+  if (finance.selectedMonth === 'all') return ''
+  const name = month(finance.selectedMonth)
+  return locale.value === 'it' ? name.toLocaleLowerCase('it') : name
+})
+
+const displayIncome = computed(() => {
+  return finance.isMonthFiltered ? finance.monthSummaryData!.income : s.value.incomeToDate
+})
+const incomeLabel = computed(() => {
+  return finance.isMonthFiltered
+    ? t('dashboard.incomeMonth', { month: selectedMonthName.value })
+    : t('dashboard.income')
+})
+
+const displayExpenses = computed(() => {
+  return finance.isMonthFiltered ? finance.monthSummaryData!.expenses : s.value.expensesToDate
+})
+const expensesLabel = computed(() => {
+  if (finance.isMonthFiltered) {
+    return t('dashboard.expensesMonth', { month: selectedMonthName.value })
+  }
+  return t(isPastYear.value ? 'dashboard.expenses' : 'dashboard.expensesToDate')
+})
+const expensesHint = computed(() => {
+  if (finance.isMonthFiltered) return undefined
+  return isPastYear.value ? undefined : t('dashboard.expensesHint')
+})
+
+const displayBalance = computed(() => {
+  return finance.isMonthFiltered ? finance.monthSummaryData!.balance : s.value.balanceToDate
+})
+const balanceLabel = computed(() => {
+  if (finance.isMonthFiltered) {
+    return t('dashboard.balanceMonth', { month: selectedMonthName.value })
+  }
+  return t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')
+})
+
+const categoryTotals = computed(() => {
+  return finance.isMonthFiltered ? finance.monthSummaryData!.byCategory : s.value.byCategory
+})
+const categoryGrandTotal = computed(() => {
+  return finance.isMonthFiltered ? (finance.monthSummaryData!.expenses || 1) : grandTotal.value
+})
+const categoryEmptyText = computed(() => {
+  if (!finance.isMonthFiltered) return t('dashboard.empty')
+  return t('dashboard.emptyMonth', { month: selectedMonthName.value })
+})
+
+const paymentTotals = computed(() => {
+  return finance.isMonthFiltered ? finance.monthSummaryData!.byPaymentMethod : s.value.byPaymentMethod
+})
+const paymentGrandTotal = computed(() => {
+  return finance.isMonthFiltered ? (finance.monthSummaryData!.expenses || 1) : grandTotal.value
+})
+
 /** Per un anno passato "a oggi" coincide con tutto l'anno e il previsto non aggiunge nulla. */
 /** In italiano il mese va in minuscolo ("di ottobre"), in inglese resta maiuscolo ("in October"). */
 const variableLabel = computed(() => {
@@ -25,54 +87,69 @@ const variableHint = computed(() => {
   const note = t('dashboard.variableNote')
   return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
 })
-const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
-const grandTotal = computed(() => s.value.totalExpenses || 1)
-const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
 </script>
 
 <template>
   <section class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
       <h2 class="text-lg font-bold text-slate-800">{{ t('dashboard.title') }}</h2>
-      <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
-        {{ t('dashboard.period', { from: month(s.periodStartMonth, 'short'), to: month(11, 'short'), year: finance.selectedYear }) }}
-      </span>
+      <MonthSelector />
     </div>
 
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-      <KpiCard :label="t('dashboard.income')" :value="money(s.incomeToDate)" color="text-emerald-600" />
+      <KpiCard :label="incomeLabel" :value="money(displayIncome)" color="text-emerald-600" />
       <KpiCard
-        :label="t(isPastYear ? 'dashboard.expenses' : 'dashboard.expensesToDate')"
-        :value="money(s.expensesToDate)"
+        :label="expensesLabel"
+        :value="money(displayExpenses)"
         color="text-rose-600"
-        :hint="isPastYear ? undefined : t('dashboard.expensesHint')"
+        :hint="expensesHint"
       />
       <KpiCard
-        :label="t(isPastYear ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')"
-        :value="money(s.balanceToDate)"
-        :color="s.balanceToDate >= 0 ? 'text-blue-600' : 'text-rose-600'"
-        :hint="isPastYear ? undefined : t('dashboard.balanceHint')"
+        :label="balanceLabel"
+        :value="money(displayBalance)"
+        :color="displayBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+        :hint="finance.isMonthFiltered ? undefined : (isPastYear ? undefined : t('dashboard.balanceHint'))"
       />
-      <KpiCard
-        v-if="!isPastYear"
-        :label="t('dashboard.projected')"
-        :value="money(s.projectedBalance)"
-        :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
-        :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
-      />
-      <KpiCard
-        :label="t('dashboard.monthlyRecurring')"
-        :value="money(Math.round(s.monthlyRecurring))"
-        color="text-indigo-600"
-        :hint="t('dashboard.monthlyRecurringHint')"
-      />
-      <KpiCard
-        v-if="finance.variableThisMonth"
-        :label="variableLabel"
-        :value="money(finance.variableThisMonth.total)"
-        color="text-orange-600"
-        :hint="variableHint"
-      />
+
+      <!-- Se la vista è annuale: le 3 card classiche -->
+      <template v-if="!finance.isMonthFiltered">
+        <KpiCard
+          v-if="!isPastYear"
+          :label="t('dashboard.projected')"
+          :value="money(s.projectedBalance)"
+          :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+          :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
+        />
+        <KpiCard
+          :label="t('dashboard.monthlyRecurring')"
+          :value="money(Math.round(s.monthlyRecurring))"
+          color="text-indigo-600"
+          :hint="t('dashboard.monthlyRecurringHint')"
+        />
+        <KpiCard
+          v-if="finance.variableThisMonth"
+          :label="variableLabel"
+          :value="money(finance.variableThisMonth.total)"
+          color="text-orange-600"
+          :hint="variableHint"
+        />
+      </template>
+
+      <!-- Se la vista è filtrata per mese: ricorrenti vs una tantum del mese -->
+      <template v-else>
+        <KpiCard
+          :label="t('dashboard.recurringInMonth')"
+          :value="money(finance.monthSummaryData!.recurringInMonth)"
+          color="text-indigo-600"
+          :hint="t('dashboard.recurringInMonthHint')"
+        />
+        <KpiCard
+          :label="t('dashboard.oneTimeInMonth')"
+          :value="money(finance.monthSummaryData!.oneTimeTotal)"
+          color="text-orange-600"
+          :hint="t('dashboard.oneTimeInMonthHint')"
+        />
+      </template>
     </div>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -94,12 +171,12 @@ const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
-        <BreakdownList kind="categories" :totals="s.byCategory" :grand-total="grandTotal" :empty-text="t('dashboard.empty')" />
+        <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="categoryGrandTotal" :empty-text="categoryEmptyText" />
       </div>
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
-        <BreakdownList kind="paymentMethods" :totals="s.byPaymentMethod" :grand-total="grandTotal" :empty-text="t('dashboard.empty')" />
+        <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="paymentGrandTotal" :empty-text="t('dashboard.empty')" />
       </div>
     </div>
   </section>

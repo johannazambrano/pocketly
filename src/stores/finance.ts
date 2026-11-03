@@ -12,12 +12,12 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
-import { availableYears, estimateMonthlyIncome, forecast, variableSpending, yearSummary } from '@/domain/calculations'
+import { availableYears, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { pickUniqueColor, randomUniqueColor } from '@/utils/colors'
-import { todayIso, yearOf } from '@/utils/dates'
+import { parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export type TagKind = 'categories' | 'paymentMethods'
@@ -45,6 +45,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const ready = ref(false)
   const saveError = ref(false)
   const selectedYear = ref(new Date().getFullYear())
+  const selectedMonth = ref<number | 'all'>('all')
   /** Oggi, per separare ciò che è già successo da ciò che è previsto. Si aggiorna quando l'app torna in primo piano. */
   const today = ref(todayIso())
   const dataStore: DataStore = deviceDataStore
@@ -107,6 +108,15 @@ export const useFinanceStore = defineStore('finance', () => {
   const oneTimeOfYear = computed(() =>
     data.value.oneTimeExpenses.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
   )
+  const isMonthFiltered = computed(() => selectedMonth.value !== 'all')
+  const monthSummaryData = computed(() => {
+    if (selectedMonth.value === 'all') return null
+    return monthSummary(data.value, selectedYear.value, selectedMonth.value)
+  })
+  const oneTimeFiltered = computed(() => {
+    if (selectedMonth.value === 'all') return oneTimeOfYear.value
+    return oneTimeOfYear.value.filter((e) => parseIsoDate(e.date).month === selectedMonth.value)
+  })
   const incomesOfYear = computed(() =>
     data.value.incomes.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
   )
@@ -253,6 +263,10 @@ export const useFinanceStore = defineStore('finance', () => {
     ready,
     saveError,
     selectedYear,
+    selectedMonth,
+    isMonthFiltered,
+    monthSummaryData,
+    oneTimeFiltered,
     init,
     flush,
     replaceAll,

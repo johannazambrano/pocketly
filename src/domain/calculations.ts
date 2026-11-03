@@ -180,6 +180,92 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
   }
 }
 
+export interface MonthBreakdown {
+  byCategory: TagTotal[]
+  byPaymentMethod: TagTotal[]
+  totalExpenses: Cents
+}
+
+/**
+ * Ripartizione delle uscite di un singolo mese (0–11) in un dato anno:
+ * spese una tantum con data nel mese + addebiti ricorrenti con scadenza nel mese.
+ */
+export function monthBreakdown(data: FinanceData, year: number, month: number): MonthBreakdown {
+  const byCategory = new Map<Id, Cents>()
+  const byPayment = new Map<Id, Cents>()
+
+  for (const e of data.oneTimeExpenses) {
+    const d = parseIsoDate(e.date)
+    if (d.year === year && d.month === month) {
+      addTo(byCategory, e.categoryId, e.amount)
+      addTo(byPayment, e.paymentMethodId, e.amount)
+    }
+  }
+
+  for (const r of data.recurringExpenses) {
+    const due = dueDateIn(r, year, month)
+    if (due) {
+      addTo(byCategory, r.categoryId, r.amount)
+      addTo(byPayment, r.paymentMethodId, r.amount)
+    }
+  }
+
+  const totals = sortedTotals(byCategory)
+  const totalExpenses = sum(totals.map((t) => t.total))
+
+  return {
+    byCategory: totals,
+    byPaymentMethod: sortedTotals(byPayment),
+    totalExpenses,
+  }
+}
+
+export interface MonthSummary {
+  income: Cents
+  expenses: Cents
+  balance: Cents
+  oneTimeTotal: Cents
+  recurringInMonth: Cents
+  byCategory: TagTotal[]
+  byPaymentMethod: TagTotal[]
+}
+
+/**
+ * Riepilogo completo di un singolo mese (0–11) in un dato anno:
+ * entrate del mese, uscite (una tantum + ricorrenti), saldo netto e ripartizioni.
+ */
+export function monthSummary(data: FinanceData, year: number, month: number): MonthSummary {
+  const breakdown = monthBreakdown(data, year, month)
+  let income = 0
+  for (const i of data.incomes) {
+    const d = parseIsoDate(i.date)
+    if (d.year === year && d.month === month) {
+      income += i.amount
+    }
+  }
+
+  let oneTimeTotal = 0
+  for (const e of data.oneTimeExpenses) {
+    const d = parseIsoDate(e.date)
+    if (d.year === year && d.month === month) {
+      oneTimeTotal += e.amount
+    }
+  }
+
+  const expenses = breakdown.totalExpenses
+  const recurringInMonth = expenses - oneTimeTotal
+
+  return {
+    income,
+    expenses,
+    balance: income - expenses,
+    oneTimeTotal,
+    recurringInMonth,
+    byCategory: breakdown.byCategory,
+    byPaymentMethod: breakdown.byPaymentMethod,
+  }
+}
+
 /**
  * Proiezione mese per mese, dal mese di inizio del periodo attivo a dicembre.
  * Entrate: solo quelle registrate (vedi `incomeByMonth`), più la stima se l'utente l'ha attivata.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, estimateMonthlyIncome, forecast, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -235,5 +235,66 @@ describe('upcomingCharges', () => {
 describe('availableYears', () => {
   it('include anno corrente e anni dei dati', () => {
     expect(availableYears(sample(), 2026)).toEqual([2025, 2026])
+  })
+})
+
+describe('monthBreakdown', () => {
+  it('calcola correttamente le spese per categoria e metodo per un singolo mese', () => {
+    // sample() ha:
+    // Marzo (month 2): spesa una tantum 5000 (cat: food, pm: card) + ricorrente affitto 70000 (cat: home, pm: bank)
+    const res = monthBreakdown(sample(), 2026, 2)
+    expect(res.totalExpenses).toBe(75000)
+    expect(res.byCategory).toEqual([
+      { id: 'home', total: 70000 },
+      { id: 'food', total: 5000 },
+    ])
+    expect(res.byPaymentMethod).toEqual([
+      { id: 'bank', total: 70000 },
+      { id: 'card', total: 5000 },
+    ])
+  })
+
+  it('include ricorrenti semestrali solo nei mesi in cui scadono', () => {
+    // Giugno (month 5): affitto (home 70000) + assicurazione (car 60000)
+    const res = monthBreakdown(sample(), 2026, 5)
+    expect(res.totalExpenses).toBe(130000)
+    expect(res.byCategory).toEqual([
+      { id: 'home', total: 70000 },
+      { id: 'car', total: 60000 },
+    ])
+
+    // Luglio (month 6): solo affitto (home 70000), assicurazione non scade a luglio
+    const july = monthBreakdown(sample(), 2026, 6)
+    expect(july.totalExpenses).toBe(70000)
+    expect(july.byCategory).toEqual([{ id: 'home', total: 70000 }])
+  })
+
+  it('restituisce liste vuote e totale 0 se non ci sono uscite nel mese', () => {
+    const res = monthBreakdown(sample(), 2024, 0)
+    expect(res.totalExpenses).toBe(0)
+    expect(res.byCategory).toEqual([])
+    expect(res.byPaymentMethod).toEqual([])
+  })
+})
+
+describe('monthSummary', () => {
+  it('calcola entrate, uscite totali, saldo e ripartizione per un dato mese', () => {
+    const res = monthSummary(sample(), 2026, 2)
+    expect(res.income).toBe(200000)
+    expect(res.expenses).toBe(75000)
+    expect(res.balance).toBe(125000)
+    expect(res.oneTimeTotal).toBe(5000)
+    expect(res.recurringInMonth).toBe(70000)
+    expect(res.byCategory).toHaveLength(2)
+    expect(res.byPaymentMethod).toHaveLength(2)
+  })
+
+  it('funziona correttamente in un mese senza entrate ma con uscite', () => {
+    const res = monthSummary(sample(), 2026, 0)
+    expect(res.income).toBe(0)
+    expect(res.expenses).toBe(70000)
+    expect(res.balance).toBe(-70000)
+    expect(res.recurringInMonth).toBe(70000)
+    expect(res.oneTimeTotal).toBe(0)
   })
 })

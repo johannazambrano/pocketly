@@ -9,14 +9,21 @@ import EntryList from '@/components/EntryList.vue'
 import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
+import MonthSelector from '@/components/MonthSelector.vue'
 
 const finance = useFinanceStore()
-const { t, money, date } = useFormat()
+const { t, money, date, month, locale } = useFormat()
 const confirmDelete = useConfirmDelete()
 
 const formOpen = ref(false)
 const editing = ref<OneTimeExpense | null>(null)
-const total = computed(() => finance.oneTimeOfYear.reduce((acc, e) => acc + e.amount, 0))
+const total = computed(() => finance.oneTimeFiltered.reduce((acc, e) => acc + e.amount, 0))
+
+const emptyText = computed(() => {
+  if (finance.selectedMonth === 'all') return t('onetime.empty')
+  const name = month(finance.selectedMonth)
+  return t('onetime.emptyMonth', { month: locale.value === 'it' ? name.toLocaleLowerCase('it') : name })
+})
 
 function open(item: OneTimeExpense | null) {
   editing.value = item
@@ -26,15 +33,22 @@ function open(item: OneTimeExpense | null) {
 
 <template>
   <section class="space-y-4">
-    <PageHeader :title="t('onetime.title')" add-label="" @add="open(null)" />
+    <PageHeader :title="t('onetime.title')">
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <MonthSelector />
+        <button type="button" class="btn-primary" @click="open(null)">
+          <i class="fa-solid fa-plus mr-1"></i> {{ t('app.add') }}
+        </button>
+      </div>
+    </PageHeader>
     <EntryList
-      :empty="!finance.oneTimeOfYear.length"
-      :empty-text="t('onetime.empty')"
+      :empty="!finance.oneTimeFiltered.length"
+      :empty-text="emptyText"
       :total-label="t('common.total')"
       :total="money(total)"
     >
       <EntryRow
-        v-for="e in finance.oneTimeOfYear"
+        v-for="e in finance.oneTimeFiltered"
         :key="e.id"
         :name="e.name"
         :amount="money(e.amount)"
