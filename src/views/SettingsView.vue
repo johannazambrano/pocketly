@@ -6,6 +6,10 @@ import { useUiStore } from '@/stores/ui'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
+import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
+import { parseBackup } from '@/services/migration'
+import { XlsxUnsupportedError } from '@/services/xlsx/zip'
+import { formatDate } from '@/utils/dates'
 import BaseModal from '@/components/BaseModal.vue'
 import TagManager from '@/components/TagManager.vue'
 
@@ -109,6 +113,58 @@ async function importBackup(event: Event) {
   }
 }
 
+// --- importazione da Excel ------------------------------------------------
+
+const excelPreview = ref<ExcelImportResult | null>(null)
+const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods']
+
+function excelErrorKey(e: unknown): string {
+  if (e instanceof NotExpenseTrackerError) return 'excelImport.notTracker'
+  if (e instanceof XlsxUnsupportedError) return 'excelImport.unsupported'
+  if (e instanceof RangeError) return 'excelImport.tooLarge'
+  return 'excelImport.error'
+}
+
+function warningText(w: ImportWarning): string {
+  const params = { ...w.params }
+  if (typeof params.date === 'string') params.date = formatDate(params.date, locale.value)
+  return t(`excelImport.warnings.${w.code}`, params)
+}
+
+async function pickExcel(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  busy.value = true
+  try {
+    excelPreview.value = await readExcelFile(file)
+  } catch (e) {
+    console.error('Lettura del file Excel non riuscita', e)
+    ui.toast(t(excelErrorKey(e)), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+
+async function confirmExcelImport() {
+  const preview = excelPreview.value
+  if (!preview || busy.value) return
+  busy.value = true
+  try {
+    // Stesso controllo dei backup: i dati arrivano allo store già normalizzati.
+    finance.replaceAll(parseBackup(JSON.parse(JSON.stringify(preview.data))))
+    await finance.flush()
+    excelPreview.value = null
+    ui.toast(t('excelImport.success'))
+  } catch (e) {
+    console.error('Importazione da Excel non riuscita', e)
+    ui.toast(t('excelImport.error'), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+
 function changeLocale(code: LocaleCode) {
   setLocale(code)
 }
@@ -184,6 +240,23 @@ function changeLocale(code: LocaleCode) {
         </label>
       </div>
 
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700">
+          <i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i> {{ t('excelImport.title') }}
+        </h3>
+        <p class="text-xs text-slate-500">{{ t('excelImport.hint') }}</p>
+        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 hover:bg-slate-50" :class="busy ? 'pointer-events-none opacity-50' : ''">
+          {{ t('excelImport.choose') }}
+          <input
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            class="hidden"
+            :disabled="busy"
+            @change="pickExcel"
+          />
+        </label>
+      </div>
+
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
 
@@ -230,6 +303,32 @@ function changeLocale(code: LocaleCode) {
           <button type="submit" class="btn-primary flex-1" :disabled="!unlockPassword">{{ t('settings.unlockButton') }}</button>
         </div>
       </form>
+    </BaseModal>
+
+    <BaseModal :open="!!excelPreview" :title="t('excelImport.previewTitle')" @close="excelPreview = null">
+      <div v-if="excelPreview" class="space-y-3">
+        <dl class="divide-y divide-slate-100 rounded-lg bg-slate-50 px-3 text-sm">
+          <div v-for="key in COUNT_KEYS" :key="key" class="flex justify-between py-1.5">
+            <dt class="text-slate-600">{{ t(`excelImport.counts.${key}`) }}</dt>
+            <dd class="font-semibold text-slate-800 tabular-nums">{{ excelPreview.stats[key] }}</dd>
+          </div>
+        </dl>
+        <details v-if="excelPreview.warnings.length" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <summary class="cursor-pointer font-medium">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('excelImport.warningsTitle', { count: excelPreview.warnings.length }) }}
+          </summary>
+          <ul class="mt-2 max-h-48 list-disc space-y-1 overflow-y-auto pl-4">
+            <li v-for="(w, i) in excelPreview.warnings" :key="i">{{ warningText(w) }}</li>
+          </ul>
+        </details>
+        <p class="text-xs text-slate-600">{{ t('excelImport.replaceWarning') }}</p>
+        <div class="flex gap-2">
+          <button type="button" class="min-h-10 flex-1 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50" @click="excelPreview = null">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="btn-primary flex-1" :disabled="busy" @click="confirmExcelImport">{{ t('excelImport.confirm') }}</button>
+        </div>
+      </div>
     </BaseModal>
   </section>
 </template>

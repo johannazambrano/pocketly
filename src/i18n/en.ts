@@ -245,6 +245,38 @@ const en: typeof it = {
     storageNotPersistent: 'The browser may clear data when space runs low. Installing the app on your Home screen reduces this risk.',
     version: 'Version {version}',
   },
+  excelImport: {
+    title: 'Import from Excel',
+    hint: 'Converts the “Expense Tracker” spreadsheet (.xlsx): one-time and recurring expenses, income, categories and payment methods. The file is read on this device and is not sent anywhere.',
+    choose: 'Choose Excel file',
+    previewTitle: 'File contents',
+    counts: {
+      oneTimeExpenses: 'One-time expenses',
+      recurringExpenses: 'Recurring expenses',
+      incomes: 'Income',
+      categories: 'Categories',
+      paymentMethods: 'Payment methods',
+    },
+    warningsTitle: 'Warnings ({count})',
+    replaceWarning: 'Your current data will be replaced by the file contents, including budgets, loans and simulations. We recommend exporting a backup first.',
+    confirm: 'Replace data',
+    success: 'Data imported from the Excel file.',
+    error: 'Unable to read the Excel file.',
+    notTracker: 'The file does not contain the One-time, Income or Recurring sheets of the Expense Tracker.',
+    unsupported: 'This browser cannot read Excel files. Update it or use another browser.',
+    tooLarge: 'The file is too large to be an Expense Tracker.',
+    warnings: {
+      monthUnknown: '{sheet}, row {row}: unrecognised month “{value}”.',
+      missingDate: '{sheet}, row {row}: no date or month, entry skipped.',
+      dateFromMonth: '{sheet}, row {row} ({name}): no date, used {date}.',
+      tagIgnored: 'One-time, row {row}: tag “{tag}” is not supported and is ignored.',
+      recurringIncomplete: 'Recurring, row {row}: missing name or amount, entry skipped.',
+      frequencyUnsupported: 'Recurring, row {row} ({name}): frequency “{frequency}” not supported, entry skipped.',
+      recurringNoStart: 'Recurring, row {row} ({name}): missing Data Inizio and Mese, entry skipped.',
+      annualManyMonths: 'Recurring, row {row} ({name}): annual with {count} months listed, only Data Inizio used.',
+      loansSkipped: 'Prestiti: {count} rows not converted, the sheet has no standard structure.',
+    },
+  },
 }
 
 export default en
