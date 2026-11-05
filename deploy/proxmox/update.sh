@@ -22,3 +22,12 @@ mv "$DEST.new" "$DEST"
 rm -rf "$DEST.old"
 
 echo "Pubblicato in $DEST"
+
+# Se il server di sincronizzazione è installato (install-sync.sh), lo riavvia con il codice nuovo.
+if systemctl is-enabled --quiet pocketly-sync 2>/dev/null; then
+  if systemctl restart pocketly-sync; then
+    echo "Server di sincronizzazione riavviato"
+  else
+    echo "ATTENZIONE: riavvio del server di sincronizzazione non riuscito (serve root?)" >&2
+  fi
+fi

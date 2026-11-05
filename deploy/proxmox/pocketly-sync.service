@@ -1,0 +1,35 @@
+# Server di sincronizzazione di Pocketly. Lo installa install-sync.sh, che sostituisce @REPO@
+# con la cartella del repository (di solito /opt/pocketly).
+[Unit]
+Description=Pocketly sync server
+After=network.target
+
+[Service]
+Type=simple
+User=pocketly
+Group=pocketly
+EnvironmentFile=/etc/pocketly/sync.env
+Environment=POCKETLY_HOST=127.0.0.1
+Environment=POCKETLY_PORT=8787
+Environment=POCKETLY_DATA_DIR=/var/lib/pocketly
+ExecStart=/usr/bin/python3 @REPO@/server/main.py
+Restart=on-failure
+RestartSec=5
+
+# Il servizio può scrivere solo nella sua cartella dati.
+StateDirectory=pocketly
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

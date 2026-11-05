@@ -20,6 +20,8 @@ funzionano solo in un contesto sicuro.
 | `make-cert.sh` | Crea la CA locale e il certificato per l'IP del container. |
 | `update.sh` | Scarica gli aggiornamenti, fa la build e pubblica il sito. |
 | `publish.sh` | Alternativa: dal PC di sviluppo, fa la build e carica `dist/` sul container via SSH. |
+| `install-sync.sh` | Facoltativo: installa il server di sincronizzazione tra dispositivi (punto 8). |
+| `pocketly-sync.service` | Servizio systemd del server di sincronizzazione, installato da `install-sync.sh`. |
 
 ## 1. Il container
 
@@ -132,13 +134,50 @@ Poi apri **`https://IP-DEL-CONTAINER/`**: dal browser potrai anche installare l'
 I dati restano nel browser di ogni dispositivo. Su ognuno importa il backup JSON dalle Impostazioni
 dell'app.
 
+## 8. Sincronizzazione tra dispositivi (facoltativa)
+
+Senza questo passo ogni dispositivo ha i suoi dati. Con il server di sincronizzazione i dispositivi che aprono
+Pocketly da `https://IP-DEL-CONTAINER/` restano allineati. I dati vengono cifrati sul dispositivo con una password
+scelta da te prima di essere inviati: sul server finiscono solo dati cifrati.
+
+```bash
+cd /opt/pocketly && deploy/proxmox/install-sync.sh
+```
+
+Lo script crea l'utente `pocketly`, la cartella dati `/var/lib/pocketly` e la chiave del server, avvia il servizio
+`pocketly-sync` e aggiorna nginx (la configurazione precedente resta in `/etc/nginx/sites-available/pocketly.bak`).
+Alla fine **mostra la chiave del server**: copiala, serve su ogni dispositivo. Per rileggerla:
+`cat /etc/pocketly/sync.env`.
+
+Poi, su ogni dispositivo: *Impostazioni → Sincronizzazione → Collega questo dispositivo*, con la chiave del server e
+la password dei dati (la stessa su tutti i dispositivi).
+
+- Il **primo** dispositivo carica i suoi dati sul server.
+- Gli altri, se non hanno dati, prendono quelli del server. Se hanno già dati propri, l'app chiede quali tenere:
+  la scelta sovrascrive l'altra parte, perché due elenchi di spese inseriti separatamente non si possono unire.
+- Da lì in poi le modifiche (anche le cancellazioni) passano da un dispositivo all'altro da sole: all'avvio, quando
+  l'app torna in primo piano, pochi secondi dopo ogni modifica e ogni 5 minuti.
+
+**Copie di sicurezza:** il server conserva le ultime 30 versioni in `/var/lib/pocketly/history/`. Ognuna è un
+normale backup protetto: per recuperarla copiala su un dispositivo e usa *Importa backup* con la password dei dati.
+
+**La password dei dati non si può recuperare.** Se la perdi, i dati sui dispositivi restano, ma quelli sul server
+non si leggono più: scollega tutti i dispositivi, ferma il servizio, svuota `/var/lib/pocketly` e ricollega
+partendo dal dispositivo con i dati giusti.
+
+Su Vercel il server non c'è: lì la sincronizzazione non compare.
+
 ## Aggiornare l'app in seguito
 
 ```bash
 cd /opt/pocketly && deploy/proxmox/update.sh
 ```
 
-Non serve riavviare nginx. Chi ha l'app aperta vede la richiesta di aggiornamento.
+Non serve riavviare nginx. Chi ha l'app aperta vede la richiesta di aggiornamento. Se il server di
+sincronizzazione è installato, `update.sh` lo riavvia con il codice nuovo (serve lanciarlo come root).
+
+Se un aggiornamento cambia `nginx/pocketly.conf`, rilancia `deploy/proxmox/install-sync.sh` (o copia il file a mano
+come al punto 4): `update.sh` non tocca la configurazione di nginx.
 
 ## Se qualcosa non funziona
 
@@ -150,12 +189,14 @@ Non serve riavviare nginx. Chi ha l'app aperta vede la richiesta di aggiornament
 | La build si interrompe con `Killed` | Poca memoria: porta il container a 2 GB di RAM (o aggiungi swap) e rilancia `update.sh`. |
 | Il browser avvisa che la connessione non è privata | La CA non è installata su quel dispositivo (punto 6), oppure stai aprendo un indirizzo diverso dall'IP del certificato. |
 | `git pull` o `update.sh` chiede credenziali | Repository privato: serve un token (punto 3). |
+| In *Impostazioni* la sincronizzazione dice che funziona solo dall'indirizzo di casa | Il server non risponde: `systemctl status pocketly-sync` e `curl -ks https://localhost/api/health`. |
+| La sincronizzazione dice "chiave del server non corretta" | Ricopia la chiave da `/etc/pocketly/sync.env` (senza `POCKETLY_SYNC_KEY=`). |
 | Dopo un aggiornamento l'app mostra ancora la versione vecchia | Accetta la richiesta di aggiornamento dell'app, oppure ricarica forzando (`Ctrl+F5`). |
 
 ## Da sapere
 
 - **I dati sono legati all'indirizzo.** Cambiando IP il browser riparte da zero: usa il backup JSON dalle
-  Impostazioni per spostarli. Non c'è sincronizzazione tra dispositivi.
+  Impostazioni per spostarli (oppure la sincronizzazione, punto 8, dopo aver aperto il nuovo indirizzo).
 - **Il certificato del sito dura 825 giorni.** Per rinnovarlo rilancia `./make-cert.sh IP` e
   `systemctl reload nginx`: la CA viene riusata, quindi i dispositivi non vanno toccati.
 - **Se cambia l'IP** rigenera il certificato con quello nuovo (la CA resta valida).
