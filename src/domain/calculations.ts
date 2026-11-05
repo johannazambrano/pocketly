@@ -27,8 +27,12 @@ export interface YearSummary {
   projectedBalance: Cents
   /** Somma dei costi mensili equivalenti delle ricorrenze attive nell'anno. */
   monthlyRecurring: number
+  /** Uscite di tutto l'anno, comprese quelle programmate fino a dicembre. */
   byCategory: TagTotal[]
   byPaymentMethod: TagTotal[]
+  /** Solo le uscite già avvenute: tornano con `expensesToDate`. */
+  byCategoryToDate: TagTotal[]
+  byPaymentMethodToDate: TagTotal[]
 }
 
 export interface ForecastRow {
@@ -135,10 +139,16 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
   const oneTime = inYear(data.oneTimeExpenses, year)
   const byCategory = new Map<Id, Cents>()
   const byPayment = new Map<Id, Cents>()
+  const byCategoryToDate = new Map<Id, Cents>()
+  const byPaymentToDate = new Map<Id, Cents>()
 
   for (const e of oneTime) {
     addTo(byCategory, e.categoryId, e.amount)
     addTo(byPayment, e.paymentMethodId, e.amount)
+    if (e.date <= cutoff) {
+      addTo(byCategoryToDate, e.categoryId, e.amount)
+      addTo(byPaymentToDate, e.paymentMethodId, e.amount)
+    }
   }
 
   let recurringInPeriod = 0
@@ -148,9 +158,13 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
       const due = dueDateIn(r, year, m)
       if (!due) continue
       recurringInPeriod += r.amount
-      if (due <= cutoff) recurringToDate += r.amount
       addTo(byCategory, r.categoryId, r.amount)
       addTo(byPayment, r.paymentMethodId, r.amount)
+      if (due <= cutoff) {
+        recurringToDate += r.amount
+        addTo(byCategoryToDate, r.categoryId, r.amount)
+        addTo(byPaymentToDate, r.paymentMethodId, r.amount)
+      }
     }
   }
 
@@ -177,6 +191,8 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
     monthlyRecurring: sum(data.recurringExpenses.filter((r) => isActiveInYear(r, year)).map(monthlyEquivalent)),
     byCategory: sortedTotals(byCategory),
     byPaymentMethod: sortedTotals(byPayment),
+    byCategoryToDate: sortedTotals(byCategoryToDate),
+    byPaymentMethodToDate: sortedTotals(byPaymentToDate),
   }
 }
 
@@ -189,14 +205,15 @@ export interface MonthBreakdown {
 /**
  * Ripartizione delle uscite di un singolo mese (0–11) in un dato anno:
  * spese una tantum con data nel mese + addebiti ricorrenti con scadenza nel mese.
+ * Con `cutoff` conta solo ciò che ha data fino a quel giorno compreso.
  */
-export function monthBreakdown(data: FinanceData, year: number, month: number): MonthBreakdown {
+export function monthBreakdown(data: FinanceData, year: number, month: number, cutoff?: string): MonthBreakdown {
   const byCategory = new Map<Id, Cents>()
   const byPayment = new Map<Id, Cents>()
 
   for (const e of data.oneTimeExpenses) {
     const d = parseIsoDate(e.date)
-    if (d.year === year && d.month === month) {
+    if (d.year === year && d.month === month && (!cutoff || e.date <= cutoff)) {
       addTo(byCategory, e.categoryId, e.amount)
       addTo(byPayment, e.paymentMethodId, e.amount)
     }
@@ -204,7 +221,7 @@ export function monthBreakdown(data: FinanceData, year: number, month: number): 
 
   for (const r of data.recurringExpenses) {
     const due = dueDateIn(r, year, month)
-    if (due) {
+    if (due && (!cutoff || due <= cutoff)) {
       addTo(byCategory, r.categoryId, r.amount)
       addTo(byPayment, r.paymentMethodId, r.amount)
     }
@@ -220,7 +237,12 @@ export function monthBreakdown(data: FinanceData, year: number, month: number): 
   }
 }
 
+/** Dove sta un mese rispetto a oggi: passato (tutto avvenuto), corrente o futuro (tutto da avvenire). */
+export type MonthTiming = 'past' | 'current' | 'future'
+
 export interface MonthSummary {
+  timing: MonthTiming
+  /** Tutto il mese, comprese le uscite con data futura e gli addebiti non ancora arrivati. */
   income: Cents
   expenses: Cents
   balance: Cents
@@ -228,41 +250,64 @@ export interface MonthSummary {
   recurringInMonth: Cents
   byCategory: TagTotal[]
   byPaymentMethod: TagTotal[]
+  /** Solo ciò che è già avvenuto: per un mese passato coincide con il totale, per uno futuro è zero. */
+  incomeToDate: Cents
+  expensesToDate: Cents
+  balanceToDate: Cents
+  byCategoryToDate: TagTotal[]
+  byPaymentMethodToDate: TagTotal[]
+  /** Entrate del mese più, se attivata, la stima (solo per il mese corrente e quelli futuri). */
+  projectedIncome: Cents
+  /** Saldo a fine mese: entrate previste meno tutte le uscite del mese (simulazioni escluse, come per l'anno). */
+  projectedBalance: Cents
 }
 
 /**
  * Riepilogo completo di un singolo mese (0–11) in un dato anno:
- * entrate del mese, uscite (una tantum + ricorrenti), saldo netto e ripartizioni.
+ * entrate del mese, uscite (una tantum + ricorrenti), saldo netto e ripartizioni,
+ * sia per tutto il mese sia solo per ciò che è già avvenuto rispetto a oggi.
  */
-export function monthSummary(data: FinanceData, year: number, month: number): MonthSummary {
-  const breakdown = monthBreakdown(data, year, month)
-  let income = 0
-  for (const i of data.incomes) {
-    const d = parseIsoDate(i.date)
-    if (d.year === year && d.month === month) {
-      income += i.amount
-    }
-  }
+export function monthSummary(data: FinanceData, year: number, month: number, today: string = todayIso()): MonthSummary {
+  const t = parseIsoDate(today)
+  const key = monthIndex(year, month)
+  const now = monthIndex(t.year, t.month)
+  const timing: MonthTiming = key < now ? 'past' : key > now ? 'future' : 'current'
+  // Ultimo giorno già avvenuto nel mese: per un mese futuro nessuno.
+  const cutoff = timing === 'past' ? '9999-12-31' : timing === 'current' ? today : '0000-01-01'
 
-  let oneTimeTotal = 0
-  for (const e of data.oneTimeExpenses) {
-    const d = parseIsoDate(e.date)
-    if (d.year === year && d.month === month) {
-      oneTimeTotal += e.amount
-    }
-  }
+  const breakdown = monthBreakdown(data, year, month)
+  const breakdownToDate = monthBreakdown(data, year, month, cutoff)
+
+  const inMonth = <T extends { date: string }>(items: T[]) =>
+    items.filter((i) => {
+      const d = parseIsoDate(i.date)
+      return d.year === year && d.month === month
+    })
+  const incomes = inMonth(data.incomes)
+  const income = sum(incomes.map((i) => i.amount))
+  const incomeToDate = sum(incomes.filter((i) => i.date <= cutoff).map((i) => i.amount))
+  const oneTimeTotal = sum(inMonth(data.oneTimeExpenses).map((e) => e.amount))
 
   const expenses = breakdown.totalExpenses
-  const recurringInMonth = expenses - oneTimeTotal
+  const expensesToDate = breakdownToDate.totalExpenses
+  const projectedIncome = incomeByMonth(data, year, today).get(month)?.income ?? income
 
   return {
+    timing,
     income,
     expenses,
     balance: income - expenses,
     oneTimeTotal,
-    recurringInMonth,
+    recurringInMonth: expenses - oneTimeTotal,
     byCategory: breakdown.byCategory,
     byPaymentMethod: breakdown.byPaymentMethod,
+    incomeToDate,
+    expensesToDate,
+    balanceToDate: incomeToDate - expensesToDate,
+    byCategoryToDate: breakdownToDate.byCategory,
+    byPaymentMethodToDate: breakdownToDate.byPaymentMethod,
+    projectedIncome,
+    projectedBalance: projectedIncome - expenses,
   }
 }
 

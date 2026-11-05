@@ -117,7 +117,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const isMonthFiltered = computed(() => selectedMonth.value !== 'all')
   const monthSummaryData = computed(() => {
     if (selectedMonth.value === 'all') return null
-    return monthSummary(data.value, selectedYear.value, selectedMonth.value)
+    return monthSummary(data.value, selectedYear.value, selectedMonth.value, today.value)
   })
   const oneTimeFiltered = computed(() => {
     if (selectedMonth.value === 'all') return oneTimeOfYear.value

@@ -13,64 +13,89 @@ const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
 const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
-const grandTotal = computed(() => s.value.totalExpenses || 1)
 const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
+
+/**
+ * Una sola regola per tutta la dashboard: le card e le ripartizioni contano ciò che è già avvenuto,
+ * la previsione dice dove si arriverà. Un mese passato è tutto avvenuto; uno futuro mostra ciò che è programmato.
+ */
+const ms = computed(() => finance.monthSummaryData)
+const monthToDate = computed(() => ms.value?.timing === 'current')
 
 const selectedMonthName = computed(() => {
   if (finance.selectedMonth === 'all') return ''
   const name = month(finance.selectedMonth)
   return locale.value === 'it' ? name.toLocaleLowerCase('it') : name
 })
+const monthArgs = computed(() => ({ month: selectedMonthName.value }))
 
 const displayIncome = computed(() => {
-  return finance.isMonthFiltered ? finance.monthSummaryData!.income : s.value.incomeToDate
+  if (!ms.value) return s.value.incomeToDate
+  return monthToDate.value ? ms.value.incomeToDate : ms.value.income
 })
 const incomeLabel = computed(() => {
-  return finance.isMonthFiltered
-    ? t('dashboard.incomeMonth', { month: selectedMonthName.value })
-    : t('dashboard.income')
+  if (ms.value) return t(monthToDate.value ? 'dashboard.incomeMonthToDate' : 'dashboard.incomeMonth', monthArgs.value)
+  return t(isPastYear.value ? 'dashboard.income' : 'dashboard.incomeToDate')
 })
 
 const displayExpenses = computed(() => {
-  return finance.isMonthFiltered ? finance.monthSummaryData!.expenses : s.value.expensesToDate
+  if (!ms.value) return s.value.expensesToDate
+  return monthToDate.value ? ms.value.expensesToDate : ms.value.expenses
 })
 const expensesLabel = computed(() => {
-  if (finance.isMonthFiltered) {
-    return t('dashboard.expensesMonth', { month: selectedMonthName.value })
-  }
+  if (ms.value) return t(monthToDate.value ? 'dashboard.expensesMonthToDate' : 'dashboard.expensesMonth', monthArgs.value)
   return t(isPastYear.value ? 'dashboard.expenses' : 'dashboard.expensesToDate')
 })
+/** Sotto le uscite "a oggi", quanto è ancora in arrivo: spiega perché il previsto è più basso del saldo. */
 const expensesHint = computed(() => {
-  if (finance.isMonthFiltered) return undefined
-  return isPastYear.value ? undefined : t('dashboard.expensesHint')
+  if (ms.value) {
+    if (ms.value.timing === 'future') return t('dashboard.scheduledHint')
+    if (ms.value.timing === 'past') return undefined
+    const toCome = ms.value.expenses - ms.value.expensesToDate
+    return toCome > 0 ? t('dashboard.stillToComeMonth', { amount: money(toCome) }) : t('dashboard.expensesHint')
+  }
+  if (isPastYear.value) return undefined
+  const toCome = s.value.totalExpenses - s.value.expensesToDate
+  return toCome > 0 ? t('dashboard.stillToComeYear', { amount: money(toCome) }) : t('dashboard.expensesHint')
 })
 
 const displayBalance = computed(() => {
-  return finance.isMonthFiltered ? finance.monthSummaryData!.balance : s.value.balanceToDate
+  if (!ms.value) return s.value.balanceToDate
+  return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
 })
 const balanceLabel = computed(() => {
-  if (finance.isMonthFiltered) {
-    return t('dashboard.balanceMonth', { month: selectedMonthName.value })
-  }
+  if (ms.value) return t(monthToDate.value ? 'dashboard.balanceMonthToDate' : 'dashboard.balanceMonth', monthArgs.value)
   return t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')
 })
+const balanceHint = computed(() => {
+  if (ms.value) return monthToDate.value ? t('dashboard.balanceHint') : undefined
+  return isPastYear.value ? undefined : t('dashboard.balanceHint')
+})
 
+/**
+ * Il previsto a fine mese compare solo se dice qualcosa in più del saldo: mai per un mese passato (tutto avvenuto),
+ * e per un mese futuro solo quando la stima delle entrate lo rende diverso da ciò che è già programmato.
+ */
+const showMonthProjection = computed(
+  () => !!ms.value && ms.value.timing !== 'past' && ms.value.projectedBalance !== displayBalance.value,
+)
+const monthProjectionHint = computed(() =>
+  t(finance.data.forecast.estimateIncome ? 'dashboard.projectedMonthHintEstimate' : 'dashboard.projectedMonthHint'),
+)
+
+/** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
 const categoryTotals = computed(() => {
-  return finance.isMonthFiltered ? finance.monthSummaryData!.byCategory : s.value.byCategory
+  if (!ms.value) return s.value.byCategoryToDate
+  return monthToDate.value ? ms.value.byCategoryToDate : ms.value.byCategory
 })
-const categoryGrandTotal = computed(() => {
-  return finance.isMonthFiltered ? (finance.monthSummaryData!.expenses || 1) : grandTotal.value
-})
-const categoryEmptyText = computed(() => {
-  if (!finance.isMonthFiltered) return t('dashboard.empty')
-  return t('dashboard.emptyMonth', { month: selectedMonthName.value })
-})
-
 const paymentTotals = computed(() => {
-  return finance.isMonthFiltered ? finance.monthSummaryData!.byPaymentMethod : s.value.byPaymentMethod
+  if (!ms.value) return s.value.byPaymentMethodToDate
+  return monthToDate.value ? ms.value.byPaymentMethodToDate : ms.value.byPaymentMethod
 })
-const paymentGrandTotal = computed(() => {
-  return finance.isMonthFiltered ? (finance.monthSummaryData!.expenses || 1) : grandTotal.value
+const breakdownGrandTotal = computed(() => displayExpenses.value || 1)
+const categoryEmptyText = computed(() => {
+  if (!ms.value) return t('dashboard.empty')
+  return t('dashboard.emptyMonth', monthArgs.value)
 })
 
 /** Per un anno passato "a oggi" coincide con tutto l'anno e il previsto non aggiunge nulla. */
@@ -87,6 +112,7 @@ const variableHint = computed(() => {
   const note = t('dashboard.variableNote')
   return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
 })
+
 </script>
 
 <template>
@@ -108,11 +134,11 @@ const variableHint = computed(() => {
         :label="balanceLabel"
         :value="money(displayBalance)"
         :color="displayBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
-        :hint="finance.isMonthFiltered ? undefined : (isPastYear ? undefined : t('dashboard.balanceHint'))"
+        :hint="balanceHint"
       />
 
-      <!-- Se la vista è annuale: le 3 card classiche -->
-      <template v-if="!finance.isMonthFiltered">
+      <!-- Vista annuale: previsto a fine anno, costo mensile delle ricorrenti, spese variabili del mese di oggi -->
+      <template v-if="!ms">
         <KpiCard
           v-if="!isPastYear"
           :label="t('dashboard.projected')"
@@ -135,17 +161,24 @@ const variableHint = computed(() => {
         />
       </template>
 
-      <!-- Se la vista è filtrata per mese: ricorrenti vs una tantum del mese -->
+      <!-- Vista mensile: previsto a fine mese (non per i mesi passati), ricorrenti e una tantum di tutto il mese -->
       <template v-else>
         <KpiCard
+          v-if="showMonthProjection"
+          :label="t('dashboard.projectedMonth', monthArgs)"
+          :value="money(ms.projectedBalance)"
+          :color="ms.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
+          :hint="monthProjectionHint"
+        />
+        <KpiCard
           :label="t('dashboard.recurringInMonth')"
-          :value="money(finance.monthSummaryData!.recurringInMonth)"
+          :value="money(ms.recurringInMonth)"
           color="text-indigo-600"
           :hint="t('dashboard.recurringInMonthHint')"
         />
         <KpiCard
-          :label="t('dashboard.oneTimeInMonth')"
-          :value="money(finance.monthSummaryData!.oneTimeTotal)"
+          :label="t('dashboard.oneTimeInMonth', monthArgs)"
+          :value="money(ms.oneTimeTotal)"
           color="text-orange-600"
           :hint="t('dashboard.oneTimeInMonthHint')"
         />
@@ -171,12 +204,12 @@ const variableHint = computed(() => {
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
-        <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="categoryGrandTotal" :empty-text="categoryEmptyText" />
+        <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
       </div>
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
-        <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="paymentGrandTotal" :empty-text="t('dashboard.empty')" />
+        <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
       </div>
     </div>
   </section>

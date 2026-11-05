@@ -82,6 +82,15 @@ describe('yearSummary', () => {
     expect(yearSummary(d, 2026, '2026-03-14').expensesToDate).toBe(1 + 1000 * 2)
   })
 
+  it('le ripartizioni "a oggi" tornano con le uscite a oggi', () => {
+    const s = yearSummary(sample(), 2026, TODAY)
+    const sumOf = (rows: { total: number }[]) => rows.reduce((acc, r) => acc + r.total, 0)
+    expect(sumOf(s.byCategoryToDate)).toBe(s.expensesToDate)
+    expect(sumOf(s.byPaymentMethodToDate)).toBe(s.expensesToDate)
+    // Quelle di tutto l'anno comprendono anche affitto e assicurazione di dicembre.
+    expect(sumOf(s.byCategory)).toBe(s.totalExpenses)
+  })
+
   it('le entrate con data futura non sono ancora avvenute ma contano nel previsto', () => {
     const d = createEmptyData()
     d.incomes.push({ id: 'i', name: 'Stipendio', amount: 100000, date: '2026-12-27', categoryId: 'salary', paymentMethodId: 'bank' })
@@ -287,6 +296,52 @@ describe('monthSummary', () => {
     expect(res.recurringInMonth).toBe(70000)
     expect(res.byCategory).toHaveLength(2)
     expect(res.byPaymentMethod).toHaveLength(2)
+  })
+
+  it('nel mese corrente separa ciò che è avvenuto da ciò che deve ancora arrivare', () => {
+    const d = sample()
+    d.oneTimeExpenses.push(
+      { id: 'n1', name: 'Spesa', amount: 4000, date: '2026-11-03', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+      { id: 'n2', name: 'Concerto', amount: 6000, date: '2026-11-25', categoryId: 'fun', paymentMethodId: 'card', notes: '' },
+    )
+    d.incomes.push({ id: 'n3', name: 'Stipendio', amount: 200000, date: '2026-11-27', categoryId: 'salary', paymentMethodId: 'bank' })
+    // Il 5 novembre: affitto (1/11) e spesa del 3 avvenuti; concerto e stipendio ancora da venire.
+    const res = monthSummary(d, 2026, 10, '2026-11-05')
+    expect(res.timing).toBe('current')
+    expect(res.expensesToDate).toBe(70000 + 4000)
+    expect(res.expenses).toBe(70000 + 4000 + 6000)
+    expect(res.incomeToDate).toBe(0)
+    expect(res.balanceToDate).toBe(-74000)
+    expect(res.byCategoryToDate).toEqual([
+      { id: 'home', total: 70000 },
+      { id: 'food', total: 4000 },
+    ])
+    // Il previsto conta tutte le uscite del mese e le entrate registrate, anche future; le simulazioni no.
+    expect(res.projectedIncome).toBe(200000)
+    expect(res.projectedBalance).toBe(200000 - 80000)
+  })
+
+  it('un mese passato è tutto avvenuto, uno futuro non ha ancora nulla di avvenuto', () => {
+    const past = monthSummary(sample(), 2026, 2, '2026-11-05')
+    expect(past.timing).toBe('past')
+    expect(past.expensesToDate).toBe(past.expenses)
+    expect(past.incomeToDate).toBe(past.income)
+    expect(past.byCategoryToDate).toEqual(past.byCategory)
+    const future = monthSummary(sample(), 2026, 11, '2026-11-05')
+    expect(future.timing).toBe('future')
+    expect(future.expensesToDate).toBe(0)
+    expect(future.byCategoryToDate).toEqual([])
+    expect(future.expenses).toBe(70000 + 60000)
+  })
+
+  it('il previsto del mese aggiunge la stima delle entrate se attivata', () => {
+    const d = sample()
+    d.forecast.estimateIncome = true
+    d.forecast.incomeCategoryIds = ['salary']
+    const dec = monthSummary(d, 2026, 11, '2026-11-05')
+    expect(dec.income).toBe(0)
+    expect(dec.projectedIncome).toBe(200000)
+    expect(dec.projectedBalance).toBe(200000 - 130000)
   })
 
   it('funziona correttamente in un mese senza entrate ma con uscite', () => {
