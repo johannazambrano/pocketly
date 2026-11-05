@@ -5,6 +5,7 @@ import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
 import { todayIso } from '@/utils/dates'
 import KpiCard from '@/components/KpiCard.vue'
+import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 
@@ -98,7 +99,6 @@ const categoryEmptyText = computed(() => {
   return t('dashboard.emptyMonth', monthArgs.value)
 })
 
-/** Per un anno passato "a oggi" coincide con tutto l'anno e il previsto non aggiunge nulla. */
 /** In italiano il mese va in minuscolo ("di ottobre"), in inglese resta maiuscolo ("in October"). */
 const variableLabel = computed(() => {
   const v = finance.variableThisMonth
@@ -113,6 +113,44 @@ const variableHint = computed(() => {
   return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
 })
 
+/** Il riquadro principale: saldo in primo piano, entrate e uscite che lo spiegano, previsione in fondo. */
+const balanceFigure = computed(() => ({ label: balanceLabel.value, value: displayBalance.value, hint: balanceHint.value }))
+const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value }))
+const expensesFigure = computed(() => ({ label: expensesLabel.value, value: displayExpenses.value, hint: expensesHint.value }))
+/** Per un anno o un mese passato tutto è avvenuto e il previsto coinciderebbe con il saldo. */
+const projectionFigure = computed(() => {
+  if (ms.value) {
+    if (!showMonthProjection.value) return null
+    return { label: t('dashboard.projectedMonth', monthArgs.value), value: ms.value.projectedBalance, hint: monthProjectionHint.value }
+  }
+  if (isPastYear.value) return null
+  return {
+    label: t('dashboard.projected'),
+    value: s.value.projectedBalance,
+    hint: t(finance.data.forecast.estimateIncome ? 'dashboard.projectedHintEstimate' : 'dashboard.projectedHint'),
+  }
+})
+
+/** Il dettaglio delle uscite, un livello sotto: ricorrenti e spese variabili, sempre affiancate. */
+const detailCards = computed(() => {
+  if (ms.value) {
+    return [
+      { key: 'recurring', label: t('dashboard.recurringInMonth'), value: ms.value.recurringInMonth, color: 'text-indigo-600', hint: t('dashboard.recurringInMonthHint') },
+      { key: 'variable', label: t('dashboard.oneTimeInMonth', monthArgs.value), value: ms.value.oneTimeTotal, color: 'text-orange-600', hint: t('dashboard.oneTimeInMonthHint') },
+    ]
+  }
+  const cards = [
+    { key: 'recurring', label: t('dashboard.monthlyRecurring'), value: Math.round(s.value.monthlyRecurring), color: 'text-indigo-600', hint: t('dashboard.monthlyRecurringHint') },
+  ]
+  const v = finance.variableThisMonth
+  if (v) cards.push({ key: 'variable', label: variableLabel.value, value: v.total, color: 'text-orange-600', hint: variableHint.value ?? '' })
+  return cards
+})
+
+/** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
+const showUpcoming = computed(
+  () => finance.selectedYear === new Date().getFullYear() && (!ms.value || ms.value.timing === 'current'),
+)
 </script>
 
 <template>
@@ -122,71 +160,22 @@ const variableHint = computed(() => {
       <MonthSelector />
     </div>
 
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-      <KpiCard :label="incomeLabel" :value="money(displayIncome)" color="text-emerald-600" />
-      <KpiCard
-        :label="expensesLabel"
-        :value="money(displayExpenses)"
-        color="text-rose-600"
-        :hint="expensesHint"
-      />
-      <KpiCard
-        :label="balanceLabel"
-        :value="money(displayBalance)"
-        :color="displayBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
-        :hint="balanceHint"
-      />
+    <BalancePanel :balance="balanceFigure" :income="incomeFigure" :expenses="expensesFigure" :projection="projectionFigure" />
 
-      <!-- Vista annuale: previsto a fine anno, costo mensile delle ricorrenti, spese variabili del mese di oggi -->
-      <template v-if="!ms">
-        <KpiCard
-          v-if="!isPastYear"
-          :label="t('dashboard.projected')"
-          :value="money(s.projectedBalance)"
-          :color="s.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
-          :hint="finance.data.forecast.estimateIncome ? t('dashboard.projectedHintEstimate') : t('dashboard.projectedHint')"
-        />
-        <KpiCard
-          :label="t('dashboard.monthlyRecurring')"
-          :value="money(Math.round(s.monthlyRecurring))"
-          color="text-indigo-600"
-          :hint="t('dashboard.monthlyRecurringHint')"
-        />
-        <KpiCard
-          v-if="finance.variableThisMonth"
-          :label="variableLabel"
-          :value="money(finance.variableThisMonth.total)"
-          color="text-orange-600"
-          :hint="variableHint"
-        />
-      </template>
-
-      <!-- Vista mensile: previsto a fine mese (non per i mesi passati), ricorrenti e una tantum di tutto il mese -->
-      <template v-else>
-        <KpiCard
-          v-if="showMonthProjection"
-          :label="t('dashboard.projectedMonth', monthArgs)"
-          :value="money(ms.projectedBalance)"
-          :color="ms.projectedBalance >= 0 ? 'text-blue-600' : 'text-rose-600'"
-          :hint="monthProjectionHint"
-        />
-        <KpiCard
-          :label="t('dashboard.recurringInMonth')"
-          :value="money(ms.recurringInMonth)"
-          color="text-indigo-600"
-          :hint="t('dashboard.recurringInMonthHint')"
-        />
-        <KpiCard
-          :label="t('dashboard.oneTimeInMonth', monthArgs)"
-          :value="money(ms.oneTimeTotal)"
-          color="text-orange-600"
-          :hint="t('dashboard.oneTimeInMonthHint')"
-        />
-      </template>
+    <div class="grid grid-cols-2 gap-3">
+      <KpiCard
+        v-for="card in detailCards"
+        :key="card.key"
+        :class="detailCards.length === 1 ? 'col-span-2' : ''"
+        :label="card.label"
+        :value="money(card.value)"
+        :color="card.color"
+        :hint="card.hint"
+      />
     </div>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div class="card space-y-3 md:col-span-2">
+      <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
         <h3 class="text-sm font-semibold text-slate-700">
           <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
         </h3>
