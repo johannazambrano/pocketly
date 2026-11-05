@@ -167,6 +167,18 @@ describe('sincronizzazione', () => {
     expect(server.version).toBe(version)
   })
 
+  it('chi riceve una modifica non la rimanda indietro al server', async () => {
+    const { server, a, b } = await twoDevices()
+    a.data.oneTimeExpenses.push(coffee('da-a'))
+    await a.sync()
+    const version = server.version
+    await b.sync()
+    await b.sync()
+    await a.sync()
+    expect(server.version).toBe(version)
+    expect(b.data).toEqual(a.data)
+  })
+
   it('se un altro dispositivo scrive nel frattempo riprova e tiene tutte e due le modifiche', async () => {
     const { server, a, b } = await twoDevices()
     a.data.oneTimeExpenses.push(coffee('da-a'))

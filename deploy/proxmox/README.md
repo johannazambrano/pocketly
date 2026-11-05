@@ -156,7 +156,7 @@ la password dei dati (la stessa su tutti i dispositivi).
 - Gli altri, se non hanno dati, prendono quelli del server. Se hanno già dati propri, l'app chiede quali tenere:
   la scelta sovrascrive l'altra parte, perché due elenchi di spese inseriti separatamente non si possono unire.
 - Da lì in poi le modifiche (anche le cancellazioni) passano da un dispositivo all'altro da sole: all'avvio, quando
-  l'app torna in primo piano, pochi secondi dopo ogni modifica e ogni 5 minuti.
+  l'app torna in primo piano, pochi secondi dopo ogni modifica e ogni 20 secondi mentre l'app è aperta.
 
 **Copie di sicurezza:** il server conserva le ultime 30 versioni in `/var/lib/pocketly/history/`. Ognuna è un
 normale backup protetto: per recuperarla copiala su un dispositivo e usa *Importa backup* con la password dei dati.

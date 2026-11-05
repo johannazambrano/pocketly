@@ -18,8 +18,12 @@ import type { FinanceData } from '@/types/models'
 
 const CONFIG_KEY = 'sync-config'
 /** Attesa dopo una modifica prima di inviarla, per raggruppare più modifiche di fila. */
-const CHANGE_DELAY_MS = 3000
-const PERIODIC_MS = 5 * 60 * 1000
+const CHANGE_DELAY_MS = 1500
+/**
+ * Controllo delle novità mentre l'app è visibile. Senza novità il server risponde 304 senza dati,
+ * quindi costa pochissimo anche su telefono.
+ */
+const PERIODIC_MS = 20 * 1000
 
 /**
  * Configurazione salvata sul dispositivo, fuori dai dati finanziari (non finisce nei backup).
@@ -138,6 +142,8 @@ export const useSyncStore = defineStore('sync', () => {
       if (document.visibilityState === 'visible') void syncNow()
     })
     window.addEventListener('online', () => void syncNow())
+    // Due finestre affiancate restano sempre "visibili": passare dall'una all'altra si vede solo dal focus.
+    window.addEventListener('focus', () => void syncNow())
     setInterval(() => {
       if (document.visibilityState === 'visible') void syncNow()
     }, PERIODIC_MS)
