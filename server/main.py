@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""Server di sincronizzazione di Pocketly.
+
+Conserva una sola copia dei dati, cifrata dai dispositivi (il server non conosce la password e non
+può leggerla), con un numero di versione. Non unisce niente: un dispositivo può salvare solo se conosce
+l'ultima versione, altrimenti riceve 409 e deve prima scaricare e unire i dati più recenti.
+
+Endpoint (dietro nginx, sotto /api/):
+  GET /api/health   -> {"service": "pocketly-sync", "api": 1}           (senza chiave)
+  GET /api/sync     -> {"version": n, "payload": {...} | null}         (304 se If-None-Match = versione)
+  PUT /api/sync     <- {"baseVersion": n, "payload": {...}}
+                    -> 200 {"version": n + 1} oppure 409 {"version": attuale}
+
+Configurazione (variabili d'ambiente):
+  POCKETLY_SYNC_KEY   chiave di accesso, obbligatoria (almeno 32 caratteri)
+  POCKETLY_DATA_DIR   cartella dei dati (default /var/lib/pocketly)
+  POCKETLY_HOST       indirizzo di ascolto (default 127.0.0.1: si arriva solo tramite nginx)
+  POCKETLY_PORT       porta (default 8787)
+
+Richiede solo la libreria standard di Python (3.9 o successivo).
+"""
+from __future__ import annotations
+
+import hmac
+import json
+import os
+import sys
+import tempfile
+import threading
+import time
+from datetime import datetime, timezone
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+API_VERSION = 1
+MIN_KEY_LENGTH = 32
+MAX_BODY_BYTES = 5 * 1024 * 1024
+HISTORY_KEEP = 30
+ENCRYPTED_FORMAT = 'pocketly-encrypted-backup'
+
+# Dopo troppi tentativi con la chiave sbagliata da uno stesso indirizzo, si blocca per un po'.
+MAX_FAILURES = 10
+FAILURE_WINDOW_SECONDS = 15 * 60
+
+
+class Store:
+    """Dati e versione su disco. Ogni scrittura è atomica: file temporaneo e poi rinomina."""
+
+    def __init__(self, data_dir: Path):
+        self.data_dir = data_dir
+        self.current = data_dir / 'current.json'
+        self.history = data_dir / 'history'
+        self.lock = threading.Lock()
+        self.history.mkdir(parents=True, exist_ok=True)
+
+    def read(self) -> dict:
+        try:
+            with open(self.current, encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {'version': 0, 'updatedAt': None, 'payload': None}
+
+    def _write_atomic(self, path: Path, content: dict) -> None:
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix='.tmp-', suffix='.json')
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(content, f, ensure_ascii=False, separators=(',', ':'))
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+            raise
+
+    def save(self, base_version: int, payload: dict) -> tuple[bool, int]:
+        """Salva se `base_version` è l'ultima. Restituisce (salvato, versione attuale)."""
+        with self.lock:
+            current = self.read()
+            if base_version != current['version']:
+                return False, current['version']
+            if current['payload'] is not None:
+                # La versione precedente resta come copia di sicurezza: è un backup cifrato,
+                # ripristinabile dall'app con "Importa backup" e la password.
+                self._write_atomic(self.history / f"v{current['version']:06d}.json", current['payload'])
+                self._prune_history()
+            new = {
+                'version': current['version'] + 1,
+                'updatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+                'payload': payload,
+            }
+            self._write_atomic(self.current, new)
+            return True, new['version']
+
+    def _prune_history(self) -> None:
+        old = sorted(self.history.glob('v*.json'))[:-HISTORY_KEEP]
+        for p in old:
+            p.unlink(missing_ok=True)
+
+
+class Failures:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.by_ip: dict[str, list[float]] = {}
+
+    def blocked(self, ip: str) -> bool:
+        now = time.monotonic()
+        with self.lock:
+            recent = [t for t in self.by_ip.get(ip, []) if now - t < FAILURE_WINDOW_SECONDS]
+            self.by_ip[ip] = recent
+            return len(recent) >= MAX_FAILURES
+
+    def add(self, ip: str) -> None:
+        with self.lock:
+            self.by_ip.setdefault(ip, []).append(time.monotonic())
+
+
+def valid_payload(payload: object) -> bool:
+    """Il server accetta solo dati cifrati: i dati in chiaro non devono mai finire sul disco del server."""
+    return (
+        isinstance(payload, dict)
+        and payload.get('format') == ENCRYPTED_FORMAT
+        and all(isinstance(payload.get(k), str) for k in ('salt', 'iv', 'data'))
+        and isinstance(payload.get('iterations'), int)
+    )
+
+
+def make_handler(store: Store, key: str, failures: Failures):
+    class Handler(BaseHTTPRequestHandler):
+        server_version = 'pocketly-sync'
+        sys_version = ''
+
+        def log_message(self, fmt, *args):  # niente dati nei log, solo metodo, percorso ed esito
+            sys.stderr.write('%s %s\n' % (self.client_ip(), fmt % args))
+
+        def client_ip(self) -> str:
+            # Il server ascolta solo in locale: l'indirizzo vero lo passa nginx.
+            return self.headers.get('X-Real-IP') or self.client_address[0]
+
+        def send_json(self, status: int, body: dict | None = None, extra: dict | None = None) -> None:
+            raw = b'' if body is None else json.dumps(body, ensure_ascii=False).encode('utf-8')
+            self.send_response(status)
+            self.send_header('Cache-Control', 'no-store')
+            for k, v in (extra or {}).items():
+                self.send_header(k, v)
+            if body is not None:
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(raw)))
+            self.end_headers()
+            if raw:
+                self.wfile.write(raw)
+
+        def authorized(self) -> bool:
+            ip = self.client_ip()
+            if failures.blocked(ip):
+                self.send_json(HTTPStatus.TOO_MANY_REQUESTS, {'error': 'too many attempts'})
+                return False
+            auth = self.headers.get('Authorization', '')
+            given = auth[7:].strip() if auth.startswith('Bearer ') else ''
+            if given and hmac.compare_digest(given.encode('utf-8'), key.encode('utf-8')):
+                return True
+            failures.add(ip)
+            self.send_json(HTTPStatus.UNAUTHORIZED, {'error': 'invalid key'})
+            return False
+
+        def path_only(self) -> str:
+            return self.path.split('?', 1)[0].rstrip('/')
+
+        def do_GET(self):
+            path = self.path_only()
+            if path == '/api/health':
+                self.send_json(HTTPStatus.OK, {'service': 'pocketly-sync', 'api': API_VERSION})
+            elif path == '/api/sync':
+                if not self.authorized():
+                    return
+                current = store.read()
+                etag = f'"{current["version"]}"'
+                if self.headers.get('If-None-Match') == etag:
+                    self.send_json(HTTPStatus.NOT_MODIFIED, None, {'ETag': etag})
+                    return
+                self.send_json(
+                    HTTPStatus.OK,
+                    {'version': current['version'], 'updatedAt': current['updatedAt'], 'payload': current['payload']},
+                    {'ETag': etag},
+                )
+            else:
+                self.send_json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
+
+        def do_PUT(self):
+            if self.path_only() != '/api/sync':
+                self.send_json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
+                return
+            if not self.authorized():
+                return
+            try:
+                length = int(self.headers.get('Content-Length', ''))
+            except ValueError:
+                self.send_json(HTTPStatus.LENGTH_REQUIRED, {'error': 'length required'})
+                return
+            if length <= 0 or length > MAX_BODY_BYTES:
+                self.send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {'error': 'body too large'})
+                return
+            try:
+                body = json.loads(self.rfile.read(length).decode('utf-8'))
+            except (ValueError, UnicodeDecodeError):
+                self.send_json(HTTPStatus.BAD_REQUEST, {'error': 'invalid json'})
+                return
+            base = body.get('baseVersion') if isinstance(body, dict) else None
+            payload = body.get('payload') if isinstance(body, dict) else None
+            if not isinstance(base, int) or isinstance(base, bool) or not valid_payload(payload):
+                self.send_json(HTTPStatus.BAD_REQUEST, {'error': 'invalid body'})
+                return
+            saved, version = store.save(base, payload)
+            self.send_json(HTTPStatus.OK if saved else HTTPStatus.CONFLICT, {'version': version})
+
+        def do_POST(self):
+            self.send_json(HTTPStatus.METHOD_NOT_ALLOWED, {'error': 'method not allowed'})
+
+        do_DELETE = do_PATCH = do_POST
+
+    return Handler
+
+
+def make_server(host: str, port: int, data_dir: Path, key: str) -> ThreadingHTTPServer:
+    if len(key) < MIN_KEY_LENGTH:
+        raise ValueError(f'POCKETLY_SYNC_KEY deve avere almeno {MIN_KEY_LENGTH} caratteri')
+    return ThreadingHTTPServer((host, port), make_handler(Store(data_dir), key, Failures()))
+
+
+def main() -> int:
+    key = os.environ.get('POCKETLY_SYNC_KEY', '').strip()
+    if not key:
+        print('POCKETLY_SYNC_KEY non impostata: il server non parte senza chiave.', file=sys.stderr)
+        return 2
+    host = os.environ.get('POCKETLY_HOST', '127.0.0.1')
+    port = int(os.environ.get('POCKETLY_PORT', '8787'))
+    data_dir = Path(os.environ.get('POCKETLY_DATA_DIR', '/var/lib/pocketly'))
+    try:
+        server = make_server(host, port, data_dir, key)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
+    print(f'Pocketly sync in ascolto su {host}:{port}, dati in {data_dir}', file=sys.stderr)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
