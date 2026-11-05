@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
+import { useSyncStore } from '@/stores/sync'
 import { useUiStore } from '@/stores/ui'
 
 const { t } = useI18n()
 const finance = useFinanceStore()
+const sync = useSyncStore()
 const ui = useUiStore()
 </script>
 
@@ -23,6 +25,17 @@ const ui = useUiStore()
           <option v-for="y in finance.years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
+      <RouterLink
+        v-if="sync.enabled"
+        to="/impostazioni"
+        class="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base hover:bg-slate-800"
+        :aria-label="`${t('sync.headerLabel')}: ${t(`sync.status.${sync.status}`)}`"
+        :title="t(`sync.status.${sync.status}`)"
+      >
+        <i v-if="sync.status === 'syncing'" class="fa-solid fa-arrows-rotate fa-spin text-sky-300"></i>
+        <i v-else-if="sync.status === 'error'" class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+        <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sky-300' : 'text-slate-500'"></i>
+      </RouterLink>
       <button
         type="button"
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base shadow transition hover:bg-emerald-500"

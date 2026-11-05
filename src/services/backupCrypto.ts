@@ -85,51 +85,95 @@ async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>, iterat
   )
 }
 
-export async function encryptBackup(plaintext: string, password: string): Promise<EncryptedBackup> {
+/**
+ * Chiave per cifrare con un sale fisso: la sincronizzazione la calcola una volta per dispositivo e la riusa,
+ * invece di ripetere le 600.000 iterazioni a ogni invio.
+ */
+export interface DerivedKey {
+  key: CryptoKey
+  salt: string
+  iterations: number
+}
+
+export async function deriveBackupKey(password: string, salt?: string, iterations = KDF_ITERATIONS): Promise<DerivedKey> {
   if (!isCryptoAvailable()) throw new CryptoUnavailableError()
-  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
+  checkIterations(iterations)
+  const saltBytes = salt ? decodeSized(salt, SALT_BYTES) : crypto.getRandomValues(new Uint8Array(SALT_BYTES))
+  return { key: await deriveKey(password, saltBytes, iterations), salt: toBase64(saltBytes), iterations }
+}
+
+/** Cifra con una chiave già calcolata. Il risultato è un normale backup protetto, apribile con la password. */
+export async function encryptWithKey(plaintext: string, derived: DerivedKey): Promise<EncryptedBackup> {
+  if (!isCryptoAvailable()) throw new CryptoUnavailableError()
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
-  const key = await deriveKey(password, salt, KDF_ITERATIONS)
   const cipher = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv, additionalData: AAD },
-    key,
+    derived.key,
     new TextEncoder().encode(plaintext),
   )
   return {
     format: ENCRYPTED_FORMAT,
     version: 1,
     kdf: 'PBKDF2-SHA256',
-    iterations: KDF_ITERATIONS,
-    salt: toBase64(salt),
+    iterations: derived.iterations,
+    salt: derived.salt,
     iv: toBase64(iv),
     data: toBase64(new Uint8Array(cipher)),
   }
 }
 
-export async function decryptBackup(file: EncryptedBackup, password: string): Promise<string> {
-  if (!isCryptoAvailable()) throw new CryptoUnavailableError()
-  if (file.version !== 1 || file.kdf !== 'PBKDF2-SHA256') throw new EncryptedBackupFormatError('unsupported version')
-  if (!Number.isInteger(file.iterations) || file.iterations < MIN_ITERATIONS || file.iterations > MAX_ITERATIONS) {
+export async function encryptBackup(plaintext: string, password: string): Promise<EncryptedBackup> {
+  return encryptWithKey(plaintext, await deriveBackupKey(password))
+}
+
+function checkIterations(iterations: number): void {
+  if (!Number.isInteger(iterations) || iterations < MIN_ITERATIONS || iterations > MAX_ITERATIONS) {
     throw new EncryptedBackupFormatError('iterations out of range')
   }
-  let salt: Uint8Array<ArrayBuffer>
-  let iv: Uint8Array<ArrayBuffer>
+}
+
+function decodeSized(text: string, size: number): Uint8Array<ArrayBuffer> {
+  let bytes: Uint8Array<ArrayBuffer>
+  try {
+    bytes = fromBase64(text)
+  } catch {
+    throw new EncryptedBackupFormatError('bad encoding')
+  }
+  if (bytes.length !== size) throw new EncryptedBackupFormatError('bad sizes')
+  return bytes
+}
+
+function checkFormat(file: EncryptedBackup): void {
+  if (file.version !== 1 || file.kdf !== 'PBKDF2-SHA256') throw new EncryptedBackupFormatError('unsupported version')
+  checkIterations(file.iterations)
+}
+
+/** Decifra con una chiave già calcolata; la chiave deve essere stata calcolata con lo stesso sale del file. */
+export async function decryptWithKey(file: EncryptedBackup, derived: DerivedKey): Promise<string> {
+  if (!isCryptoAvailable()) throw new CryptoUnavailableError()
+  checkFormat(file)
+  if (file.salt !== derived.salt || file.iterations !== derived.iterations) throw new WrongPasswordError()
+  const iv = decodeSized(file.iv, IV_BYTES)
   let data: Uint8Array<ArrayBuffer>
   try {
-    salt = fromBase64(file.salt)
-    iv = fromBase64(file.iv)
     data = fromBase64(file.data)
   } catch {
     throw new EncryptedBackupFormatError('bad encoding')
   }
-  if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || data.length < 16) {
-    throw new EncryptedBackupFormatError('bad sizes')
-  }
-  const key = await deriveKey(password, salt, file.iterations)
+  if (data.length < 16) throw new EncryptedBackupFormatError('bad sizes')
   try {
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: AAD }, key, data)
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: AAD }, derived.key, data)
     return new TextDecoder().decode(plain)
   } catch {
     throw new WrongPasswordError()
   }
+}
+
+export async function decryptBackup(file: EncryptedBackup, password: string): Promise<string> {
+  if (!isCryptoAvailable()) throw new CryptoUnavailableError()
+  checkFormat(file)
+  // Le dimensioni si controllano prima di calcolare la chiave, che è l'operazione lenta.
+  decodeSized(file.salt, SALT_BYTES)
+  decodeSized(file.iv, IV_BYTES)
+  return decryptWithKey(file, await deriveBackupKey(password, file.salt, file.iterations))
 }

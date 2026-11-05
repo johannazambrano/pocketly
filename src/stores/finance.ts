@@ -94,6 +94,12 @@ export const useFinanceStore = defineStore('finance', () => {
     selectedYear.value = new Date().getFullYear()
   }
 
+  /** Dati arrivati dalla sincronizzazione: a differenza di un ripristino, la pagina resta sull'anno e sul mese scelti. */
+  async function applySynced(next: FinanceData) {
+    data.value = next
+    await flush()
+  }
+
   // --- viste derivate ----------------------------------------------------
 
   const years = computed(() => availableYears(data.value, new Date().getFullYear()))
@@ -270,6 +276,7 @@ export const useFinanceStore = defineStore('finance', () => {
     init,
     flush,
     replaceAll,
+    applySynced,
     years,
     summary,
     forecastRows,

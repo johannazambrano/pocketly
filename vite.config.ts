@@ -57,6 +57,10 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    // In sviluppo il server di sincronizzazione (server/main.py) gira a parte: Vite gli passa le chiamate /api.
+    proxy: { '/api': 'http://127.0.0.1:8787' },
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

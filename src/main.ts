@@ -5,6 +5,7 @@ import { router } from './router'
 import { i18n } from './i18n'
 import { useBackupStore } from './stores/backup'
 import { useFinanceStore } from './stores/finance'
+import { useSyncStore } from './stores/sync'
 import { requestPersistentStorage } from './services/storage'
 import './style.css'
 
@@ -14,5 +15,5 @@ app.mount('#app')
 
 void useFinanceStore()
   .init(i18n.global.locale.value)
-  .then(() => useBackupStore().init())
+  .then(() => Promise.all([useBackupStore().init(), useSyncStore().init()]))
 void requestPersistentStorage()
