@@ -35,6 +35,7 @@ function emptyData(): FinanceData {
     schemaVersion: 2,
     categories: [{ id: 'cat', name: 'Cibo', color: '#f59e0b' }],
     paymentMethods: [{ id: 'pm', name: 'Carta', color: '#64748b' }],
+    tags: [],
     oneTimeExpenses: [],
     recurringExpenses: [],
     incomes: [],
@@ -46,7 +47,14 @@ function emptyData(): FinanceData {
 }
 
 const coffee = (id: string): OneTimeExpense => ({
-  id, name: 'Caffè', amount: 120, date: '2026-11-05', categoryId: 'cat', paymentMethodId: 'pm', notes: '',
+  id,
+  name: 'Caffè',
+  amount: 120,
+  date: '2026-11-05',
+  categoryId: 'cat',
+  paymentMethodId: 'pm',
+  notes: '',
+  tagIds: [],
 })
 
 /** Un dispositivo: i suoi dati e il suo stato di sincronizzazione. */

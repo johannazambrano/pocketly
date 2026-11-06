@@ -80,6 +80,7 @@ export function migrateV1(raw: Obj): FinanceData {
     schemaVersion: 2,
     categories: categories.tags,
     paymentMethods: payments.tags,
+    tags: [],
     oneTimeExpenses: [],
     recurringExpenses: [],
     incomes: [],
@@ -106,6 +107,7 @@ export function migrateV1(raw: Obj): FinanceData {
         categoryId: categories.resolve(e.category, 'Other'),
         paymentMethodId: payments.resolve(e.payment, 'Other'),
         notes: str(e.notes),
+        tagIds: [],
       })
     }
 
@@ -211,6 +213,7 @@ function normalizeV2(raw: Obj): FinanceData {
     schemaVersion: 2,
     categories,
     paymentMethods: normalizeTags(raw.paymentMethods),
+    tags: normalizeTags(raw.tags),
     oneTimeExpenses: valid<OneTimeExpense>(raw.oneTimeExpenses, (o) => {
       const amount = cents(o.amount)
       if (amount === null || !isValidIsoDate(o.date)) return null
@@ -222,6 +225,7 @@ function normalizeV2(raw: Obj): FinanceData {
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
         notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
       }
     }),
     recurringExpenses: valid<RecurringExpense>(raw.recurringExpenses, (o) => {

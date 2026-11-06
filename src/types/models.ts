@@ -32,6 +32,7 @@ export interface OneTimeExpense {
   categoryId: Id
   paymentMethodId: Id
   notes: string
+  tagIds?: Id[]
 }
 
 export interface RecurringExpense {
@@ -105,6 +106,7 @@ export interface FinanceData {
   schemaVersion: 2
   categories: Tag[]
   paymentMethods: Tag[]
+  tags: Tag[]
   oneTimeExpenses: OneTimeExpense[]
   recurringExpenses: RecurringExpense[]
   incomes: Income[]

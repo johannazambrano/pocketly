@@ -48,12 +48,13 @@ const alternatives = computed(() => tags.value.filter((x) => x.id !== deleting.v
 
 function askDelete(tag: Tag) {
   deleting.value = tag
-  reassignTo.value = tags.value.find((x) => x.id !== tag.id)?.id ?? ''
+  reassignTo.value = props.kind === 'tags' ? '' : (tags.value.find((x) => x.id !== tag.id)?.id ?? '')
 }
 
 function confirmDelete() {
   if (!deleting.value) return
-  finance.deleteTag(props.kind, deleting.value.id, deletingUsage.value ? reassignTo.value : undefined)
+  const reassign = props.kind === 'tags' ? (reassignTo.value || undefined) : (deletingUsage.value ? reassignTo.value : undefined)
+  finance.deleteTag(props.kind, deleting.value.id, reassign)
   deleting.value = null
 }
 </script>
@@ -114,6 +115,13 @@ function confirmDelete() {
     >
       <div class="space-y-3 text-sm text-slate-600">
         <p v-if="!deletingUsage">{{ t('settings.deleteTagUnused') }}</p>
+        <template v-else-if="kind === 'tags'">
+          <p>{{ t('settings.deleteTagUntagOrReassign', { count: deletingUsage }) }}</p>
+          <select v-model="reassignTo" class="field">
+            <option value="">{{ t('settings.removeTagOnly') }}</option>
+            <option v-for="alt in alternatives" :key="alt.id" :value="alt.id">{{ alt.name }}</option>
+          </select>
+        </template>
         <p v-else-if="!alternatives.length">{{ t('settings.deleteTagLast', { count: deletingUsage }) }}</p>
         <template v-else>
           <p>{{ t('settings.deleteTagReassign', { count: deletingUsage }) }}</p>
@@ -129,7 +137,7 @@ function confirmDelete() {
         <button
           type="button"
           class="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
-          :disabled="deletingUsage > 0 && !alternatives.length"
+          :disabled="kind !== 'tags' && deletingUsage > 0 && !alternatives.length"
           @click="confirmDelete"
         >
           {{ t('common.delete') }}

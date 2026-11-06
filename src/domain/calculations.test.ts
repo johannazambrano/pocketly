@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -296,5 +296,33 @@ describe('monthSummary', () => {
     expect(res.balance).toBe(-70000)
     expect(res.recurringInMonth).toBe(70000)
     expect(res.oneTimeTotal).toBe(0)
+  })
+})
+
+describe('oneTimeTagBreakdown', () => {
+  it('restituisce un array vuoto se non ci sono spese o nessuna ha tag', () => {
+    expect(oneTimeTagBreakdown([])).toEqual([])
+    expect(
+      oneTimeTagBreakdown([
+        { id: '1', name: 'A', amount: 100, date: '2026-01-01', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+        { id: '2', name: 'B', amount: 200, date: '2026-01-02', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: [] },
+      ]),
+    ).toEqual([])
+  })
+
+  it('calcola totale e conteggio aggregato per tag, ordinati per importo decrescente', () => {
+    const expenses = [
+      { id: '1', name: 'Volo', amount: 35000, date: '2026-07-15', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['vacanza'] },
+      { id: '2', name: 'Hotel', amount: 65000, date: '2026-07-16', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['vacanza', 'alloggio'] },
+      { id: '3', name: 'Cena', amount: 8000, date: '2026-07-16', categoryId: 'c2', paymentMethodId: 'p1', notes: '', tagIds: ['vacanza'] },
+      { id: '4', name: 'Regalo', amount: 5000, date: '2026-07-20', categoryId: 'c3', paymentMethodId: 'p1', notes: '', tagIds: ['regali'] },
+    ]
+
+    const breakdown = oneTimeTagBreakdown(expenses)
+    expect(breakdown).toEqual([
+      { id: 'vacanza', total: 108000, count: 3 },
+      { id: 'alloggio', total: 65000, count: 1 },
+      { id: 'regali', total: 5000, count: 1 },
+    ])
   })
 })
