@@ -59,6 +59,7 @@ export default {
     balanceToDate: 'Saldo a oggi',
     balanceYear: 'Saldo dell’anno',
     balanceHint: 'Solo ciò che è già avvenuto',
+    balanceScheduledHint: 'Solo entrate e uscite già registrate o programmate',
     projected: 'Previsto a fine anno',
     projectedHint: 'Comprese le uscite programmate fino a dicembre',
     projectedHintEstimate: 'Con le uscite fino a dicembre e le entrate stimate',

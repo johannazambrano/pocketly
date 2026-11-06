@@ -61,6 +61,7 @@ const en: typeof it = {
     balanceToDate: 'Balance to date',
     balanceYear: 'Balance for the year',
     balanceHint: 'Only what has already happened',
+    balanceScheduledHint: 'Only income and expenses already recorded or scheduled',
     projected: 'Projected at year end',
     projectedHint: 'Including scheduled expenses until December',
     projectedHintEstimate: 'With expenses until December and estimated income',

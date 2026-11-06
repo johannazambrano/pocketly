@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
-import { todayIso } from '@/utils/dates'
 import KpiCard from '@/components/KpiCard.vue'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
@@ -14,7 +13,7 @@ const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
 const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
-const upcoming = computed(() => upcomingCharges(finance.data, todayIso(), 30))
+const upcoming = computed(() => upcomingCharges(finance.data, finance.today, 30))
 
 /**
  * Una sola regola per tutta la dashboard: le card e le ripartizioni contano ciò che è già avvenuto,
@@ -69,7 +68,10 @@ const balanceLabel = computed(() => {
   return t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')
 })
 const balanceHint = computed(() => {
-  if (ms.value) return monthToDate.value ? t('dashboard.balanceHint') : undefined
+  if (ms.value) {
+    if (ms.value.timing === 'future') return t('dashboard.balanceScheduledHint')
+    return monthToDate.value ? t('dashboard.balanceHint') : undefined
+  }
   return isPastYear.value ? undefined : t('dashboard.balanceHint')
 })
 
