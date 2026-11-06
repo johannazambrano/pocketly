@@ -22,6 +22,6 @@ const { t, money, percent } = useFormat()
         ></div>
       </div>
     </div>
-    <p v-if="!totals.length" class="text-xs text-slate-400">{{ emptyText }}</p>
+    <p v-if="!totals.length" class="text-xs text-slate-500">{{ emptyText }}</p>
   </div>
 </template>

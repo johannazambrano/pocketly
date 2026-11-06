@@ -35,7 +35,7 @@ const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
       >
         <div class="px-4 py-3 md:py-5">
           <h3 class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</h3>
-          <p class="mt-1 text-lg font-bold whitespace-nowrap text-emerald-600">{{ money(income.value) }}</p>
+          <p class="mt-1 text-lg font-bold whitespace-nowrap text-emerald-700">{{ money(income.value) }}</p>
           <p v-if="income.hint" class="mt-1 text-xs leading-snug text-slate-500">{{ income.hint }}</p>
         </div>
         <div class="border-l border-slate-100 px-4 py-3 md:py-5">

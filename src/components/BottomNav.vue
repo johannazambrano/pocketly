@@ -43,7 +43,7 @@ const barItem =
     <div v-if="moreOpen" class="fixed inset-0 z-30 md:hidden" @click="moreOpen = false"></div>
     <div class="pb-safe px-safe fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white shadow-lg md:hidden">
       <div class="mx-auto flex max-w-xl">
-        <RouterLink v-for="tab in mainTabs" :key="tab.name" :to="tab.path" :class="barItem" exact-active-class="!text-emerald-600 font-bold">
+        <RouterLink v-for="tab in mainTabs" :key="tab.name" :to="tab.path" :class="barItem" exact-active-class="!text-emerald-700 font-bold">
           <i class="fa-solid text-lg" :class="tab.icon"></i>
           <span class="w-full truncate text-center">{{ t(`nav.${tab.name}`) }}</span>
         </RouterLink>
@@ -52,7 +52,7 @@ const barItem =
           <button
             type="button"
             class="w-full"
-            :class="[barItem, moreActive || moreOpen ? '!text-emerald-600 font-bold' : '']"
+            :class="[barItem, moreActive || moreOpen ? '!text-emerald-700 font-bold' : '']"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             @click="moreOpen = !moreOpen"

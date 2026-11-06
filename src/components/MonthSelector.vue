@@ -13,11 +13,11 @@ const isCurrentYear = computed(() => finance.selectedYear === todayParts.value.y
 </script>
 
 <template>
-  <div class="flex items-center gap-1.5">
+  <div class="flex min-w-0 items-center gap-1.5">
     <button
       v-if="isCurrentYear && finance.selectedMonth !== currentMonth"
       type="button"
-      class="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors shrink-0"
+      class="inline-flex min-h-10 shrink-0 items-center rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
       :title="t('dashboard.currentMonth')"
       @click="finance.selectedMonth = currentMonth"
     >
@@ -25,7 +25,7 @@ const isCurrentYear = computed(() => finance.selectedYear === todayParts.value.y
     </button>
     <select
       v-model="finance.selectedMonth"
-      class="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 focus:border-emerald-500"
+      class="h-10 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
       :aria-label="t('dashboard.filterMonth')"
     >
       <option value="all">{{ t('dashboard.allMonths') }}</option>

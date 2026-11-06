@@ -20,7 +20,7 @@ const ui = useUiStore()
         <select
           v-model.number="finance.selectedYear"
           :aria-label="t('app.year')"
-          class="h-10 rounded-lg border border-slate-700 bg-slate-800 px-2 text-sm font-bold text-emerald-400 outline-none"
+          class="h-10 rounded-lg border border-slate-700 bg-slate-800 px-2 text-sm font-bold text-emerald-400"
         >
           <option v-for="y in finance.years" :key="y" :value="y">{{ y }}</option>
         </select>

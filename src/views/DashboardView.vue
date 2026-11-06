@@ -136,14 +136,14 @@ const detailCards = computed(() => {
   if (ms.value) {
     return [
       { key: 'recurring', label: t('dashboard.recurringInMonth'), value: ms.value.recurringInMonth, color: 'text-indigo-600', hint: t('dashboard.recurringInMonthHint') },
-      { key: 'variable', label: t('dashboard.oneTimeInMonth', monthArgs.value), value: ms.value.oneTimeTotal, color: 'text-orange-600', hint: t('dashboard.oneTimeInMonthHint') },
+      { key: 'variable', label: t('dashboard.oneTimeInMonth', monthArgs.value), value: ms.value.oneTimeTotal, color: 'text-orange-700', hint: t('dashboard.oneTimeInMonthHint') },
     ]
   }
   const cards = [
     { key: 'recurring', label: t('dashboard.monthlyRecurring'), value: Math.round(s.value.monthlyRecurring), color: 'text-indigo-600', hint: t('dashboard.monthlyRecurringHint') },
   ]
   const v = finance.variableThisMonth
-  if (v) cards.push({ key: 'variable', label: variableLabel.value, value: v.total, color: 'text-orange-600', hint: variableHint.value ?? '' })
+  if (v) cards.push({ key: 'variable', label: variableLabel.value, value: v.total, color: 'text-orange-700', hint: variableHint.value ?? '' })
   return cards
 })
 
@@ -155,7 +155,7 @@ const showUpcoming = computed(
 
 <template>
   <section class="space-y-4">
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-lg font-bold text-slate-800">{{ t('dashboard.title') }}</h2>
       <MonthSelector />
     </div>
@@ -183,12 +183,12 @@ const showUpcoming = computed(
           <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 py-1.5">
             <div class="min-w-0">
               <div class="truncate font-medium">{{ c.name }}</div>
-              <div class="text-xs text-slate-400">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
+              <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
             </div>
             <span class="shrink-0 font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
           </li>
         </ul>
-        <p v-else class="text-xs text-slate-400">{{ t('dashboard.noUpcoming') }}</p>
+        <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
       </div>
 
       <div class="card space-y-3">
