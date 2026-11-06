@@ -17,6 +17,11 @@ describe('formatCents', () => {
   it('formatta in euro', () => {
     expect(formatCents(12345678, 'it-IT').replace(/\s/g, ' ')).toBe('123.456,78 €')
   })
+  it('separa le migliaia anche sotto 10.000', () => {
+    expect(formatCents(272430, 'it-IT').replace(/\s/g, ' ')).toBe('2.724,30 €')
+    expect(formatCents(-128019, 'it-IT').replace(/\s/g, ' ')).toBe('-1.280,19 €')
+    expect(formatCents(99999, 'it-IT').replace(/\s/g, ' ')).toBe('999,99 €')
+  })
 })
 
 describe('date', () => {

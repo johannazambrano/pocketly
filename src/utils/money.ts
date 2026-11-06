@@ -16,7 +16,9 @@ const formatters = new Map<string, Intl.NumberFormat>()
 export function formatCents(cents: Cents, locale: string): string {
   let f = formatters.get(locale)
   if (!f) {
-    f = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' })
+    // Separatore delle migliaia sempre: in italiano Intl lo omette sotto 10.000 ("2724,30 €" accanto a "15.395,70 €").
+    // 'always' non è ancora nei tipi della lib TypeScript usata dal progetto; i browser più vecchi lo leggono come `true`.
+    f = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', useGrouping: 'always' as unknown as boolean })
     formatters.set(locale, f)
   }
   return f.format(cents / 100)

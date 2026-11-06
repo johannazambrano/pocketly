@@ -4,8 +4,8 @@ defineProps<{ label: string; value: string; color: string; hint?: string }>()
 
 <template>
   <div class="card">
-    <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{{ label }}</p>
-    <p class="mt-1 truncate text-lg font-bold" :class="color">{{ value }}</p>
-    <p v-if="hint" class="mt-0.5 text-[11px] leading-tight whitespace-pre-line text-slate-400">{{ hint }}</p>
+    <p class="text-xs font-medium text-balance text-slate-500">{{ label }}</p>
+    <p class="mt-1 text-lg font-bold whitespace-nowrap" :class="color">{{ value }}</p>
+    <p v-if="hint" class="mt-1 text-xs leading-snug whitespace-pre-line text-slate-400">{{ hint }}</p>
   </div>
 </template>

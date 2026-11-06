@@ -183,7 +183,7 @@ const showUpcoming = computed(
           <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 py-1.5">
             <div class="min-w-0">
               <div class="truncate font-medium">{{ c.name }}</div>
-              <div class="text-[11px] text-slate-400">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
+              <div class="text-xs text-slate-400">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
             </div>
             <span class="shrink-0 font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
           </li>

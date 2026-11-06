@@ -11,6 +11,8 @@
   }
   body {
     @apply min-h-dvh font-sans antialiased;
+    /* Cifre tutte della stessa larghezza: gli importi si incolonnano e non "ballano" quando cambiano. */
+    font-variant-numeric: tabular-nums;
   }
   input,
   select {
