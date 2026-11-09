@@ -7,7 +7,8 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-2">
+  <!-- Se titolo e controlli non stanno su una riga, i controlli vanno sotto invece di uscire dallo schermo. -->
+  <div class="flex flex-wrap items-center justify-between gap-2">
     <h2 class="text-lg font-bold text-slate-800">{{ title }}</h2>
     <slot>
       <button v-if="addLabel !== undefined" type="button" class="btn-primary" @click="emit('add')">
