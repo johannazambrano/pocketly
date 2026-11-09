@@ -12,9 +12,24 @@ interface Figure {
   hint?: string
 }
 
-defineProps<{ balance: Figure; income: Figure; expenses: Figure; projection?: Figure | null }>()
+/** Una parte delle uscite: ricorrenti o variabili, con il colore del suo pallino e una nota facoltativa. */
+interface Part {
+  key: string
+  label: string
+  value: number
+  dot: string
+  note?: string
+}
 
-const { money } = useFormat()
+const props = defineProps<{ balance: Figure; income: Figure; expenses: Figure; projection?: Figure | null; split?: Part[] | null }>()
+
+const { t, money } = useFormat()
+
+/** Larghezza di ogni parte nella barretta, in proporzione al totale delle parti (che coincide con le uscite mostrate). */
+const width = (value: number) => {
+  const total = (props.split ?? []).reduce((acc, p) => acc + p.value, 0)
+  return `${total > 0 ? (value / total) * 100 : 0}%`
+}
 
 const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
 /** La riga della previsione ha lo sfondo grigio chiaro: serve la tonalità più scura per restare sopra 4,5:1. */
@@ -46,6 +61,23 @@ const projectionColor = (v: number) => (v >= 0 ? 'text-blue-700' : 'text-rose-70
           <p v-if="expenses.hint" class="mt-1 text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
         </div>
       </div>
+    </div>
+
+    <!-- Di cui: le uscite mostrate sopra, divise tra ricorrenti e variabili. Le due parti sommano sempre il totale. -->
+    <div v-if="split?.length" class="border-t border-slate-100 px-4 py-3">
+      <h3 class="text-xs font-medium text-slate-500">{{ t('dashboard.splitTitle') }}</h3>
+      <div class="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+        <div v-for="part in split" :key="part.key" class="h-full first:rounded-l-full last:rounded-r-full" :class="part.dot" :style="{ width: width(part.value) }"></div>
+      </div>
+      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+        <div v-for="part in split" :key="part.key" class="min-w-0">
+          <dt class="flex items-center gap-1.5 text-xs text-slate-600">
+            <span class="h-2 w-2 shrink-0 rounded-full" :class="part.dot" aria-hidden="true"></span>{{ part.label }}
+          </dt>
+          <dd class="text-sm font-semibold whitespace-nowrap text-slate-800">{{ money(part.value) }}</dd>
+          <dd v-if="part.note" class="text-xs leading-snug text-slate-500">{{ part.note }}</dd>
+        </div>
+      </dl>
     </div>
 
     <div

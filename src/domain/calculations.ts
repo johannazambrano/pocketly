@@ -20,6 +20,9 @@ export interface YearSummary {
   /** Quanto è già successo: solo movimenti con data fino a oggi (per un anno passato, tutto l'anno). */
   incomeToDate: Cents
   expensesToDate: Cents
+  /** Le due parti di `expensesToDate`: spese una tantum e addebiti ricorrenti già avvenuti. */
+  oneTimeToDate: Cents
+  recurringToDate: Cents
   balanceToDate: Cents
   /** Entrate dell'anno più, se attivata, la stima dei mesi da oggi in poi. */
   projectedIncome: Cents
@@ -194,7 +197,8 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
   const totalExpenses = oneTimeTotal + recurringInPeriod
 
   const incomeToDate = sum(incomes.filter((i) => i.date <= cutoff).map((i) => i.amount))
-  const expensesToDate = sum(oneTime.filter((e) => e.date <= cutoff).map((e) => e.amount)) + recurringToDate
+  const oneTimeToDate = sum(oneTime.filter((e) => e.date <= cutoff).map((e) => e.amount))
+  const expensesToDate = oneTimeToDate + recurringToDate
   const projectedIncome = sum([...incomeByMonth(data, year, today).values()].map((v) => v.income))
 
   return {
@@ -205,6 +209,8 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
     totalExpenses,
     incomeToDate,
     expensesToDate,
+    oneTimeToDate,
+    recurringToDate,
     balanceToDate: incomeToDate - expensesToDate,
     projectedIncome,
     projectedBalance: projectedIncome - totalExpenses,
@@ -273,6 +279,9 @@ export interface MonthSummary {
   /** Solo ciò che è già avvenuto: per un mese passato coincide con il totale, per uno futuro è zero. */
   incomeToDate: Cents
   expensesToDate: Cents
+  /** Le due parti di `expensesToDate`: spese una tantum e addebiti ricorrenti già avvenuti. */
+  oneTimeToDate: Cents
+  recurringToDate: Cents
   balanceToDate: Cents
   byCategoryToDate: TagTotal[]
   byPaymentMethodToDate: TagTotal[]
@@ -306,7 +315,9 @@ export function monthSummary(data: FinanceData, year: number, month: number, tod
   const incomes = inMonth(data.incomes)
   const income = sum(incomes.map((i) => i.amount))
   const incomeToDate = sum(incomes.filter((i) => i.date <= cutoff).map((i) => i.amount))
-  const oneTimeTotal = sum(inMonth(data.oneTimeExpenses).map((e) => e.amount))
+  const oneTime = inMonth(data.oneTimeExpenses)
+  const oneTimeTotal = sum(oneTime.map((e) => e.amount))
+  const oneTimeToDate = sum(oneTime.filter((e) => e.date <= cutoff).map((e) => e.amount))
 
   const expenses = breakdown.totalExpenses
   const expensesToDate = breakdownToDate.totalExpenses
@@ -323,6 +334,8 @@ export function monthSummary(data: FinanceData, year: number, month: number, tod
     byPaymentMethod: breakdown.byPaymentMethod,
     incomeToDate,
     expensesToDate,
+    oneTimeToDate,
+    recurringToDate: expensesToDate - oneTimeToDate,
     balanceToDate: incomeToDate - expensesToDate,
     byCategoryToDate: breakdownToDate.byCategory,
     byPaymentMethodToDate: breakdownToDate.byPaymentMethod,
@@ -359,6 +372,8 @@ export interface VariableSpending {
   month: number
   /** Spese una tantum del mese di oggi. */
   total: Cents
+  /** Solo quelle con data fino a oggi: il mese non è ancora finito. */
+  toDate: Cents
   /** Media mensile delle spese una tantum dei mesi precedenti dell'anno, o null se non ce ne sono. */
   previousAverage: Cents | null
 }
@@ -378,6 +393,7 @@ export function variableSpending(data: FinanceData, today: string): VariableSpen
   return {
     month: t.month,
     total: ofMonth(t.month),
+    toDate: sum(oneTime.filter((e) => e.date <= today && parseIsoDate(e.date).month === t.month).map((e) => e.amount)),
     previousAverage: previous.length ? Math.round(sum(previous) / previous.length) : null,
   }
 }

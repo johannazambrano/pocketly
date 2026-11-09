@@ -84,6 +84,8 @@ describe('yearSummary', () => {
 
   it('le ripartizioni "a oggi" tornano con le uscite a oggi', () => {
     const s = yearSummary(sample(), 2026, TODAY)
+    expect(s.oneTimeToDate + s.recurringToDate).toBe(s.expensesToDate)
+    expect(s.oneTimeToDate).toBe(5000)
     const sumOf = (rows: { total: number }[]) => rows.reduce((acc, r) => acc + r.total, 0)
     expect(sumOf(s.byCategoryToDate)).toBe(s.expensesToDate)
     expect(sumOf(s.byPaymentMethodToDate)).toBe(s.expensesToDate)
@@ -237,23 +239,23 @@ describe('variableSpending', () => {
       spend('f', '2025-12-31', 99999), // altro anno: non conta
     )
     // mesi precedenti dal primo movimento: marzo 100, aprile 200, maggio 0 → media 100
-    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 35000, previousAverage: 10000 })
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 35000, toDate: 30000, previousAverage: 10000 })
   })
 
   it('i mesi prima del primo movimento non fanno media', () => {
     const d = createEmptyData()
     d.oneTimeExpenses.push(spend('a', '2026-05-10', 20000), spend('b', '2026-06-02', 5000))
-    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, previousAverage: 20000 })
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, toDate: 5000, previousAverage: 20000 })
   })
 
   it('il primo mese non ha una media di confronto', () => {
     const d = createEmptyData()
     d.oneTimeExpenses.push(spend('a', '2026-06-02', 5000))
-    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, previousAverage: null })
+    expect(variableSpending(d, '2026-06-15')).toEqual({ month: 5, total: 5000, toDate: 5000, previousAverage: null })
   })
 
   it('senza spese il mese vale 0', () => {
-    expect(variableSpending(createEmptyData(), '2026-06-15')).toEqual({ month: 5, total: 0, previousAverage: null })
+    expect(variableSpending(createEmptyData(), '2026-06-15')).toEqual({ month: 5, total: 0, toDate: 0, previousAverage: null })
   })
 })
 
@@ -335,6 +337,8 @@ describe('monthSummary', () => {
     const res = monthSummary(d, 2026, 10, '2026-11-05')
     expect(res.timing).toBe('current')
     expect(res.expensesToDate).toBe(70000 + 4000)
+    expect(res.oneTimeToDate).toBe(4000)
+    expect(res.recurringToDate).toBe(70000)
     expect(res.expenses).toBe(70000 + 4000 + 6000)
     expect(res.incomeToDate).toBe(0)
     expect(res.balanceToDate).toBe(-74000)

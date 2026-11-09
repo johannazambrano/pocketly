@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
-import KpiCard from '@/components/KpiCard.vue'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -105,20 +104,6 @@ const categoryEmptyText = computed(() => {
   return t('dashboard.emptyMonth', monthArgs.value)
 })
 
-/** In italiano il mese va in minuscolo ("di ottobre"), in inglese resta maiuscolo ("in October"). */
-const variableLabel = computed(() => {
-  const v = finance.variableThisMonth
-  if (!v) return ''
-  const name = month(v.month)
-  return t('dashboard.variable', { month: locale.value === 'it' ? name.toLocaleLowerCase('it') : name })
-})
-const variableHint = computed(() => {
-  const v = finance.variableThisMonth
-  if (!v) return undefined
-  const note = t('dashboard.variableNote')
-  return v.previousAverage === null ? note : `${note}\n${t('dashboard.variableHint', { amount: money(v.previousAverage) })}`
-})
-
 /** Il riquadro principale: saldo in primo piano, entrate e uscite che lo spiegano, previsione in fondo. */
 const balanceFigure = computed(() => ({ label: balanceLabel.value, value: displayBalance.value, hint: balanceHint.value }))
 const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value }))
@@ -140,20 +125,41 @@ const projectionFigure = computed(() => {
   }
 })
 
-/** Il dettaglio delle uscite, un livello sotto: ricorrenti e spese variabili, sempre affiancate. */
-const detailCards = computed(() => {
-  if (ms.value) {
-    return [
-      { key: 'recurring', label: t('dashboard.recurringInMonth'), value: ms.value.recurringInMonth, color: 'text-indigo-600', hint: t('dashboard.recurringInMonthHint') },
-      { key: 'variable', label: t('dashboard.oneTimeInMonth', monthArgs.value), value: ms.value.oneTimeTotal, color: 'text-orange-700', hint: t('dashboard.oneTimeInMonthHint') },
-    ]
-  }
-  const cards = [
-    { key: 'recurring', label: t('dashboard.monthlyRecurring'), value: Math.round(s.value.monthlyRecurring), color: 'text-indigo-600', hint: t('dashboard.monthlyRecurringHint') },
-  ]
+/** In italiano il mese va in minuscolo ("a novembre"), in inglese resta maiuscolo ("in November"). */
+const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLowerCase('it') : month(m))
+
+/**
+ * Le uscite mostrate nel riquadro, divise tra ricorrenti e variabili: le due parti sommano sempre il totale.
+ * Se una parte è zero la divisione ripeterebbe il totale, quindi non si mostra.
+ * Le note conservano i due confronti utili: il costo medio mensile delle ricorrenti e le variabili del mese
+ * di oggi rispetto alla media dei mesi precedenti ("finora", perché il mese non è finito).
+ */
+const expensesSplit = computed(() => {
+  const m = ms.value
+  const recurring = m ? (monthToDate.value ? m.recurringToDate : m.recurringInMonth) : s.value.recurringToDate
+  const variable = m ? (monthToDate.value ? m.oneTimeToDate : m.oneTimeTotal) : s.value.oneTimeToDate
+  if (recurring <= 0 || variable <= 0) return null
+
   const v = finance.variableThisMonth
-  if (v) cards.push({ key: 'variable', label: variableLabel.value, value: v.total, color: 'text-orange-700', hint: variableHint.value ?? '' })
-  return cards
+  let recurringNote: string | undefined
+  let variableNote: string | undefined
+  if (!m) {
+    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(Math.round(s.value.monthlyRecurring)) })
+    if (v) {
+      const args = { month: monthName(v.month), amount: money(v.toDate) }
+      variableNote =
+        v.previousAverage === null
+          ? t('dashboard.splitVariableSoFar', args)
+          : t('dashboard.splitVariableSoFarAverage', { ...args, average: money(v.previousAverage) })
+    }
+  } else if (monthToDate.value && v && v.previousAverage !== null) {
+    variableNote = t('dashboard.splitVariableAverage', { amount: money(v.previousAverage) })
+  }
+
+  return [
+    { key: 'recurring', label: t('dashboard.splitRecurring'), value: recurring, dot: 'bg-indigo-500', note: recurringNote },
+    { key: 'variable', label: t('dashboard.splitVariable'), value: variable, dot: 'bg-orange-500', note: variableNote },
+  ]
 })
 
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
@@ -169,19 +175,13 @@ const showUpcoming = computed(
       <MonthSelector />
     </div>
 
-    <BalancePanel :balance="balanceFigure" :income="incomeFigure" :expenses="expensesFigure" :projection="projectionFigure" />
-
-    <div class="grid grid-cols-2 gap-3">
-      <KpiCard
-        v-for="card in detailCards"
-        :key="card.key"
-        :class="detailCards.length === 1 ? 'col-span-2' : ''"
-        :label="card.label"
-        :value="money(card.value)"
-        :color="card.color"
-        :hint="card.hint"
-      />
-    </div>
+    <BalancePanel
+      :balance="balanceFigure"
+      :income="incomeFigure"
+      :expenses="expensesFigure"
+      :split="expensesSplit"
+      :projection="projectionFigure"
+    />
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
