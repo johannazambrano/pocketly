@@ -33,8 +33,12 @@ watch(moreOpen, (open) => {
 })
 onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
+/**
+ * Cinque voci su 320px lasciano circa 64px ciascuna: margine minimo e lettere un po' più strette perché anche
+ * "Dashboard" in grassetto (voce attiva) stia per intero.
+ */
 const barItem =
-  'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] text-slate-500 transition hover:text-emerald-600'
+  'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] tracking-tight text-slate-500 transition hover:text-emerald-600'
 </script>
 
 <template>
