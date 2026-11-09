@@ -100,7 +100,7 @@ function open(item: OneTimeExpense | null) {
 <template>
   <section class="space-y-4">
     <PageHeader :title="t('onetime.title')">
-      <div class="flex flex-wrap items-center justify-end gap-2">
+      <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
         <MonthSelector />
         <button type="button" class="btn-primary" @click="open(null)">
           <i class="fa-solid fa-plus mr-1"></i> {{ t('app.add') }}

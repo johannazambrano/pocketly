@@ -63,7 +63,7 @@ const arrow =
 </script>
 
 <template>
-  <div class="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+  <div class="flex min-w-0 items-center justify-end gap-1.5">
     <!--
       Su schermi larghi il pulsante tiene sempre il suo posto, così il menu non si sposta quando compare o sparisce.
       Sul telefono lo spazio è poco: il pulsante mostra solo l'icona e, quando non serve, sparisce del tutto.

@@ -173,8 +173,12 @@ const showUpcoming = computed(
 
 <template>
   <section class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-lg font-bold text-slate-800">{{ t('dashboard.title') }}</h2>
+    <!--
+      La dashboard è la pagina iniziale e la voce attiva del menu dice già dove si è: il titolo resta solo per i lettori
+      di schermo, e il filtro del mese prende la riga intera.
+    -->
+    <div class="flex items-center justify-end">
+      <h2 class="sr-only">{{ t('dashboard.title') }}</h2>
       <MonthSelector />
     </div>
 
