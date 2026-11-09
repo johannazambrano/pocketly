@@ -61,15 +61,15 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
 
         <div class="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5 text-center">
           <div>
-            <p class="text-[11px] text-slate-500 uppercase">{{ t('common.total') }}</p>
+            <p class="text-xs text-slate-500">{{ t('common.total') }}</p>
             <p class="font-bold text-slate-800">{{ money(loan.amount) }}</p>
           </div>
           <div>
-            <p class="text-[11px] text-slate-500 uppercase">{{ t('loans.repaid') }}</p>
+            <p class="text-xs text-slate-500">{{ t('loans.repaid') }}</p>
             <p class="font-bold text-emerald-600">{{ money(loanStatus(loan).repaid) }}</p>
           </div>
           <div>
-            <p class="text-[11px] text-slate-500 uppercase">{{ t('loans.remaining') }}</p>
+            <p class="text-xs text-slate-500">{{ t('loans.remaining') }}</p>
             <p v-if="loanStatus(loan).remaining > 0" class="font-bold text-rose-600">{{ money(loanStatus(loan).remaining) }}</p>
             <p v-else class="font-bold text-slate-400"><i class="fa-solid fa-check mr-1"></i>{{ t('loans.settled') }}</p>
           </div>

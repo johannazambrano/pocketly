@@ -83,7 +83,7 @@ function suggest() {
         <template v-else>
           <div class="card space-y-3">
             <div class="flex items-baseline justify-between gap-2">
-              <p class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">{{ t('budget.summary') }}</p>
+              <p class="text-xs font-medium text-slate-500">{{ t('budget.summary') }}</p>
               <p v-if="b.status === 'warning'" class="text-xs font-semibold text-amber-600">{{ t('budget.nearLimit') }}</p>
             </div>
             <p class="text-2xl font-bold" :class="TEXT[b.status]">{{ remainingText(b.totalRemaining) }}</p>

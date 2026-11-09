@@ -11,7 +11,7 @@ defineProps<{ empty: boolean; emptyText: string; totalLabel: string; total: stri
       <li v-if="empty" class="p-4 text-center text-xs text-slate-400">{{ emptyText }}</li>
     </ul>
     <div class="flex justify-between border-t border-slate-200 bg-slate-50 p-3 text-sm font-bold">
-      <span class="uppercase">{{ totalLabel }}</span>
+      <span>{{ totalLabel }}</span>
       <span class="text-emerald-600">{{ total }}</span>
     </div>
   </div>

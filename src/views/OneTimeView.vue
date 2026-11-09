@@ -167,7 +167,7 @@ function open(item: OneTimeExpense | null) {
       <!-- Card Riepilogo Raggruppato per Tag (comprimibile) -->
       <div v-if="showBreakdown && tagBreakdown.length > 0" class="card space-y-3">
         <div class="flex items-center justify-between">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h3 class="text-sm font-semibold text-slate-700">
             {{ t('onetime.tagSummary') }}
           </h3>
           <span class="text-xs text-slate-400">{{ tagBreakdown.length }} tag</span>
