@@ -96,6 +96,15 @@ const en: typeof it = {
     projectedMonthHint: 'Including all of this month’s expenses',
     projectedMonthHintEstimate: 'With all of this month’s expenses and estimated income ({amount})',
   },
+  welcome: {
+    title: 'Getting started',
+    intro: 'Pocketly tells you how much you have left today and where you will end up at the end of the month and the year, putting together income, fixed costs and everyday spending.',
+    start: 'It is best to start with what repeats: your salary and fixed costs like rent, bills and subscriptions. If your data is already in an Excel file or a backup, you can import it.',
+    addIncome: 'Add income',
+    addRecurring: 'Add a recurring expense',
+    import: 'Import from Excel or a backup',
+    dailyHint: 'Add everyday spending with the + at the top. This box goes away as soon as there is some data.',
+  },
   onetime: {
     title: 'Variable expenses',
     new: 'New variable expense',

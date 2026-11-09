@@ -7,11 +7,17 @@ import { yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
+import WelcomePanel from '@/components/WelcomePanel.vue'
 
 const finance = useFinanceStore()
 const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
+/** App ancora vuota: niente saldi a zero, solo il benvenuto con i primi passi. */
+const isEmpty = computed(() => {
+  const d = finance.data
+  return !d.incomes.length && !d.oneTimeExpenses.length && !d.recurringExpenses.length && !d.loans.length
+})
 /** Tutta la pagina usa lo stesso "oggi" del negozio, che si aggiorna quando l'app torna in primo piano. */
 const currentYear = computed(() => yearOf(finance.today))
 const isPastYear = computed(() => finance.selectedYear < currentYear.value)
@@ -177,46 +183,50 @@ const showUpcoming = computed(
       La dashboard è la pagina iniziale e la voce attiva del menu dice già dove si è: il titolo resta solo per i lettori
       di schermo, e il filtro del mese prende la riga intera.
     -->
-    <div class="flex items-center justify-end">
-      <h2 class="sr-only">{{ t('dashboard.title') }}</h2>
-      <MonthSelector />
-    </div>
+    <h2 class="sr-only">{{ t('dashboard.title') }}</h2>
+    <WelcomePanel v-if="isEmpty" />
 
-    <BalancePanel
-      :balance="balanceFigure"
-      :income="incomeFigure"
-      :expenses="expensesFigure"
-      :split="expensesSplit"
-      :projection="projectionFigure"
-    />
-
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
-        <h3 class="text-sm font-semibold text-slate-700">
-          <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
-        </h3>
-        <!-- Su schermi larghi due colonne: l'importo resta vicino al suo nome invece che all'altro capo della pagina. -->
-        <ul v-if="upcoming.length" class="grid gap-x-8 md:grid-cols-2">
-          <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 md:[&:nth-child(odd):nth-last-child(2)]:border-b-0">
-            <div class="min-w-0">
-              <div class="truncate text-sm font-medium">{{ c.name }}</div>
-              <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
-            </div>
-            <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
-          </li>
-        </ul>
-        <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
+    <template v-else>
+      <div class="flex items-center justify-end">
+        <MonthSelector />
       </div>
 
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
-        <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
-      </div>
+      <BalancePanel
+        :balance="balanceFigure"
+        :income="incomeFigure"
+        :expenses="expensesFigure"
+        :split="expensesSplit"
+        :projection="projectionFigure"
+      />
 
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
-        <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
+          <h3 class="text-sm font-semibold text-slate-700">
+            <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
+          </h3>
+          <!-- Su schermi larghi due colonne: l'importo resta vicino al suo nome invece che all'altro capo della pagina. -->
+          <ul v-if="upcoming.length" class="grid gap-x-8 md:grid-cols-2">
+            <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 md:[&:nth-child(odd):nth-last-child(2)]:border-b-0">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-medium">{{ c.name }}</div>
+                <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
+              </div>
+              <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
+            </li>
+          </ul>
+          <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
+        </div>
+
+        <div class="card space-y-3">
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
+          <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+        </div>
+
+        <div class="card space-y-3">
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
+          <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+        </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>

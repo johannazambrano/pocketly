@@ -94,6 +94,15 @@ export default {
     projectedMonthHint: 'Con tutte le uscite del mese',
     projectedMonthHintEstimate: 'Con tutte le uscite del mese e le entrate stimate ({amount})',
   },
+  welcome: {
+    title: 'Per cominciare',
+    intro: 'Pocketly ti dice quanto ti resta oggi e dove arriverai a fine mese e a fine anno, mettendo insieme entrate, spese fisse e spese di tutti i giorni.',
+    start: 'Conviene partire da ciò che si ripete: lo stipendio e le spese fisse come affitto, bollette e abbonamenti. Se hai già i dati in un file Excel o in un backup, puoi importarli.',
+    addIncome: 'Aggiungi un’entrata',
+    addRecurring: 'Aggiungi una spesa ricorrente',
+    import: 'Importa da Excel o da un backup',
+    dailyHint: 'Le spese di tutti i giorni le aggiungi con il + in alto. Questo riquadro sparisce appena c’è il primo dato.',
+  },
   onetime: {
     title: 'Spese variabili',
     new: 'Nuova spesa variabile',
