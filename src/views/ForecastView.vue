@@ -21,21 +21,18 @@ watch(firstSimMonth, (m) => (sim.month = m), { immediate: true })
 // --- stima facoltativa delle entrate future -------------------------------
 
 const settings = computed(() => finance.data.forecast)
-const chosenCategories = computed(() => new Set(settings.value.incomeCategoryIds))
-const SALARY_NAMES = ['stipendio', 'salary']
+/** Le categorie mostrate come scelte sono quelle davvero usate, anche quando le sceglie l'app in automatico. */
+const chosenCategories = computed(() => new Set(finance.estimateCategories))
+const automatic = computed(() => !settings.value.incomeCategoryIds.length)
 
 function toggleEstimate(on: boolean) {
-  if (on && !settings.value.incomeCategoryIds.length) {
-    // Prima attivazione: propone la categoria dello stipendio, se esiste.
-    const guess = finance.data.categories.filter((c) => SALARY_NAMES.includes(c.name.trim().toLowerCase())).map((c) => c.id)
-    finance.setForecastSettings({ estimateIncome: true, incomeCategoryIds: guess })
-  } else {
-    finance.setForecastSettings({ estimateIncome: on })
-  }
+  // Da qui in poi vale la scelta dell'utente, anche quando spegne la stima accesa di serie.
+  finance.setForecastSettings({ estimateIncome: on, estimateChosen: true })
 }
 
 function toggleCategory(id: string) {
-  const ids = settings.value.incomeCategoryIds
+  // Toccare una categoria fissa la scelta: si parte da quelle in uso, anche se erano automatiche.
+  const ids = finance.estimateCategories
   finance.setForecastSettings({ incomeCategoryIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] })
 }
 
@@ -114,7 +111,8 @@ function addSimulation() {
                 <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: c.color }"></span>{{ c.name }}
               </label>
             </div>
-            <p v-if="!settings.incomeCategoryIds.length" class="text-xs text-amber-700">{{ t('forecast.estimateNeedCategory') }}</p>
+            <p v-if="!chosenCategories.size" class="text-xs text-amber-700">{{ t('forecast.estimateNeedCategory') }}</p>
+            <p v-else-if="automatic" class="text-xs text-slate-500">{{ t('forecast.estimateAutomatic') }}</p>
             <p v-else-if="finance.estimatedMonthlyIncome > 0" class="text-xs text-emerald-700">
               {{ t('forecast.estimateBasis', { amount: money(finance.estimatedMonthlyIncome), n: ESTIMATE_MONTHS }) }}
             </p>

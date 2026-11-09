@@ -17,6 +17,8 @@ defineProps<{ balance: Figure; income: Figure; expenses: Figure; projection?: Fi
 const { money } = useFormat()
 
 const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
+/** La riga della previsione ha lo sfondo grigio chiaro: serve la tonalità più scura per restare sopra 4,5:1. */
+const projectionColor = (v: number) => (v >= 0 ? 'text-blue-700' : 'text-rose-700')
 </script>
 
 <template>
@@ -51,7 +53,7 @@ const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
       class="grid grid-cols-[1fr_auto] items-baseline gap-x-4 border-t border-slate-100 bg-slate-50 px-4 py-3"
     >
       <h3 class="text-sm font-semibold text-slate-700">{{ projection.label }}</h3>
-      <p class="text-lg font-bold whitespace-nowrap" :class="signColor(projection.value)">{{ money(projection.value) }}</p>
+      <p class="text-lg font-bold whitespace-nowrap" :class="projectionColor(projection.value)">{{ money(projection.value) }}</p>
       <p v-if="projection.hint" class="col-span-2 text-xs text-slate-500">{{ projection.hint }}</p>
     </div>
   </section>

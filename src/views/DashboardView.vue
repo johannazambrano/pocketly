@@ -82,9 +82,13 @@ const balanceHint = computed(() => {
 const showMonthProjection = computed(
   () => !!ms.value && ms.value.timing !== 'past' && ms.value.projectedBalance !== displayBalance.value,
 )
-const monthProjectionHint = computed(() =>
-  t(finance.data.forecast.estimateIncome ? 'dashboard.projectedMonthHintEstimate' : 'dashboard.projectedMonthHint'),
-)
+/** Se la previsione comprende entrate stimate, la nota dice quanto valgono: è la parte del numero che non è ancora successa. */
+const monthProjectionHint = computed(() => {
+  const estimated = ms.value ? ms.value.projectedIncome - ms.value.income : 0
+  return estimated > 0
+    ? t('dashboard.projectedMonthHintEstimate', { amount: money(estimated) })
+    : t('dashboard.projectedMonthHint')
+})
 
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
 const categoryTotals = computed(() => {
@@ -129,7 +133,10 @@ const projectionFigure = computed(() => {
   return {
     label: t('dashboard.projected'),
     value: s.value.projectedBalance,
-    hint: t(finance.data.forecast.estimateIncome ? 'dashboard.projectedHintEstimate' : 'dashboard.projectedHint'),
+    hint:
+      finance.estimatedMonthlyIncome > 0
+        ? t('dashboard.projectedHintEstimate', { amount: money(finance.estimatedMonthlyIncome) })
+        : t('dashboard.projectedHint'),
   }
 })
 

@@ -77,14 +77,34 @@ function sortedTotals(map: Map<Id, Cents>): TagTotal[] {
 export const ESTIMATE_MONTHS = 3
 
 /**
+ * Categorie di entrata da stimare: quelle scelte dall'utente oppure, se non ne ha scelte, quelle che si
+ * ripetono, cioè presenti in almeno 2 dei 3 mesi prima di quello di oggi (es. lo stipendio).
+ * Un rimborso o un regalo occasionale non si ripete e resta fuori.
+ */
+export function estimateCategoryIds(data: FinanceData, today: string): Id[] {
+  if (data.forecast.incomeCategoryIds.length) return data.forecast.incomeCategoryIds
+  const t = parseIsoDate(today)
+  const now = monthIndex(t.year, t.month)
+  const monthsByCategory = new Map<Id, Set<number>>()
+  for (const i of data.incomes) {
+    const { year, month } = parseIsoDate(i.date)
+    const key = monthIndex(year, month)
+    if (key < now - 3 || key >= now) continue
+    if (!monthsByCategory.has(i.categoryId)) monthsByCategory.set(i.categoryId, new Set())
+    monthsByCategory.get(i.categoryId)!.add(key)
+  }
+  return [...monthsByCategory.entries()].filter(([, months]) => months.size >= 2).map(([id]) => id)
+}
+
+/**
  * Stima dell'entrata mensile: media degli ultimi mesi (fino a `ESTIMATE_MONTHS`) in cui ci sono state
  * entrate nelle categorie scelte dall'utente. Conta solo ciò che è già successo (data fino a oggi).
  * Restituisce 0 se la stima è disattivata, se non ci sono categorie o se non c'è ancora nulla su cui basarla.
  */
 export function estimateMonthlyIncome(data: FinanceData, today: string): Cents {
-  const { estimateIncome, incomeCategoryIds } = data.forecast
-  if (!estimateIncome || !incomeCategoryIds.length) return 0
-  const chosen = new Set(incomeCategoryIds)
+  if (!data.forecast.estimateIncome) return 0
+  const chosen = new Set(estimateCategoryIds(data, today))
+  if (!chosen.size) return 0
   const perMonth = new Map<number, Cents>()
   for (const i of data.incomes) {
     if (!chosen.has(i.categoryId) || i.date > today) continue
@@ -111,7 +131,7 @@ function incomeByMonth(data: FinanceData, year: number, today: string): Map<numb
   const t = parseIsoDate(today)
   const currentMonth = monthIndex(t.year, t.month)
   const estimate = estimateMonthlyIncome(data, today)
-  const chosen = new Set(data.forecast.incomeCategoryIds)
+  const chosen = new Set(estimateCategoryIds(data, today))
   const incomes = inYear(data.incomes, year)
 
   const result = new Map<number, IncomeOfMonth>()

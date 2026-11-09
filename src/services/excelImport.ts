@@ -12,6 +12,7 @@
  * - Non supportati e quindi ignorati: Tag, Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
  */
 import type { FinanceData, Frequency, Income, OneTimeExpense, RecurringExpense, Tag } from '@/types/models'
+import { defaultForecastSettings } from '@/domain/defaults'
 import { PALETTE } from '@/utils/colors'
 import { uuidv5 } from '@/utils/uuidv5'
 import { isCellDate, readWorkbook, type CellValue, type Sheet, type Workbook } from './xlsx/workbook'
@@ -325,7 +326,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     incomes,
     loans: [],
     simulations: [],
-    forecast: { estimateIncome: false, incomeCategoryIds: [] },
+    forecast: defaultForecastSettings(),
     budget: { limits: {} },
   }
 

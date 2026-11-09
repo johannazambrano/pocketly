@@ -180,9 +180,12 @@ function normalizeTags(source: unknown): Tag[] {
 function normalizeForecast(raw: unknown): ForecastSettings {
   const defaults = defaultForecastSettings()
   if (!isObj(raw)) return defaults
+  // Finché l'utente non ha scelto di persona, la stima è accesa (i dati salvati prima avevano "spenta" di serie).
+  const chosen = raw.estimateChosen === true
   return {
-    estimateIncome: raw.estimateIncome === true,
+    estimateIncome: chosen ? raw.estimateIncome === true : true,
     incomeCategoryIds: arr(raw.incomeCategoryIds).filter((x): x is string => typeof x === 'string'),
+    ...(chosen ? { estimateChosen: true } : {}),
   }
 }
 

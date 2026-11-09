@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -132,11 +132,37 @@ describe('entrate non ricorrenti', () => {
       return d
     }
 
-    it('è spenta di default e senza categorie non stima nulla', () => {
-      const d = sample()
+    it('senza entrate che si ripetono non stima nulla', () => {
+      // sample(): stipendi solo a marzo e aprile, nessuno nei 3 mesi prima di novembre
+      expect(estimateMonthlyIncome(sample(), TODAY)).toBe(0)
+    })
+
+    it('se spenta non stima nulla, anche con le categorie scelte', () => {
+      const d = withEstimate(sample())
+      d.forecast.estimateIncome = false
       expect(estimateMonthlyIncome(d, TODAY)).toBe(0)
-      d.forecast.estimateIncome = true
-      expect(estimateMonthlyIncome(d, TODAY)).toBe(0)
+    })
+
+    it('senza categorie scelte usa quelle che si ripetono in almeno 2 dei 3 mesi precedenti', () => {
+      const d = createEmptyData()
+      d.incomes.push(
+        salary('a', '2026-08-27', 180000),
+        salary('b', '2026-09-27', 180000),
+        salary('c', '2026-10-27', 180000),
+        gift('g', '2026-09-10', 50000),
+      )
+      expect(d.forecast).toMatchObject({ estimateIncome: true, incomeCategoryIds: [] })
+      expect(estimateCategoryIds(d, '2026-11-06')).toEqual(['salary'])
+      expect(estimateMonthlyIncome(d, '2026-11-06')).toBe(180000)
+      // Il previsto di novembre comprende lo stipendio atteso.
+      expect(monthSummary(d, 2026, 10, '2026-11-06').projectedIncome).toBe(180000)
+    })
+
+    it('le categorie scelte dall’utente prevalgono su quelle automatiche', () => {
+      const d = withEstimate(createEmptyData(), ['gift'])
+      d.incomes.push(salary('a', '2026-09-27', 180000), salary('b', '2026-10-27', 180000), gift('g', '2026-10-10', 50000))
+      expect(estimateCategoryIds(d, '2026-11-06')).toEqual(['gift'])
+      expect(estimateMonthlyIncome(d, '2026-11-06')).toBe(50000)
     })
 
     it('usa la media degli ultimi 3 mesi con entrate nelle categorie scelte', () => {

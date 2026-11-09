@@ -17,7 +17,8 @@ function toTags(names: string[], colorOffset = 0): Tag[] {
 }
 
 export function defaultForecastSettings(): ForecastSettings {
-  return { estimateIncome: false, incomeCategoryIds: [] }
+  // Accesa di serie: la previsione deve dire dove si arriverà, comprese le entrate che si ripetono.
+  return { estimateIncome: true, incomeCategoryIds: [] }
 }
 
 export function defaultBudgetSettings(): BudgetSettings {

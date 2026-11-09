@@ -84,13 +84,17 @@ export interface Simulation {
 }
 
 /**
- * Impostazioni della proiezione. Le entrate non sono ricorrenti: per default i mesi senza entrate
- * registrate valgono 0. La stima dei mesi futuri è facoltativa e usa solo le categorie scelte
- * (es. Stipendio), così regali e entrate occasionali non finiscono nelle previsioni.
+ * Impostazioni della proiezione. Le entrate non sono ricorrenti, ma per default si stimano quelle che si
+ * ripetono (es. lo stipendio) dal mese corrente in poi, così la previsione dice dove si arriverà davvero.
+ * Senza categorie scelte la stima usa quelle che si ripetono da sole (vedi `estimateCategoryIds`);
+ * regali ed entrate occasionali restano fuori.
  */
 export interface ForecastSettings {
   estimateIncome: boolean
+  /** Categorie scelte dall'utente; vuoto = scelta automatica tra le entrate che si ripetono. */
   incomeCategoryIds: Id[]
+  /** True quando l'utente ha acceso o spento la stima di persona: da lì in poi vale la sua scelta. */
+  estimateChosen?: boolean
 }
 
 /**

@@ -40,7 +40,7 @@ function emptyData(): FinanceData {
     incomes: [],
     loans: [],
     simulations: [],
-    forecast: { estimateIncome: false, incomeCategoryIds: [] },
+    forecast: { estimateIncome: true, incomeCategoryIds: [] },
     budget: { limits: {} },
   }
 }
