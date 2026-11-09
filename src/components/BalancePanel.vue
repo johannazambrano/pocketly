@@ -47,30 +47,31 @@ const projectionColor = (v: number) => (v >= 0 ? 'text-blue-700' : 'text-rose-70
         <p v-if="balance.hint" class="mt-1 text-xs text-slate-500">{{ balance.hint }}</p>
       </div>
 
+      <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
       <div
-        class="grid grid-cols-2 border-t border-slate-100 md:col-span-2 md:border-t-0 md:border-l"
+        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] border-t border-slate-100 md:col-span-2 md:border-t-0 md:border-l"
       >
-        <div class="px-4 py-3 md:py-5">
-          <h3 class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</h3>
-          <p class="mt-1 text-lg font-bold whitespace-nowrap text-emerald-700">{{ money(income.value) }}</p>
-          <p v-if="income.hint" class="mt-1 text-xs leading-snug text-slate-500">{{ income.hint }}</p>
+        <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
+          <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>
+          <p class="text-lg font-bold whitespace-nowrap text-emerald-700">{{ money(income.value) }}</p>
+          <p v-if="income.hint" class="text-xs leading-snug text-slate-500">{{ income.hint }}</p>
         </div>
-        <div class="border-l border-slate-100 px-4 py-3 md:py-5">
-          <h3 class="text-xs font-medium text-balance text-slate-500">{{ expenses.label }}</h3>
-          <p class="mt-1 text-lg font-bold whitespace-nowrap text-rose-600">{{ money(expenses.value) }}</p>
-          <p v-if="expenses.hint" class="mt-1 text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
+        <div class="row-span-3 grid grid-rows-subgrid gap-y-1 border-l border-slate-100 px-4 py-3 md:py-5">
+          <p class="text-xs font-medium text-balance text-slate-500">{{ expenses.label }}</p>
+          <p class="text-lg font-bold whitespace-nowrap text-rose-600">{{ money(expenses.value) }}</p>
+          <p v-if="expenses.hint" class="text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
         </div>
       </div>
     </div>
 
     <!-- Di cui: le uscite mostrate sopra, divise tra ricorrenti e variabili. Le due parti sommano sempre il totale. -->
     <div v-if="split?.length" class="border-t border-slate-100 px-4 py-3">
-      <h3 class="text-xs font-medium text-slate-500">{{ t('dashboard.splitTitle') }}</h3>
+      <p class="text-xs font-medium text-slate-500">{{ t('dashboard.splitTitle') }}</p>
       <div class="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
         <div v-for="part in split" :key="part.key" class="h-full first:rounded-l-full last:rounded-r-full" :class="part.dot" :style="{ width: width(part.value) }"></div>
       </div>
-      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-        <div v-for="part in split" :key="part.key" class="min-w-0">
+      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 md:flex md:gap-x-12">
+        <div v-for="part in split" :key="part.key" class="min-w-0 md:max-w-xs">
           <dt class="flex items-center gap-1.5 text-xs text-slate-600">
             <span class="h-2 w-2 shrink-0 rounded-full" :class="part.dot" aria-hidden="true"></span>{{ part.label }}
           </dt>

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
+import { yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -11,7 +12,9 @@ const finance = useFinanceStore()
 const { t, money, month, date, locale } = useFormat()
 
 const s = computed(() => finance.summary)
-const isPastYear = computed(() => finance.selectedYear < new Date().getFullYear())
+/** Tutta la pagina usa lo stesso "oggi" del negozio, che si aggiorna quando l'app torna in primo piano. */
+const currentYear = computed(() => yearOf(finance.today))
+const isPastYear = computed(() => finance.selectedYear < currentYear.value)
 const upcoming = computed(() => upcomingCharges(finance.data, finance.today, 30))
 
 /**
@@ -164,7 +167,7 @@ const expensesSplit = computed(() => {
 
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
-  () => finance.selectedYear === new Date().getFullYear() && (!ms.value || ms.value.timing === 'current'),
+  () => finance.selectedYear === currentYear.value && (!ms.value || ms.value.timing === 'current'),
 )
 </script>
 
@@ -188,13 +191,14 @@ const showUpcoming = computed(
         <h3 class="text-sm font-semibold text-slate-700">
           <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
         </h3>
-        <ul v-if="upcoming.length" class="divide-y divide-slate-100 text-xs">
-          <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 py-1.5">
+        <!-- Su schermi larghi due colonne: l'importo resta vicino al suo nome invece che all'altro capo della pagina. -->
+        <ul v-if="upcoming.length" class="grid gap-x-8 md:grid-cols-2">
+          <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 md:[&:nth-child(odd):nth-last-child(2)]:border-b-0">
             <div class="min-w-0">
-              <div class="truncate font-medium">{{ c.name }}</div>
+              <div class="truncate text-sm font-medium">{{ c.name }}</div>
               <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
             </div>
-            <span class="shrink-0 font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
+            <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
           </li>
         </ul>
         <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
