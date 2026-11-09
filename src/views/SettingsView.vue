@@ -262,6 +262,7 @@ function changeLocale(code: LocaleCode) {
 
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
+      <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-language mr-1 text-indigo-600"></i> {{ t('settings.language') }}</h3>

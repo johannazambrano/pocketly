@@ -21,7 +21,8 @@ const sample = () => {
     paymentMethodId: data.paymentMethods[0]!.id,
     date: '2026-10-01',
     notes: '',
-  } as (typeof data.oneTimeExpenses)[number])
+    tagIds: [],
+  })
   return data
 }
 

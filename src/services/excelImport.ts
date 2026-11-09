@@ -235,6 +235,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
         categoryId: categories.add(clean(r.Categoria) || 'Other'),
         paymentMethodId: payments.add(clean(r['Metodo Pagamento']) || 'Other'),
         notes: clean(r.Note),
+        tagIds: [],
       })
       if (clean(r.Tag)) warn('tagIgnored', { row: n, tag: clean(r.Tag) })
     }
@@ -321,6 +322,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     schemaVersion: 2,
     categories: categories.items,
     paymentMethods: payments.items,
+    tags: [],
     oneTimeExpenses: oneTime,
     recurringExpenses: recurring,
     incomes,

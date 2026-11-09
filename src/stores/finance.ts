@@ -20,7 +20,7 @@ import { pickUniqueColor, randomUniqueColor } from '@/utils/colors'
 import { parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
-export type TagKind = 'categories' | 'paymentMethods'
+export type TagKind = 'categories' | 'paymentMethods' | 'tags'
 type WithOptionalId<T extends { id: Id }> = Omit<T, 'id'> & { id?: Id }
 
 const REF_FIELD = { categories: 'categoryId', paymentMethods: 'paymentMethodId' } as const
@@ -141,6 +141,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const tagMaps = computed(() => ({
     categories: new Map(data.value.categories.map((t) => [t.id, t])),
     paymentMethods: new Map(data.value.paymentMethods.map((t) => [t.id, t])),
+    tags: new Map(data.value.tags.map((t) => [t.id, t])),
   }))
 
   function tag(kind: TagKind, id: Id): Tag | undefined {
@@ -150,7 +151,7 @@ export const useFinanceStore = defineStore('finance', () => {
   // --- movimenti ---------------------------------------------------------
 
   function saveOneTime(item: WithOptionalId<OneTimeExpense>) {
-    upsert(data.value.oneTimeExpenses, item)
+    upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
     selectedYear.value = yearOf(item.date)
   }
 
@@ -210,7 +211,7 @@ export const useFinanceStore = defineStore('finance', () => {
   // --- categorie e metodi di pagamento -----------------------------------
 
   function allColors() {
-    return [...data.value.categories, ...data.value.paymentMethods].map((t) => t.color)
+    return [...data.value.categories, ...data.value.paymentMethods, ...data.value.tags].map((t) => t.color)
   }
 
   function nameTaken(kind: TagKind, name: string, exceptId?: Id) {
@@ -244,15 +245,30 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   function tagUsage(kind: TagKind, id: Id): number {
+    if (kind === 'tags') {
+      return data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length
+    }
     const field = REF_FIELD[kind]
     const d = data.value
     return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes].filter((x) => x[field] === id).length
   }
 
-  /** Elimina una categoria/metodo spostando le voci che lo usano su `reassignTo`. */
+  /** Elimina una categoria/metodo/tag spostando le voci che lo usano su `reassignTo`. */
   function deleteTag(kind: TagKind, id: Id, reassignTo?: Id) {
-    const field = REF_FIELD[kind]
     const d = data.value
+    if (kind === 'tags') {
+      for (const x of d.oneTimeExpenses) {
+        if (x.tagIds?.includes(id)) {
+          x.tagIds = x.tagIds.filter((t) => t !== id)
+          if (reassignTo && !x.tagIds.includes(reassignTo)) {
+            x.tagIds.push(reassignTo)
+          }
+        }
+      }
+      remove(d.tags, id)
+      return
+    }
+    const field = REF_FIELD[kind]
     if (reassignTo) {
       for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes]) {
         if (x[field] === id) x[field] = reassignTo

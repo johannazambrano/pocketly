@@ -10,6 +10,7 @@ function data(overrides: Partial<FinanceData> = {}): FinanceData {
       { id: 'cat-home', name: 'Casa', color: '#3b82f6' },
     ],
     paymentMethods: [{ id: 'pm-card', name: 'Carta', color: '#64748b' }],
+    tags: [],
     oneTimeExpenses: [],
     recurringExpenses: [],
     incomes: [],
@@ -129,6 +130,31 @@ describe('mergeFinanceData', () => {
     const remote = data({ loans: [loan('l1'), loan('l2', [{ id: 'r2', amount: 500, date: '2026-03-01' }])] })
     const merged = mergeFinanceData(base, local, remote)
     expect(merged.loans.map((l) => l.repayments.map((r) => r.id))).toEqual([['r1'], ['r2']])
+  })
+
+  it('unisce tag ed elenchi di tag sulle spese creati su dispositivi diversi', () => {
+    const base = data({
+      tags: [{ id: 't1', name: 'Vacanza', color: '#111111' }],
+      oneTimeExpenses: [expense('e1', { tagIds: ['t1'] })],
+    })
+    const local = data({
+      tags: [
+        { id: 't1', name: 'Vacanza', color: '#111111' },
+        { id: 't2', name: 'Lavoro', color: '#222222' },
+      ],
+      oneTimeExpenses: [expense('e1', { tagIds: ['t1', 't2'] })],
+    })
+    const remote = data({
+      tags: [
+        { id: 't1', name: 'Vacanza', color: '#111111' },
+        { id: 't3', name: 'Regali', color: '#333333' },
+      ],
+      oneTimeExpenses: [expense('e1', { tagIds: ['t1'] }), expense('e2', { tagIds: ['t3'] })],
+    })
+    const merged = mergeFinanceData(base, local, remote)
+    expect(merged.tags.map((t) => t.id).sort()).toEqual(['t1', 't2', 't3'])
+    expect(merged.oneTimeExpenses.find((e) => e.id === 'e1')?.tagIds?.sort()).toEqual(['t1', 't2'])
+    expect(merged.oneTimeExpenses.find((e) => e.id === 'e2')?.tagIds).toEqual(['t3'])
   })
 })
 

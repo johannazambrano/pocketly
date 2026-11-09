@@ -8,6 +8,7 @@ import { centsToInput, toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import TagSelect from './TagSelect.vue'
+import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null }>()
@@ -15,7 +16,15 @@ const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const finance = useFinanceStore()
 
-const form = reactive({ name: '', amount: '', date: '', categoryId: '', paymentMethodId: '', notes: '' })
+const form = reactive({
+  name: '',
+  amount: '',
+  date: '',
+  categoryId: '',
+  paymentMethodId: '',
+  notes: '',
+  tagIds: [] as string[],
+})
 const error = ref('')
 
 const title = computed(() => {
@@ -37,6 +46,7 @@ watch(
       categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
       notes: i && 'notes' in i ? i.notes : '',
+      tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds) ? [...i.tagIds] : [],
     })
   },
   { immediate: true },
@@ -56,7 +66,7 @@ function submit() {
     categoryId: form.categoryId,
     paymentMethodId: form.paymentMethodId,
   }
-  if (props.kind === 'expense') finance.saveOneTime({ ...base, notes: form.notes.trim() })
+  if (props.kind === 'expense') finance.saveOneTime({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
   else finance.saveIncome(base)
   emit('close')
 }
@@ -92,6 +102,7 @@ function submit() {
         <span class="field-label">{{ t('common.notes') }}</span>
         <input v-model="form.notes" maxlength="200" class="field" />
       </label>
+      <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
     </form>
