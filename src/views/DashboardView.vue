@@ -102,6 +102,31 @@ const estimatedIncome = computed(() => {
   return value > 0 ? value : 0
 })
 
+/**
+ * Quando oggi sei sotto zero ma a fine periodo torni sopra, una frase collega i due numeri: quanto entra ed esce ancora
+ * da qui alla fine del mese o dell'anno in corso. Solo per il periodo in corso, l'unico in cui "da qui" ha senso.
+ */
+const bridge = computed(() => {
+  const projection = projectionFigure.value
+  if (!projection || displayBalance.value >= 0 || projection.value < 0) return null
+  let incoming: number
+  let outgoing: number
+  let end: string
+  if (ms.value) {
+    if (!monthToDate.value) return null
+    incoming = ms.value.projectedIncome - ms.value.incomeToDate
+    outgoing = ms.value.expenses - ms.value.expensesToDate
+    end = t('dashboard.bridgeEndMonth', monthArgs.value)
+  } else {
+    incoming = s.value.projectedIncome - s.value.incomeToDate
+    outgoing = s.value.totalExpenses - s.value.expensesToDate
+    end = t('dashboard.bridgeEndYear')
+  }
+  if (incoming <= 0) return null
+  const args = { end, income: money(incoming), expenses: money(outgoing) }
+  return outgoing > 0 ? t('dashboard.bridge', args) : t('dashboard.bridgeIncomeOnly', args)
+})
+
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
 const categoryTotals = computed(() => {
   if (!ms.value) return s.value.byCategoryToDate
@@ -211,6 +236,7 @@ const showUpcoming = computed(
         :expenses="expensesFigure"
         :split="expensesSplit"
         :projection="projectionFigure"
+        :bridge="bridge"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

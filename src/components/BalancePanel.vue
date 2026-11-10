@@ -26,7 +26,15 @@ interface Part {
   note?: string
 }
 
-const props = defineProps<{ balance: Figure; income: Figure; expenses: Figure; projection?: Figure | null; split?: Part[] | null }>()
+const props = defineProps<{
+  balance: Figure
+  income: Figure
+  expenses: Figure
+  projection?: Figure | null
+  split?: Part[] | null
+  /** Frase che collega saldo e previsto: cosa entra ed esce ancora da qui a fine periodo. */
+  bridge?: string | null
+}>()
 
 const { t, money } = useFormat()
 
@@ -95,6 +103,11 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
           </p>
           <p v-if="projection.hint" class="mt-1 text-xs text-slate-500">{{ projection.hint }}</p>
         </div>
+        <!-- Il ponte tra i due numeri: perché oggi sei sotto zero ma a fine periodo no. Sotto entrambi, senza spostare nulla. -->
+        <p v-if="bridge" class="mt-3 flex gap-2 border-t border-slate-100 pt-3 text-sm text-slate-700 sm:col-span-2">
+          <span class="shrink-0 text-slate-400" aria-hidden="true"><i class="fa-solid fa-arrow-right-long"></i></span>
+          <span>{{ bridge }}</span>
+        </p>
       </div>
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
