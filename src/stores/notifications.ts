@@ -456,7 +456,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         const shown = await showNotificationSafely(msg.title, {
           body: msg.body,
           icon: '/pwa-192x192.png',
-          badge: '/pwa-64x64.png',
+          badge: '/badge-96x96.png',
           tag: r.id,
           data: { url: '/ricorrenti' },
         })
@@ -573,7 +573,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       return await showNotificationSafely(title, {
         body,
         icon: '/pwa-192x192.png',
-        badge: '/pwa-64x64.png',
+        badge: '/badge-96x96.png',
         tag: 'pocketly-test',
         data: { url: '/ricorrenti' },
       })

@@ -519,7 +519,7 @@ describe('useNotificationsStore', () => {
     expect(swShowNotification).toHaveBeenCalledWith(
       expect.stringContaining('Pocketly'),
       expect.objectContaining({
-        badge: '/pwa-64x64.png',
+        badge: '/badge-96x96.png',
         icon: '/pwa-192x192.png',
       }),
     )
