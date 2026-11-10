@@ -28,6 +28,12 @@ import { newId } from '@/utils/id'
 
 const CONFIG_KEY = 'notification-config'
 const SHOWN_KEY = 'notifications-shown'
+/**
+ * Con le notifiche dal server attive, l'app lascia al server qualche minuto per consegnare il promemoria.
+ * Se dopo questo margine il promemoria non risulta mostrato (il push-worker lo segna in SHOWN_KEY quando arriva),
+ * lo mostra l'app da sola: così un 403 di Apple, un server spento o un firewall non fanno perdere il promemoria.
+ */
+const PUSH_GRACE_SECONDS = 10 * 60
 const SYNC_DEBOUNCE_MS = 2000
 
 export interface NotificationConfig {
@@ -399,11 +405,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
   async function checkLocalReminders(): Promise<void> {
     if (!enabled.value || permission.value !== 'granted') return
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return
-    // Evita notifiche doppie: se il dispositivo è in modalità push attiva, inibisci il promemoria locale
-    if (isPushActive.value) return
-
     try {
-      const due = calculateDueLocalReminders(finance.data.recurringExpenses, new Date(), 24)
+      const now = new Date()
+      let due = calculateDueLocalReminders(finance.data.recurringExpenses, now, 24)
+      // Con la push attiva il promemoria locale è solo un ripiego: niente doppioni finché il server ha tempo di consegnare.
+      if (isPushActive.value) {
+        const graceLimit = Math.floor(now.getTime() / 1000) - PUSH_GRACE_SECONDS
+        due = due.filter((r) => r.fireAt <= graceLimit)
+      }
       if (!due.length) return
 
       let shownMap: Record<string, number> = {}

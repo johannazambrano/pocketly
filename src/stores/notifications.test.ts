@@ -297,22 +297,25 @@ describe('useNotificationsStore', () => {
     expect(success).toBe(false)
   })
 
-  it('evita promemoria locali doppi quando isPushActive è true', async () => {
+  /**
+   * Con la push attiva il promemoria locale è un ripiego: aspetta 10 minuti, poi compare solo se la push non è arrivata.
+   * L'orologio è fermo alle 12:00 di un giorno fisso, così l'ora del promemoria decide se il margine è passato.
+   */
+  async function setupPushActive(time: string) {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 10, 12, 0, 0))
     const finance = useFinanceStore()
     await finance.init('it')
-
-    const now = new Date()
-    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
     finance.saveRecurring({
       name: 'Internet Casa',
       amount: 2999,
       frequency: 'monthly',
-      startDate: todayIso,
+      startDate: '2026-11-10',
       endDate: null,
       categoryId: finance.data.categories[0]!.id,
       paymentMethodId: finance.data.paymentMethods[0]!.id,
-      notifications: [{ daysBefore: 0, time: '00:00' }],
+      notifications: [{ daysBefore: 0, time }],
     })
 
     const store = useNotificationsStore()
@@ -339,11 +342,47 @@ describe('useNotificationsStore', () => {
     win.PushManager = class {}
 
     expect(store.isPushActive).toBe(true)
-
+    // enable() controlla subito i promemoria in modalità locale (la push non era ancora attiva): si riparte da zero.
+    inMemoryIdb.delete('notifications-shown')
     showNotificationMock.mockClear()
-    await store.checkLocalReminders()
-    // Promemoria locale deve essere inibito per evitare duplicati
-    expect(showNotificationMock).not.toHaveBeenCalled()
+    const reminderId = `${finance.data.recurringExpenses[0]!.id}:2026-11-10:0:${time}`
+    return { store, reminderId }
+  }
+
+  it('con la push attiva lascia al server 10 minuti prima del promemoria locale', async () => {
+    try {
+      const { store, reminderId } = await setupPushActive('11:55')
+      await store.checkLocalReminders()
+      const shown = (inMemoryIdb.get('notifications-shown') as Record<string, number> | undefined) ?? {}
+      expect(shown[reminderId]).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('con la push attiva mostra il promemoria locale se la push non è arrivata', async () => {
+    try {
+      const { store, reminderId } = await setupPushActive('11:30')
+      await store.checkLocalReminders()
+      // Il promemoria risulta mostrato dall'app: la mappa lo registra solo quando la notifica è andata a buon fine.
+      const shown = (inMemoryIdb.get('notifications-shown') as Record<string, number> | undefined) ?? {}
+      expect(shown[reminderId]).toBeDefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('con la push attiva non ripete un promemoria già mostrato dalla push', async () => {
+    try {
+      const { store, reminderId } = await setupPushActive('11:30')
+      // La push l'ha già mostrato (il push-worker scrive la stessa mappa): l'app non lo ripete.
+      inMemoryIdb.set('notifications-shown', { [reminderId]: 1 })
+      await store.checkLocalReminders()
+      const shown = inMemoryIdb.get('notifications-shown') as Record<string, number>
+      expect(shown[reminderId]).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('accoda richieste concorrenti di syncPushSchedule con il flag syncAgain', async () => {
