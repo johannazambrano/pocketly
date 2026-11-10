@@ -5,11 +5,13 @@ import { MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
 import { useSyncStore } from '@/stores/sync'
 import { useUiStore } from '@/stores/ui'
 import { useFinanceStore } from '@/stores/finance'
+import { useNotificationsStore } from '@/stores/notifications'
 import type { FinanceData } from '@/types/models'
 import BaseModal from '@/components/BaseModal.vue'
 
 const sync = useSyncStore()
 const finance = useFinanceStore()
+const notifications = useNotificationsStore()
 const ui = useUiStore()
 const { t, locale } = useFormat()
 
@@ -82,7 +84,10 @@ async function disconnect() {
     message: t('sync.disconnectText'),
     confirmLabel: t('sync.disconnectButton'),
   })
-  if (ok) await sync.disconnect()
+  if (!ok) return
+  // Prima di dimenticare la chiave del server, si tolgono da lì iscrizione e promemoria di questo dispositivo.
+  await notifications.leaveServer()
+  await sync.disconnect()
 }
 
 const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpenses.length + d.incomes.length + d.loans.length

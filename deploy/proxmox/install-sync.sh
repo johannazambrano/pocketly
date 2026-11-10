@@ -4,6 +4,9 @@
 #
 # - crea l'utente di sistema `pocketly` e la cartella dati /var/lib/pocketly;
 # - genera la chiave del server in /etc/pocketly/sync.env (solo la prima volta) e la mostra;
+# - se è impostata POCKETLY_VAPID_SUBJECT, la scrive in /etc/pocketly/sync.env: è il contatto che i servizi di
+#   notifica (Apple, Google, Mozilla) vogliono vedere. Esempio:
+#     POCKETLY_VAPID_SUBJECT=mailto:tuo.indirizzo@esempio.it deploy/proxmox/install-sync.sh
 # - installa e avvia il servizio pocketly-sync;
 # - aggiorna la configurazione di nginx con il blocco /api/ (la versione precedente resta come .bak).
 #
@@ -36,6 +39,24 @@ if [ ! -f "$ENV_FILE" ]; then
 else
   KEY="$(sed -n 's/^POCKETLY_SYNC_KEY=//p' "$ENV_FILE")"
   NEW_KEY=0
+fi
+
+# Mittente delle notifiche push: un indirizzo reale, altrimenti Apple può rifiutare le notifiche (403 BadJwtToken).
+SUBJECT="${POCKETLY_VAPID_SUBJECT:-}"
+if [ -n "$SUBJECT" ]; then
+  case "$SUBJECT" in
+    mailto:*@*.* | https://*.*) ;;
+    *)
+      echo "POCKETLY_VAPID_SUBJECT deve essere mailto:indirizzo@dominio oppure https://sito" >&2
+      exit 1
+      ;;
+  esac
+  if grep -q '^POCKETLY_VAPID_SUBJECT=' "$ENV_FILE"; then
+    sed -i "s#^POCKETLY_VAPID_SUBJECT=.*#POCKETLY_VAPID_SUBJECT=$SUBJECT#" "$ENV_FILE"
+  else
+    printf 'POCKETLY_VAPID_SUBJECT=%s
+' "$SUBJECT" >> "$ENV_FILE"
+  fi
 fi
 
 sed "s#@REPO@#$REPO#g" "$REPO/deploy/proxmox/pocketly-sync.service" > /etc/systemd/system/pocketly-sync.service
@@ -71,3 +92,10 @@ echo
 echo "    $KEY"
 echo
 echo "Per rileggerla in seguito: cat $ENV_FILE"
+
+if ! grep -q '^POCKETLY_VAPID_SUBJECT=' "$ENV_FILE"; then
+  echo
+  echo "ATTENZIONE notifiche: manca il mittente reale (POCKETLY_VAPID_SUBJECT). Senza, Apple può rifiutare"
+  echo "le notifiche sugli iPhone. Rilancia lo script con il tuo indirizzo:"
+  echo "    POCKETLY_VAPID_SUBJECT=mailto:tuo.indirizzo@esempio.it $0"
+fi
