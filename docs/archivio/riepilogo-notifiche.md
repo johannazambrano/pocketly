@@ -1,3 +1,10 @@
+> [!WARNING]
+> **DOCUMENTO STORICO ARCHIVIATO**
+> Questo documento rappresenta la revisione preliminare del ramo `feature/notifiche-spese-ricorrenti` prima del merge finale.
+> Per la documentazione tecnica definitiva sulle notifiche, consulta:
+> - [Guida Notifiche](../NOTIFICHE.md)
+> - [Stato e Difetti Noti](../known-issues.md)
+
 # Revisione del ramo `feature/notifiche-spese-ricorrenti` (5b5e112)
 
 Ciao! Ho fatto rivedere il ramo prima di unirlo a `main`. Ecco cosa è emerso.

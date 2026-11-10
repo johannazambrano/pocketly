@@ -1,3 +1,16 @@
+---
+source-files:
+  - src/domain/notifications.ts
+  - src/stores/notifications.ts
+  - src/services/notifications/api.ts
+  - src/services/notifications/webpushCrypto.ts
+  - src/components/NotificationSettings.vue
+  - src/components/NotificationRulesEditor.vue
+  - server/webpush.py
+  - server/main.py
+verified: 2026-11-10
+---
+
 # Sistema di Notifiche e Promemoria per le Spese Ricorrenti
 
 Pocketly include un sistema di notifiche push e promemoria configurabili per le **spese ricorrenti** (mutui, bollette, abbonamenti, stipendi, assicurazioni), ispirato all'esperienza d'uso di **Google Calendar** e progettato secondo i principi di **Privacy-First (Zero-Knowledge)** e **Local-First**.
@@ -49,7 +62,7 @@ Il sistema supporta due modalità operative, selezionate automaticamente dall'ap
 ### A. Modalità Locale (Offline / Standalone)
 Attiva quando l'app non è collegata a un server di sincronizzazione.
 
-- **Come funziona**: Il motore di dominio ([`src/domain/notifications.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/domain/notifications.ts)) calcola le scadenze e i promemoria dovuti.
+- **Come funziona**: Il motore di dominio ([`src/domain/notifications.ts`](../src/domain/notifications.ts)) calcola le scadenze e i promemoria dovuti.
 - **Quando si attiva**:
   1. All'avvio dell'applicazione (`init()`).
   2. Al ritorno in primo piano della pagina (`visibilitychange`, es. sblocco del telefono o passaggio da un'altra app).
@@ -66,8 +79,10 @@ Attiva automaticamente non appena colleghi una chiave di sincronizzazione in *Im
   3. Lo scadenzario con i blob cifrati e la data/ora di invio (`fireAt`) viene inviato al server tramite `PUT /api/push/schedule`.
   4. Il server Python mantiene un thread dispatcher in background: al minuto esatto, invia la richiesta Web Push al push service di Google FCM, Apple APNs o Mozilla.
   5. Il server firma la richiesta usando **VAPID (RFC 8292)** con una coppia di chiavi asimmetriche su curva ellittica NIST P-256 (ES256), implementata in puro standard library Python senza dipendenze `pip`.
-  6. Il sistema operativo riceve il pacchetto, risveglia il Service Worker ([`public/push-worker.js`](file:///mnt/c/progetti_locali/Jo/pocketly/public/push-worker.js)), che decifra nativamente il messaggio e mostra la notifica.
+  6. Il sistema operativo riceve il pacchetto, risveglia il Service Worker ([`public/push-worker.js`](../public/push-worker.js)), che decifra nativamente il messaggio e mostra la notifica con l'icona badge dedicata per la barra di stato Android ([`public/badge-96x96.png`](../public/badge-96x96.png)).
 - **Caratteristiche**: La notifica viene recapitata **anche ad app completamente chiusa e a telefono in standby**. Il server non possiede la chiave privata del dispositivo e vede unicamente dati cifrati indecifrabili.
+- **Resilienza e Fallback Ibrido (`PUSH_GRACE_SECONDS`)**: Se la notifica dal server non dovesse arrivare entro una finestra di tolleranza di 10 minuti (`PUSH_GRACE_SECONDS = 600`) per problemi del gateway push (es. 403 Apple, server spento o firewall), l'app al rientro in primo piano mostra autonomamente il promemoria in locale, garantendo la ricezione degli avvisi senza doppi.
+- **Rinnovo e Pulizia**: Se il browser rigenera l'iscrizione push (`pushsubscriptionchange`), il client registra le nuove chiavi e ricifra lo scadenzario (`onSubscriptionChanged`). Quando la sincronizzazione viene scollegata dall'utente, l'app pulisce preventivamente sottoscrizione e calendario dal server (`leaveServer`).
 
 ---
 
@@ -125,33 +140,33 @@ Apple supporta le Web Push su iOS a partire da **iOS 16.4**, con due requisiti t
 
 | File | Responsabilità |
 |---|---|
-| [`src/types/models.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/types/models.ts) | Definizione interfaccia `NotificationRule` (`daysBefore: number`, `time: string`) e campo `RecurringExpense.notifications`. |
-| [`src/domain/notifications.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/domain/notifications.ts) | Funzioni pure: normalizzazione regole, calcolo occorrenze, verifica promemoria scaduti, generazione testi e badge. |
-| [`src/stores/notifications.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/stores/notifications.ts) | Store Pinia: stato permessi, persistenza IndexedDB (con isolamento proxy reattivi), sincronizzazione schedulazione push, invio test con fallback locale. |
-| [`src/services/notifications/webpushCrypto.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/services/notifications/webpushCrypto.ts) | Crittografia W3C RFC 8291 (`aes128gcm` tramite HKDF SHA-256 e Web Crypto API `crypto.subtle`). |
-| [`src/services/notifications/api.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/services/notifications/api.ts) | Client REST per interagire con gli endpoint push del backend (`/api/push/*`). |
-| [`src/components/NotificationRulesEditor.vue`](file:///mnt/c/progetti_locali/Jo/pocketly/src/components/NotificationRulesEditor.vue) | Componente UI a regole multiple con preset stile Google Calendar, orari e rimozione. |
-| [`src/components/NotificationSettings.vue`](file:///mnt/c/progetti_locali/Jo/pocketly/src/components/NotificationSettings.vue) | Card impostazioni: switch dispositivo, pulsante test, rilevamento iOS, configurazione default ed esecuzione massiva. |
-| [`src/components/RecurringForm.vue`](file:///mnt/c/progetti_locali/Jo/pocketly/src/components/RecurringForm.vue) | Integrazione dell'editor regole all'interno del form spesa ricorrente. |
-| [`src/views/RecurringView.vue`](file:///mnt/c/progetti_locali/Jo/pocketly/src/views/RecurringView.vue) | Mostra il campanellino e il riassunto dell'avviso per ogni voce nella lista. |
-| [`src/services/migration.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/services/migration.ts) | Preservazione e normalizzazione delle regole nei file di backup `.pocketly` (v2). |
-| [`src/domain/merge.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/src/domain/merge.ts) | Risoluzione a 3 vie dei conflitti di sincronizzazione multi-dispositivo per le regole di notifica. |
-| [`public/push-worker.js`](file:///mnt/c/progetti_locali/Jo/pocketly/public/push-worker.js) | Worker di ricezione eventi `push` e navigazione all'app su `notificationclick`. |
+| [`src/types/models.ts`](../src/types/models.ts) | Definizione interfaccia `NotificationRule` (`daysBefore: number`, `time: string`) e campo `RecurringExpense.notifications`. |
+| [`src/domain/notifications.ts`](../src/domain/notifications.ts) | Funzioni pure: normalizzazione regole, calcolo occorrenze, verifica promemoria scaduti, generazione testi e badge. |
+| [`src/stores/notifications.ts`](../src/stores/notifications.ts) | Store Pinia: stato permessi, persistenza IndexedDB (con isolamento proxy reattivi), sincronizzazione schedulazione push, invio test con fallback locale. |
+| [`src/services/notifications/webpushCrypto.ts`](../src/services/notifications/webpushCrypto.ts) | Crittografia W3C RFC 8291 (`aes128gcm` tramite HKDF SHA-256 e Web Crypto API `crypto.subtle`). |
+| [`src/services/notifications/api.ts`](../src/services/notifications/api.ts) | Client REST per interagire con gli endpoint push del backend (`/api/push/*`). |
+| [`src/components/NotificationRulesEditor.vue`](../src/components/NotificationRulesEditor.vue) | Componente UI a regole multiple con preset stile Google Calendar, orari e rimozione. |
+| [`src/components/NotificationSettings.vue`](../src/components/NotificationSettings.vue) | Card impostazioni: switch dispositivo, pulsante test, rilevamento iOS, configurazione default ed esecuzione massiva. |
+| [`src/components/RecurringForm.vue`](../src/components/RecurringForm.vue) | Integrazione dell'editor regole all'interno del form spesa ricorrente. |
+| [`src/views/RecurringView.vue`](../src/views/RecurringView.vue) | Mostra il campanellino e il riassunto dell'avviso per ogni voce nella lista. |
+| [`src/services/migration.ts`](../src/services/migration.ts) | Preservazione e normalizzazione delle regole nei file di backup `.pocketly` (v2). |
+| [`src/domain/merge.ts`](../src/domain/merge.ts) | Risoluzione a 3 vie dei conflitti di sincronizzazione multi-dispositivo per le regole di notifica. |
+| [`public/push-worker.js`](../public/push-worker.js) | Worker di ricezione eventi `push` e navigazione all'app su `notificationclick`. |
 
 ### Backend (`server/`)
 
 | File | Responsabilità |
 |---|---|
-| [`server/webpush.py`](file:///mnt/c/progetti_locali/Jo/pocketly/server/webpush.py) | Crittografia VAPID RFC 8292 ES256: generazione chiavi NIST P-256, firma token JWT, invio HTTP/2 a push gateway in puro Python standard library. |
-| [`server/main.py`](file:///mnt/c/progetti_locali/Jo/pocketly/server/main.py) | API HTTP del server Pocketly: gestione sottoscrizioni push, memorizzazione atomica dello schedulario cifrato, dispatcher in background. |
-| [`server/test_main.py`](file:///mnt/c/progetti_locali/Jo/pocketly/server/test_main.py) | Suite di test unitari automatizzati per il backend push. |
+| [`server/webpush.py`](../server/webpush.py) | Crittografia VAPID RFC 8292 ES256: generazione chiavi NIST P-256, firma token JWT, invio HTTP/2 a push gateway in puro Python standard library. |
+| [`server/main.py`](../server/main.py) | API HTTP del server Pocketly: gestione sottoscrizioni push, memorizzazione atomica dello schedulario cifrato, dispatcher in background. |
+| [`server/test_main.py`](../server/test_main.py) | Suite di test unitari automatizzati per il backend push. |
 
 ### Configurazione e Deploy
 
 | File | Responsabilità |
 |---|---|
-| [`vite.config.ts`](file:///mnt/c/progetti_locali/Jo/pocketly/vite.config.ts) | Configurazione Workbox con `importScripts: ['push-worker.js']` e proxy locale verso `8787`. |
-| [`deploy/proxmox/nginx/pocketly.conf`](file:///mnt/c/progetti_locali/Jo/pocketly/deploy/proxmox/nginx/pocketly.conf) | Configurazione Nginx con header `Cache-Control: no-cache` per il Service Worker e routing `/api/`. |
+| [`vite.config.ts`](../vite.config.ts) | Configurazione Workbox con `importScripts: ['push-worker.js']` e proxy locale verso `8787`. |
+| [`deploy/proxmox/nginx/pocketly.conf`](../deploy/proxmox/nginx/pocketly.conf) | Configurazione Nginx con header `Cache-Control: no-cache` per il Service Worker e routing `/api/`. |
 
 ---
 
@@ -168,16 +183,16 @@ npm run dev
 
 ### Esecuzione dei test automatici
 ```bash
-# Test frontend (logica di dominio, merge, crittografia, store, edge cases): 170 test
+# Test frontend (logica di dominio, merge, crittografia, store, edge cases): 178 test
 npm test
 
-# Test backend Python (API push, VAPID, rate-limit, dispatcher, corruzione file): 21 test
-PYTHONPATH=server python3 -m unittest discover -s server
+# Test backend Python (API push, VAPID, rate-limit, dispatcher, corruzione file): 27 test
+npm run test:server
 ```
 
 ### Configurazione Server (Variabili d'Ambiente)
 - `POCKETLY_SYNC_KEY`: chiave segreta per la sincronizzazione (min. 32 caratteri).
-- `POCKETLY_VAPID_SUBJECT`: indirizzo di contatto per il subject VAPID (default: `mailto:support@pocketly.local`). Su iOS / Apple APNs deve essere un'email valida o un URL `https://`.
+- `POCKETLY_VAPID_SUBJECT`: indirizzo di contatto per il subject VAPID (default: `mailto:support@pocketly.local`). Su iOS / Apple APNs deve obbligatoriamente contenere un dominio pubblico valido (es. `mailto:tuo@dominio-reale.it` o `https://tuo-dominio.it`), altrimenti le notifiche vengono rifiutate con errore 403.
 - `POCKETLY_DATA_DIR`: directory di persistenza dei dati (default `/var/lib/pocketly`).
 - `POCKETLY_PORT`: porta di ascolto (default `8787`).
 

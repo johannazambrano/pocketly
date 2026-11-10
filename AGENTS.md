@@ -1,0 +1,109 @@
+# Pocketly — Istruzioni per Agenti IA
+
+Questo documento è la **fonte unica di verità** per qualsiasi agente IA (Claude, Gemini, Codex, Cursor o altri) che interagisce con il repository Pocketly. Leggi questo documento prima di apportare modifiche al codice.
+
+---
+
+## 1. Cos'è Pocketly e Stack Tecnologico
+
+Pocketly è una **Progressive Web App (PWA)** per la gestione delle finanze personali, progettata con principi **privacy-first** e **offline-first**. Tutti i dati dell'utente risiedono localmente sul dispositivo (IndexedDB) e possono opzionalmente essere sincronizzati in modo cifrato end-to-end con un server personale leggero.
+
+### Stack Frontend
+- **Framework:** Vue 3 (Composition API con `<script setup lang="ts">`)
+- **Linguaggio:** TypeScript (strict mode, `vue-tsc`)
+- **Bundler & Tooling:** Vite, `@vite-pwa/assets-generator`, `vite-plugin-pwa`
+- **State Management:** Pinia
+- **Routing:** Vue Router (9 viste: 8 viste principali + 1 vista di dettaglio)
+- **Persistenza locale:** IndexedDB tramite libreria `idb-keyval`
+- **Stile:** Tailwind CSS v4, FontAwesome Free icons
+- **i18n:** `vue-i18n` (supporto completo Italiano `it` e Inglese `en`)
+- **Test:** Vitest
+
+### Stack Backend & Deploy
+- **Server:** Python 3 standard library (`server/main.py`, `server/webpush.py`) — zero dipendenze esterne (`pip`).
+- **Funzionalità backend:** Zero-Knowledge sync cifrata con ETag/versione atomica, gateway Web Push RFC 8291 (`aes128gcm`) e RFC 8292 (VAPID).
+- **Deploy:** Container Proxmox LXC, Nginx reverse proxy con TLS, systemd unit.
+
+### Comandi Operativi
+```bash
+# Sviluppo frontend
+npm run dev
+
+# Controllo tipi TypeScript
+npm run typecheck       # equivale a: vue-tsc -b
+
+# Build di produzione
+npm run build           # vue-tsc -b && vite build
+
+# Test unitari frontend
+npm run test            # vitest run
+
+# Test server Python
+npm run test:server     # python3 -m unittest server.test_main
+
+# Validazione integrità documentazione e i18n
+npm run docs:check      # node scripts/docs-check.mjs
+```
+
+---
+
+## 2. Regola Aurea di Orientamento
+
+> **NON IPOTIZZARE LA STRUTTURA DEL CODICE.**
+> Prima di scrivere o modificare codice, consulta obbligatoriamente:
+> 1. [Mappa del Codice](docs/riferimento/mappa-codice.md): per individuare file, responsabilità, dipendenze e test associati.
+> 2. La pagina di documentazione collegata al modulo in esame in `docs/`.
+> 3. L'indice generale della documentazione in [docs/README.md](docs/README.md).
+
+---
+
+## 3. Invarianti Architetturali Verificati
+
+Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul codice sorgente dell'applicazione:
+
+1. **Importi memorizzati sempre in centesimi interi:**
+   Nel modello dati (`FinanceData`), tutte le cifre monetarie sono interi in centesimi (`Cents = number`). Non memorizzare mai importi decimali o floating point.  
+   *Eccezione verificata:* il calcolo derivato del costo mensile equivalente (`monthlyEquivalent` in `src/domain/recurrence.ts`) è una suddivisione matematica (`amount / FREQUENCY_MONTHS[...]`) e può restituire valori frazionari.
+
+2. **Formato date unificato `YYYY-MM-DD`:**
+   Le date di calendario sono di tipo `IsoDate = string` nel formato `YYYY-MM-DD` (tempo locale, senza fuso orario né orari). Le utility di parsing e formattazione si trovano in `src/utils/dates.ts`. L'orario locale compare esclusivamente nelle regole di notifica (`NotificationRule.time`, stringa `HH:MM`).
+
+3. **Entità referenziate per `Id`, mai per nome:**
+   Categorie, metodi di pagamento e tag sono entità `Tag { id: Id, name: string, color: string }`. Le transazioni memorizzano riferimenti `categoryId: Id` e `paymentMethodId: Id`. La ridenominazione di una categoria o metodo non richiede la modifica delle transazioni.
+
+4. **Logica di business e calcoli confinati in `src/domain/`:**
+   I componenti Vue e le viste non contengono logiche di calcolo contabile o formule finanziarie complesse. La logica di calcolo risiede in moduli puri e completamente testabili in `src/domain/` (`calculations.ts`, `recurrence.ts`, `budget.ts`, `merge.ts`, `notifications.ts`, `backupReminder.ts`). Lo store Pinia (`src/stores/finance.ts`) espone proprietà computate delegando a tali funzioni.
+
+5. **Persistenza dati separata:**
+   - I dati finanziari dell'utente (`FinanceData`) passano sempre e solo dall'interfaccia `DataStore` in `src/services/storage.ts` (salvati nella chiave `'pocketly_data'`).
+   - Le configurazioni di dispositivo / preferenze locali (impostazioni di sync, configurazione notifiche Web Push, timestamp promemoria backup) usano direttamente `idb-keyval` nei rispettivi store (`stores/sync.ts`, `stores/notifications.ts`, `stores/backup.ts`).
+
+6. **Sincronizzazione cifrata Zero-Knowledge e Merge a 3 Vie:**
+   - Il server `server/main.py` non possiede la chiave di cifratura e memorizza esclusivamente payload cifrati `EncryptedBackup` con numero di versione crescente.
+   - La sincronizzazione sfrutta l'algoritmo di merge a tre vie (`src/domain/merge.ts`) confrontando la versione base (l'ultima sincronizzata dal dispositivo), lo stato locale e lo stato remoto. Per questo motivo **non sono necessari tombstone** per tracciare le cancellazioni.
+
+7. **Allineamento i18n obbligatorio:**
+   Pocketly supporta sia l'italiano (`src/i18n/it.ts`) che l'inglese (`src/i18n/en.ts`). Ogni nuova etichetta, messaggio di errore o testo UI aggiunto in `it.ts` DEVE avere la corrispettiva chiave in `en.ts`. Lo script `npm run docs:check` verifica questo allineamento.
+
+---
+
+## 4. Regole di Manutenzione per gli Agenti IA
+
+Quando esegui una modifica nel repository, attieniti scrupolosamente a questo ciclo di vita:
+
+1. **Aggiornamento documentazione contestuale:**
+   Se modifichi il comportamento di un file presente nella mappa del codice, aggiorna la pagina di documentazione collegata nello stesso commit.
+2. **Aggiornamento della Mappa del Codice:**
+   Se aggiungi, sposti o elimini un file in `src/`, `server/` o `scripts/`, aggiorna tempestivamente [docs/riferimento/mappa-codice.md](docs/riferimento/mappa-codice.md).
+3. **Cita simboli, non numeri di riga:**
+   Nelle documentazioni e nei commenti, fai riferimento a nomi di funzioni, interfacce, costanti o classi (es. `monthlyEquivalent`, `FinanceData`). Non citare numeri di riga statici che decadono ad ogni modifica.
+4. **Front-matter nei file di documentazione:**
+   Ogni file in `docs/` contiene un'intestazione YAML front-matter che elenca i file sorgente correlati (`source-files`) e la data dell'ultima verifica (`verified`). Aggiorna questo metadato quando tocchi il modulo corrispondente.
+5. **Verifica empirica prima di documentare:**
+   Non dare mai per scontato che un bug sia stato risolto o che un componente funzioni in un certo modo. Esegui i test o controlla il codice direttamente.
+6. **Checklist finale di completamento:**
+   Prima di considerare terminato un task:
+   - `npm run test` (test Vitest verdi)
+   - `npm run typecheck` (zero errori TypeScript)
+   - `npm run test:server` (test Python server verdi)
+   - `npm run docs:check` (nessun link rotto, mappa codice aggiornata, i18n allineato)

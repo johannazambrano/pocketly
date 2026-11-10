@@ -1,4 +1,11 @@
-# Pocketly – panoramica del progetto
+> [!WARNING]
+> **DOCUMENTO STORICO ARCHIVIATO**
+> Questo documento riflette una versione iniziale di Pocketly (precedente all'introduzione del server di sincronizzazione e della vista Budget).
+> Per la documentazione aggiornata e veritiera, consulta:
+> - [Panoramica Aggiornata](../panoramica.md)
+> - [Indice della Documentazione](../README.md)
+
+# Pocketly – panoramica del progetto (Versione Storica)
 
 PWA per tenere traccia di spese una tantum, spese ricorrenti, entrate, prestiti e previsioni.
 Nessun backend e nessun account: i dati restano sul dispositivo (IndexedDB).

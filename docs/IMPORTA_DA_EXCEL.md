@@ -1,3 +1,12 @@
+---
+source-files:
+  - scripts/xlsx_to_pocketly.py
+  - src/services/excelImport.ts
+  - src/services/xlsx/workbook.ts
+  - src/services/xlsx/zip.ts
+verified: 2026-11-10
+---
+
 # Importare in Pocketly i dati dell'Excel "Expense Tracker"
 
 Pocketly non legge direttamente i file Excel. Lo script `scripts/xlsx_to_pocketly.py` converte l'Excel in
