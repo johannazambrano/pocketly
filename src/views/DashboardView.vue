@@ -293,9 +293,22 @@ const showUpcoming = computed(
           <h3 class="text-sm font-semibold text-slate-700">
             <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
           </h3>
-          <!-- Su schermi larghi due colonne: l'importo resta vicino al suo nome invece che all'altro capo della pagina. -->
-          <ul v-if="upcoming.length" class="grid gap-x-8 md:grid-cols-2">
-            <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 md:[&:nth-child(odd):nth-last-child(2)]:border-b-0">
+          <!--
+            Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
+            (metà delle righe ciascuna): l'ordine per data scende lungo la prima colonna e continua nella seconda,
+            invece di andare a zig-zag.
+          -->
+          <ul
+            v-if="upcoming.length"
+            class="grid gap-x-8 md:grid-flow-col md:grid-cols-2 md:[grid-template-rows:repeat(var(--rows),auto)]"
+            :style="{ '--rows': Math.ceil(upcoming.length / 2) }"
+          >
+            <li
+              v-for="(c, i) in upcoming"
+              :key="c.id"
+              class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0"
+              :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
+            >
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium">{{ c.name }}</div>
                 <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
