@@ -52,12 +52,18 @@ function targetName(target: MonthTarget | null): string {
   if (!target) return ''
   return target.year === finance.selectedYear ? month(target.month) : `${month(target.month)} ${target.year}`
 }
-const previousLabel = computed(() =>
-  previous.value ? t('dashboard.previousMonth', { month: targetName(previous.value) }) : t('dashboard.previousMonthNone'),
-)
-const nextLabel = computed(() =>
-  next.value ? t('dashboard.nextMonth', { month: targetName(next.value) }) : t('dashboard.nextMonthNone'),
-)
+/** Da "Tutti i mesi" la freccia non va a un mese "precedente" ma entra in un mese: l'etichetta dice dove. */
+const fromAll = computed(() => finance.selectedMonth === 'all')
+const previousLabel = computed(() => {
+  if (!previous.value) return t('dashboard.previousMonthNone')
+  const args = { month: targetName(previous.value) }
+  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.previousMonth', args)
+})
+const nextLabel = computed(() => {
+  if (!next.value) return t('dashboard.nextMonthNone')
+  const args = { month: targetName(next.value) }
+  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.nextMonth', args)
+})
 
 const arrow =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white'
