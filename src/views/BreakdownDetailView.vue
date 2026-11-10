@@ -57,7 +57,8 @@ const kindLabel = computed(() => t(kind.value === 'paymentMethods' ? 'detail.pay
     <template v-else>
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div class="min-w-0">
-          <p class="text-xs font-medium text-slate-500">{{ kindLabel }}</p>
+          <!-- Sta sullo sfondo grigio della pagina, non su un riquadro bianco: serve il grigio più scuro per 4,5:1. -->
+          <p class="text-xs font-medium text-slate-600">{{ kindLabel }}</p>
           <h2 class="flex items-center gap-2 text-lg font-bold text-slate-800">
             <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: tag.color }" aria-hidden="true"></span>
             <span class="truncate">{{ tag.name }}</span>
