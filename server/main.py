@@ -49,21 +49,27 @@ logger = logging.getLogger('pocketly.server')
 
 try:
     from server.webpush import (
+        endpoint_host,
         generate_vapid_keys,
+        get_vapid_subject,
         send_web_push,
         valid_aes128gcm_payload,
         valid_auth_secret,
         valid_endpoint,
         valid_p256dh,
+        vapid_subject_problem,
     )
 except ImportError:
     from webpush import (  # type: ignore[no-redef]
+        endpoint_host,
         generate_vapid_keys,
+        get_vapid_subject,
         send_web_push,
         valid_aes128gcm_payload,
         valid_auth_secret,
         valid_endpoint,
         valid_p256dh,
+        vapid_subject_problem,
     )
 
 API_VERSION = 1
@@ -153,6 +159,8 @@ class PushStore:
         self.file = data_dir / 'push.json'
         self.lock = threading.Lock()
         self.sender = sender
+        # Ultimo errore temporaneo per dispositivo: lo si scrive nel log solo quando cambia, non a ogni giro.
+        self._temp_errors: dict[str, int] = {}
         self.data_dir.mkdir(parents=True, exist_ok=True)
         # Un push.json rovinato ferma solo le notifiche: il server parte lo stesso, così sincronizzazione e backup
         # continuano a funzionare. Le rotte /api/push/* rispondono 503 finché il file non viene sistemato.
@@ -215,6 +223,11 @@ class PushStore:
         with self.lock:
             data = self._ensure_initialized()
             devices: dict = data.setdefault('devices', {})
+            previous = devices.get(device_id)
+            if previous and (previous.get('p256dh') != p256dh or previous.get('auth') != auth):
+                # Chiavi nuove: le voci già in calendario sono cifrate con quelle vecchie e il dispositivo non potrebbe
+                # leggerle. Si tolgono; il dispositivo rimanda subito il calendario con le chiavi nuove.
+                data['schedule'] = [s for s in data.get('schedule', []) if s.get('deviceId') != device_id]
             if device_id not in devices and len(devices) >= MAX_PUSH_DEVICES:
                 # Rimuove il dispositivo meno recente se si supera il limite
                 oldest = min(devices.values(), key=lambda d: d.get('updatedAt', ''))
@@ -291,9 +304,9 @@ class PushStore:
             status = self.sender(dev['endpoint'], payload, vapid, ttl=300)
         except Exception as e:
             logger.warning(
-                'Invio notifica di prova fallito con eccezione per device %s (endpoint %s): %s',
+                'Invio notifica di prova fallito con eccezione per device %s (%s): %s',
                 device_id,
-                dev['endpoint'],
+                endpoint_host(dev['endpoint']),
                 e,
             )
             return PushResponse(0, str(e))
@@ -301,9 +314,9 @@ class PushStore:
         if status_code < 200 or status_code >= 300:
             resp_body = getattr(status, 'body', '')
             logger.warning(
-                'Invio notifica di prova fallito per device %s (endpoint %s): HTTP %d %s',
+                'Invio notifica di prova fallito per device %s (%s): HTTP %d %s',
                 device_id,
-                dev['endpoint'],
+                endpoint_host(dev['endpoint']),
                 status_code,
                 resp_body,
             )
@@ -344,24 +357,20 @@ class PushStore:
             try:
                 status = self.sender(dev['endpoint'], item['payload'], vapid)
             except Exception as e:
-                logger.warning(
-                    'Eccezione durante invio push gateway per %s (endpoint %s): %s',
-                    key,
-                    dev['endpoint'],
-                    e,
-                )
+                logger.warning('Eccezione durante invio push per %s (%s): %s', key, endpoint_host(dev['endpoint']), e)
                 status = PushResponse(0, str(e))
             status_code = int(status)
             if 200 <= status_code < 300:
                 delivered_keys.add(key)
                 delivered_count += 1
+                self._temp_errors.pop(dev_id, None)
             elif status_code in (404, 410):
                 resp_body = getattr(status, 'body', '')
                 logger.warning(
-                    'Push gateway ha risposto %d per %s (endpoint %s): rimuovo sottoscrizione. Risposta: %s',
+                    'Push gateway (%s) ha risposto %d per %s: rimuovo sottoscrizione. Risposta: %s',
+                    endpoint_host(dev['endpoint']),
                     status_code,
                     dev_id,
-                    dev['endpoint'],
                     resp_body,
                 )
                 expired_devices.add(dev_id)
@@ -377,14 +386,16 @@ class PushStore:
                 )
                 drop_keys.add(key)
             else:
-                resp_body = getattr(status, 'body', '')
-                logger.warning(
-                    'Errore temporaneo push gateway per %s (endpoint %s): HTTP %d. Risposta: %s',
-                    key,
-                    dev['endpoint'],
-                    status_code,
-                    resp_body,
-                )
+                # Si riprova per 24 ore: nel log basta una riga quando l'errore compare o cambia, non una ogni 30 secondi.
+                if self._temp_errors.get(dev_id) != status_code:
+                    self._temp_errors[dev_id] = status_code
+                    logger.warning(
+                        'Errore temporaneo push gateway (%s) per %s: HTTP %d, si riprova. Risposta: %s',
+                        endpoint_host(dev['endpoint']),
+                        dev_id,
+                        status_code,
+                        getattr(status, 'body', ''),
+                    )
 
         with self.lock:
             data = self._ensure_initialized()
@@ -697,8 +708,8 @@ def main() -> int:
         print(e, file=sys.stderr)
         return 2
     print(f'Pocketly sync in ascolto su {host}:{port}, dati in {data_dir}', file=sys.stderr)
-    subject = webpush.get_vapid_subject()
-    problem = webpush.vapid_subject_problem(subject)
+    subject = get_vapid_subject()
+    problem = vapid_subject_problem(subject)
     if problem:
         print(
             f'ATTENZIONE notifiche: mittente VAPID "{subject}": {problem}. '

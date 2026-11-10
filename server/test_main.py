@@ -390,5 +390,56 @@ class WebPushTest(unittest.TestCase):
             self.assertTrue(any('500' in m for m in cm.output))
 
 
+    def test_rifiuta_endpoint_verso_la_rete_locale(self):
+        self.assertTrue(webpush.valid_endpoint('https://web.push.apple.com/Q1'))
+        for bad in ('https://192.168.1.10/push', 'https://10.0.0.1/x', 'https://[::1]/x', 'https://localhost/x',
+                    'https://router.lan/x', 'https://nas.local/x', 'https://intranet/x', 'ftp://web.push.apple.com/x'):
+            self.assertFalse(webpush.valid_endpoint(bad), bad)
+
+    def test_chiavi_nuove_tolgono_le_voci_cifrate_con_le_vecchie(self):
+        sub = {'deviceId': 'device-12345678', 'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+               'p256dh': self.p256dh, 'auth': self.auth}
+        self.request('PUT', '/api/push/subscription', sub)
+        future = int(time.time()) + 3600
+        self.server.push_store.replace_schedule(
+            [{'id': 'rem-1', 'deviceId': 'device-12345678', 'fireAt': future, 'payload': self.enc_payload}])
+        # Stesse chiavi: il calendario resta.
+        self.request('PUT', '/api/push/subscription', sub)
+        self.assertEqual(len(self.server.push_store._read_unlocked()['schedule']), 1)
+        # Chiavi nuove: le voci vecchie non sarebbero leggibili e vengono tolte.
+        sub2 = dict(sub, p256dh=webpush.generate_vapid_keys()['publicKey'])
+        self.request('PUT', '/api/push/subscription', sub2)
+        self.assertEqual(self.server.push_store._read_unlocked()['schedule'], [])
+
+    def test_errore_temporaneo_scritto_una_volta_sola(self):
+        sub = {'deviceId': 'device-12345678', 'endpoint': 'https://fcm.googleapis.com/fcm/send/segreto',
+               'p256dh': self.p256dh, 'auth': self.auth}
+        self.request('PUT', '/api/push/subscription', sub)
+        base_ts = int(time.time())
+        self.server.push_store.replace_schedule(
+            [{'id': 'rem-1', 'deviceId': 'device-12345678', 'fireAt': base_ts - 10, 'payload': self.enc_payload}])
+        self.next_status = webpush.PushResponse(503, 'Unavailable')
+        with self.assertLogs('pocketly.server', level='WARNING') as cm:
+            self.server.push_store.dispatch_due(now_ts=base_ts)
+            self.server.push_store.dispatch_due(now_ts=base_ts + 30)
+        self.assertEqual(len(cm.output), 1)
+        # Nel log c'è il servizio, non l'indirizzo completo del dispositivo.
+        self.assertIn('fcm.googleapis.com', cm.output[0])
+        self.assertNotIn('segreto', cm.output[0])
+
+
+class StartupTest(unittest.TestCase):
+    def test_avvio_avvisa_se_il_mittente_non_e_reale(self):
+        class FakeServer:
+            def serve_forever(self):
+                raise KeyboardInterrupt
+
+        env = {'POCKETLY_SYNC_KEY': KEY, 'POCKETLY_VAPID_SUBJECT': ''}
+        with unittest.mock.patch.dict(os.environ, env),                 unittest.mock.patch.object(main, 'make_server', return_value=FakeServer()),                 unittest.mock.patch('sys.stderr') as err:
+            self.assertEqual(main.main(), 0)
+        written = ''.join(str(c.args[0]) for c in err.write.call_args_list)
+        self.assertIn('POCKETLY_VAPID_SUBJECT', written)
+
+
 if __name__ == '__main__':
     unittest.main()
