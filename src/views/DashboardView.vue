@@ -142,10 +142,8 @@ const projectionFigure = computed(() => {
   return {
     label: t('dashboard.projected'),
     value: s.value.projectedBalance,
-    hint:
-      finance.estimatedMonthlyIncome > 0
-        ? t('dashboard.projectedHintEstimate', { amount: money(finance.estimatedMonthlyIncome) })
-        : t('dashboard.projectedHint'),
+    // La quota stimata è già una cifra a sé ("di cui …"): la nota non la ripete.
+    hint: t('dashboard.projectedHint'),
     estimated: estimatedIncome.value,
   }
 })
