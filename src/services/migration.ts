@@ -14,6 +14,7 @@ import type {
   Tag,
 } from '@/types/models'
 import { defaultBudgetSettings, defaultForecastSettings } from '@/domain/defaults'
+import { normalizeNotifications } from '@/domain/notifications'
 import { FREQUENCIES } from '@/domain/recurrence'
 import { pickUniqueColor } from '@/utils/colors'
 import { isValidIsoDate, todayIso } from '@/utils/dates'
@@ -234,6 +235,7 @@ function normalizeV2(raw: Obj): FinanceData {
     recurringExpenses: valid<RecurringExpense>(raw.recurringExpenses, (o) => {
       const amount = cents(o.amount)
       if (amount === null || !isValidIsoDate(o.startDate)) return null
+      const notifications = normalizeNotifications(o.notifications)
       return {
         id: id(o.id),
         name: str(o.name),
@@ -243,6 +245,7 @@ function normalizeV2(raw: Obj): FinanceData {
         endDate: isValidIsoDate(o.endDate) ? o.endDate : null,
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
+        ...(notifications.length ? { notifications } : {}),
       }
     }),
     incomes: valid<Income>(raw.incomes, (o) => {

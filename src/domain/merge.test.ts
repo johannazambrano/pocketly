@@ -156,6 +156,31 @@ describe('mergeFinanceData', () => {
     expect(merged.oneTimeExpenses.find((e) => e.id === 'e1')?.tagIds?.sort()).toEqual(['t1', 't2'])
     expect(merged.oneTimeExpenses.find((e) => e.id === 'e2')?.tagIds).toEqual(['t3'])
   })
+
+  it('propaga aggiunta e rimozione dei promemoria sulle spese ricorrenti', () => {
+    const rec = (id: string, notifications?: { daysBefore: number; time: string }[]) => ({
+      id,
+      name: id,
+      amount: 1500,
+      frequency: 'monthly' as const,
+      startDate: '2026-01-15',
+      endDate: null,
+      categoryId: 'cat-home',
+      paymentMethodId: 'pm-card',
+      ...(notifications ? { notifications } : {}),
+    })
+    const base = data({ recurringExpenses: [rec('r1', [{ daysBefore: 1, time: '09:00' }]), rec('r2')] })
+    const local = data({ recurringExpenses: [rec('r1'), rec('r2')] }) // r1: rimossi promemoria in locale
+    const remote = data({
+      recurringExpenses: [
+        rec('r1', [{ daysBefore: 1, time: '09:00' }]),
+        rec('r2', [{ daysBefore: 3, time: '10:00' }]), // r2: aggiunti promemoria da remoto
+      ],
+    })
+    const merged = mergeFinanceData(base, local, remote)
+    expect(merged.recurringExpenses.find((r) => r.id === 'r1')?.notifications).toBeUndefined()
+    expect(merged.recurringExpenses.find((r) => r.id === 'r2')?.notifications).toEqual([{ daysBefore: 3, time: '10:00' }])
+  })
 })
 
 describe('deepEqual', () => {

@@ -5,3 +5,5 @@ dev-dist
 .idea/workspace.xml
 .idea/shelf
 .idea/vcs.xml
+__pycache__/
+*.py[cod]

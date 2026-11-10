@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Frequency, RecurringExpense } from '@/types/models'
+import type { Frequency, NotificationRule, RecurringExpense } from '@/types/models'
 import { FREQUENCIES } from '@/domain/recurrence'
 import { useFinanceStore } from '@/stores/finance'
+import { useNotificationsStore } from '@/stores/notifications'
 import { centsToInput, toCents } from '@/utils/money'
 import { toIsoDate } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import TagSelect from './TagSelect.vue'
+import NotificationRulesEditor from './NotificationRulesEditor.vue'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; item?: RecurringExpense | null }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const finance = useFinanceStore()
+const notificationsStore = useNotificationsStore()
 
 const form = reactive({
   name: '',
@@ -23,6 +26,7 @@ const form = reactive({
   endDate: '',
   categoryId: '',
   paymentMethodId: '',
+  notifications: [] as NotificationRule[],
 })
 const error = ref('')
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
@@ -33,6 +37,10 @@ watch(
     if (!open) return
     const i = props.item
     error.value = ''
+    const initialNotifications = i
+      ? (i.notifications ? [...i.notifications] : [])
+      : notificationsStore.defaultRules.map((r) => ({ ...r }))
+
     Object.assign(form, {
       name: i?.name ?? '',
       amount: i ? centsToInput(i.amount) : '',
@@ -42,6 +50,7 @@ watch(
       endDate: i?.endDate ?? '',
       categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
+      notifications: initialNotifications,
     })
   },
   { immediate: true },
@@ -66,6 +75,7 @@ function submit() {
     endDate: form.endDate || null,
     categoryId: form.categoryId,
     paymentMethodId: form.paymentMethodId,
+    notifications: form.notifications,
   })
   emit('close')
 }
@@ -104,6 +114,14 @@ function submit() {
       <div class="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect v-model="form.paymentMethodId" kind="paymentMethods" :label="t('common.paymentMethod')" />
+      </div>
+      <div class="space-y-1 border-t border-slate-100 pt-3">
+        <NotificationRulesEditor
+          v-model="form.notifications"
+          :show-toggle="true"
+          :toggle-label="t('notifications.settingsTitle')"
+          :default-fallback-rules="notificationsStore.defaultRules"
+        />
       </div>
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>

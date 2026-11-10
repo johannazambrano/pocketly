@@ -35,6 +35,13 @@ export interface OneTimeExpense {
   tagIds?: Id[]
 }
 
+export interface NotificationRule {
+  /** Giorni prima dell'addebito: 0 = il giorno stesso, 1 = il giorno prima, ecc. (0..365). */
+  daysBefore: number
+  /** Orario locale nel formato HH:MM (es. "09:00"). */
+  time: string
+}
+
 export interface RecurringExpense {
   id: Id
   name: string
@@ -46,6 +53,11 @@ export interface RecurringExpense {
   endDate: IsoDate | null
   categoryId: Id
   paymentMethodId: Id
+  /**
+   * Promemoria configurati per questa spesa (stile Google Calendar).
+   * Presente solo quando c'è almeno una regola attiva; assente se disattivato.
+   */
+  notifications?: NotificationRule[]
 }
 
 export interface Income {
