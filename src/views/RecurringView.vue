@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { RecurringExpense } from '@/types/models'
 import { monthlyEquivalent } from '@/domain/recurrence'
+import { formatRulesSummary } from '@/domain/notifications'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
@@ -52,6 +53,14 @@ function period(r: RecurringExpense) {
           <span>{{ t(`recurring.frequencies.${r.frequency}`) }}</span>
           <TagBadge kind="categories" :id="r.categoryId" />
           <TagBadge kind="paymentMethods" :id="r.paymentMethodId" />
+          <span
+            v-if="r.notifications?.length"
+            class="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+            :title="formatRulesSummary(r.notifications, t)"
+          >
+            <i class="fa-solid fa-bell text-[10px] text-emerald-600"></i>
+            <span>{{ formatRulesSummary(r.notifications, t) }}</span>
+          </span>
         </template>
       </EntryRow>
     </EntryList>

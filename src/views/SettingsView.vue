@@ -12,6 +12,7 @@ import { XlsxUnsupportedError } from '@/services/xlsx/zip'
 import { formatDate } from '@/utils/dates'
 import BaseModal from '@/components/BaseModal.vue'
 import SyncSettings from '@/components/SyncSettings.vue'
+import NotificationSettings from '@/components/NotificationSettings.vue'
 import TagManager from '@/components/TagManager.vue'
 
 const finance = useFinanceStore()
@@ -242,6 +243,7 @@ function changeLocale(code: LocaleCode) {
       </div>
 
       <SyncSettings />
+      <NotificationSettings />
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-slate-700">
