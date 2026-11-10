@@ -34,6 +34,8 @@ const SHOWN_KEY = 'notifications-shown'
  * lo mostra l'app da sola: così un 403 di Apple, un server spento o un firewall non fanno perdere il promemoria.
  */
 const PUSH_GRACE_SECONDS = 10 * 60
+/** Il server accetta al massimo questo numero di voci per volta (MAX_PUSH_SCHEDULE in server/main.py). */
+const MAX_SCHEDULE_ITEMS = 5000
 const SYNC_DEBOUNCE_MS = 2000
 
 export interface NotificationConfig {
@@ -56,6 +58,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const isSyncingSchedule = ref(false)
   const testSending = ref(false)
   const pushSubscribed = ref(false)
+  /**
+   * Perché l'ultimo invio del calendario al server non è andato del tutto: 'tooMany' se le voci superavano il limite
+   * (le più lontane non sono partite), 'failed' se l'invio non è riuscito. Null quando è andato tutto bene.
+   */
+  const scheduleProblem = ref<'tooMany' | 'failed' | null>(null)
 
   const isSupported = computed(() => {
     return typeof window !== 'undefined' && 'Notification' in window
@@ -351,12 +358,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
         }
       }
 
-      const itemsToSend = encryptedItems.slice(0, 5000)
+      const itemsToSend = encryptedItems.slice(0, MAX_SCHEDULE_ITEMS)
       await api.putSchedule(itemsToSend)
+      scheduleProblem.value = encryptedItems.length > MAX_SCHEDULE_ITEMS ? 'tooMany' : null
       lastScheduleHash.value = currentHash
       await persistConfig()
     } catch (e) {
       console.warn('Sincronizzazione pianificazione push non riuscita', e)
+      scheduleProblem.value = 'failed'
     }
   }
 
@@ -661,6 +670,33 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
 
   /**
+   * La sincronizzazione sta per essere scollegata: si tolgono dal server l'iscrizione e il calendario di questo
+   * dispositivo, finché la chiave del server è ancora disponibile. Altrimenti il server continuerebbe a mandare
+   * promemoria con dati non più aggiornati. Le notifiche locali restano attive.
+   */
+  async function leaveServer(): Promise<void> {
+    if (sync.serverKey && deviceId.value) {
+      try {
+        await createPushApi(sync.serverKey).deleteSubscription(deviceId.value)
+      } catch (e) {
+        console.warn('Rimozione dal server non riuscita', e)
+      }
+    }
+    const reg = await getServiceWorkerRegistration()
+    if (reg && 'pushManager' in reg) {
+      try {
+        await (await reg.pushManager.getSubscription())?.unsubscribe()
+      } catch (e) {
+        console.warn('Errore durante unsubscribe Web Push', e)
+      }
+    }
+    pushSubscribed.value = false
+    scheduleProblem.value = null
+    lastScheduleHash.value = null
+    await persistConfig()
+  }
+
+  /**
    * Il browser ha rinnovato l'iscrizione da solo (evento pushsubscriptionchange nel service worker): si registra la
    * nuova sul server e si rimanda il calendario, che altrimenti resterebbe cifrato con le chiavi vecchie.
    */
@@ -671,6 +707,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   return {
     ready,
     onSubscriptionChanged,
+    leaveServer,
+    scheduleProblem,
     enabled,
     permission,
     deviceId,
