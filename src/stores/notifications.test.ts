@@ -24,6 +24,7 @@ describe('useNotificationsStore', () => {
   let mockNotification: any
 
   beforeEach(() => {
+    vi.unstubAllGlobals()
     setActivePinia(createPinia())
     inMemoryIdb.clear()
     vi.restoreAllMocks()
@@ -294,5 +295,237 @@ describe('useNotificationsStore', () => {
 
     const success = await store.sendTestNotification()
     expect(success).toBe(false)
+  })
+
+  it('evita promemoria locali doppi quando isPushActive è true', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+
+    const now = new Date()
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    finance.saveRecurring({
+      name: 'Internet Casa',
+      amount: 2999,
+      frequency: 'monthly',
+      startDate: todayIso,
+      endDate: null,
+      categoryId: finance.data.categories[0]!.id,
+      paymentMethodId: finance.data.paymentMethods[0]!.id,
+      notifications: [{ daysBefore: 0, time: '00:00' }],
+    })
+
+    const store = useNotificationsStore()
+    await store.init()
+    await store.enable()
+
+    // Simula modalità push attiva
+    const sync = useSyncStore()
+    inMemoryIdb.set('sync-config', {
+      serverKey: 'test-key',
+      key: {} as any,
+      state: { version: 1, base: null, snapshot: {} as any },
+    })
+    await sync.init()
+    store.pushSubscribed = true
+
+    // Simula supporto ServiceWorker e PushManager
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        getRegistration: vi.fn(async () => null),
+      },
+    })
+    const win = window as any
+    win.PushManager = class {}
+
+    expect(store.isPushActive).toBe(true)
+
+    showNotificationMock.mockClear()
+    await store.checkLocalReminders()
+    // Promemoria locale deve essere inibito per evitare duplicati
+    expect(showNotificationMock).not.toHaveBeenCalled()
+  })
+
+  it('accoda richieste concorrenti di syncPushSchedule con il flag syncAgain', async () => {
+    const sync = useSyncStore()
+    inMemoryIdb.set('sync-config', {
+      serverKey: 'test-sync-key-which-is-long-enough',
+      key: {} as any,
+      state: { version: 1, base: null, snapshot: {} as any },
+    })
+    await sync.init()
+
+    let callCount = 0
+    const putScheduleMock = vi.fn(async () => {
+      callCount++
+      // Ritardo artificiale per simulare una chiamata in corso
+      await new Promise((r) => setTimeout(r, 50))
+      return { scheduled: 1 }
+    })
+
+    vi.spyOn(apiModule, 'createPushApi').mockReturnValue({
+      getConfig: vi.fn(async () => ({
+        vapidPublicKey: 'test-key',
+        devices: [{ deviceId: 'dev-1', p256dh: 'p1', auth: 'a1' }],
+      })),
+      putSubscription: vi.fn(),
+      deleteSubscription: vi.fn(),
+      putSchedule: putScheduleMock,
+      sendTest: vi.fn(),
+    })
+
+    const store = useNotificationsStore()
+    await store.init()
+
+    // Lancia due chiamate in parallelo con force: true
+    const p1 = store.syncPushSchedule(true)
+    const p2 = store.syncPushSchedule(true)
+    await Promise.all([p1, p2])
+
+    // Entrambe sono state completate senza errori e putSchedule è stato eseguito
+    expect(putScheduleMock).toHaveBeenCalled()
+  })
+
+  it('include le credenziali crittografiche nell hash della pianificazione', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+
+    const sync = useSyncStore()
+    inMemoryIdb.set('sync-config', {
+      serverKey: 'test-sync-key-which-is-long-enough',
+      key: {} as any,
+      state: { version: 1, base: null, snapshot: {} as any },
+    })
+    await sync.init()
+
+    let deviceP256dh = 'initial-p256dh'
+    const putScheduleMock = vi.fn(async () => ({ scheduled: 1 }))
+    vi.spyOn(apiModule, 'createPushApi').mockImplementation(() => ({
+      getConfig: vi.fn(async () => ({
+        vapidPublicKey: 'test-key',
+        devices: [{ deviceId: 'dev-1', p256dh: deviceP256dh, auth: 'a1' }],
+      })),
+      putSubscription: vi.fn(),
+      deleteSubscription: vi.fn(),
+      putSchedule: putScheduleMock,
+      sendTest: vi.fn(),
+    }))
+
+    const store = useNotificationsStore()
+    await store.init()
+
+    // Primo invio
+    await store.syncPushSchedule(false)
+    const firstHash = store.lastScheduleHash
+    expect(firstHash).toBeTruthy()
+
+    // Se cambiano le credenziali crittografiche del dispositivo sul server (stesso deviceId)
+    deviceP256dh = 'rotated-p256dh'
+    await store.syncPushSchedule(false)
+    const secondHash = store.lastScheduleHash
+    expect(secondHash).toBeTruthy()
+    expect(secondHash).not.toBe(firstHash)
+  })
+
+  it('gestisce con successo lerrore Illegal constructor di new Notification', async () => {
+    // Simula Android Chrome dove new Notification() solleva Illegal constructor
+    vi.stubGlobal(
+      'Notification',
+      Object.assign(
+        function () {
+          throw new TypeError("Failed to construct 'Notification': Illegal constructor.")
+        },
+        {
+          permission: 'granted',
+          requestPermission: vi.fn(async () => 'granted'),
+        },
+      ),
+    )
+
+    const store = useNotificationsStore()
+    await store.init()
+
+    // sendTestNotification non deve lanciare eccezioni non gestite
+    const result = await store.sendTestNotification()
+    expect(result).toBe(false)
+  })
+
+  it('su Android Chrome usa ServiceWorkerRegistration.showNotification con successo', async () => {
+    const swShowNotification = vi.fn(async () => undefined)
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        getRegistration: vi.fn(async () => ({
+          showNotification: swShowNotification,
+        })),
+      },
+    })
+    vi.stubGlobal(
+      'Notification',
+      Object.assign(
+        function () {
+          throw new TypeError("Failed to construct 'Notification': Illegal constructor.")
+        },
+        {
+          permission: 'granted',
+          requestPermission: vi.fn(async () => 'granted'),
+        },
+      ),
+    )
+
+    const store = useNotificationsStore()
+    await store.init()
+
+    const result = await store.sendTestNotification()
+    expect(result).toBe(true)
+    expect(swShowNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Pocketly'),
+      expect.objectContaining({
+        badge: '/pwa-64x64.png',
+        icon: '/pwa-192x192.png',
+      }),
+    )
+  })
+
+  it('non marca come mostrato un promemoria locale se la notifica non puo essere visualizzata', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+
+    const now = new Date()
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    finance.saveRecurring({
+      name: 'Internet Casa',
+      amount: 2999,
+      frequency: 'monthly',
+      startDate: todayIso,
+      endDate: null,
+      categoryId: finance.data.categories[0]!.id,
+      paymentMethodId: finance.data.paymentMethods[0]!.id,
+      notifications: [{ daysBefore: 0, time: '00:00' }],
+    })
+
+    // new Notification lancia errore e nessun service worker attivo
+    vi.stubGlobal(
+      'Notification',
+      Object.assign(
+        function () {
+          throw new TypeError("Failed to construct 'Notification': Illegal constructor.")
+        },
+        {
+          permission: 'granted',
+          requestPermission: vi.fn(async () => 'granted'),
+        },
+      ),
+    )
+
+    const store = useNotificationsStore()
+    await store.init()
+    store.enabled = true
+    store.permission = 'granted'
+
+    await store.checkLocalReminders()
+    const shown = (inMemoryIdb.get('notifications-shown') as Record<string, number>) || {}
+    // Poiché showNotificationSafely è fallito, non deve marcare come mostrato
+    expect(Object.keys(shown).length).toBe(0)
   })
 })

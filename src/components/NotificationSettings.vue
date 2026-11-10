@@ -72,7 +72,7 @@ function applyDefaults(mode: 'missing' | 'all') {
 
     <!-- Stato attivo -->
     <div v-if="notifications.enabled" class="space-y-3">
-      <p v-if="notifications.mode === 'push'" class="text-xs font-medium text-emerald-700">
+      <p v-if="notifications.isPushActive" class="text-xs font-medium text-emerald-700">
         <i class="fa-solid fa-check mr-1"></i>
         {{ t('notifications.modePush') }}
       </p>

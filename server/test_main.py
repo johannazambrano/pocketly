@@ -245,6 +245,124 @@ class WebPushTest(unittest.TestCase):
         self.assertEqual((status, body), (200, {'status': 201}))
         self.assertEqual(len(self.sent_calls), 1)
 
+    def test_vapid_subject_configurabile(self):
+        vapid = webpush.generate_vapid_keys()
+        # Default subject non è localhost
+        auth_default = webpush.create_vapid_auth_header(vapid, 'https://web.push.apple.com/endpoint')
+        jwt_token = auth_default.split('t=')[1].split(',')[0]
+        claims = json.loads(webpush.b64url_decode(jwt_token.split('.')[1]))
+        self.assertEqual(claims['sub'], 'mailto:support@pocketly.local')
+
+        # Con variabile d'ambiente POCKETLY_VAPID_SUBJECT
+        with unittest.mock.patch.dict(os.environ, {'POCKETLY_VAPID_SUBJECT': 'https://pocketly.example.com'}):
+            auth_custom = webpush.create_vapid_auth_header(vapid, 'https://web.push.apple.com/endpoint')
+            jwt_token_custom = auth_custom.split('t=')[1].split(',')[0]
+            claims_custom = json.loads(webpush.b64url_decode(jwt_token_custom.split('.')[1]))
+            self.assertEqual(claims_custom['sub'], 'https://pocketly.example.com')
+
+        # Se vuoto o spazi, fallback sicuro sul default
+        with unittest.mock.patch.dict(os.environ, {'POCKETLY_VAPID_SUBJECT': '   '}):
+            self.assertEqual(webpush.get_vapid_subject(), webpush.DEFAULT_VAPID_SUBJECT)
+
+    def test_replace_schedule_conserva_pending_ultime_24h(self):
+        sub = {
+            'deviceId': 'device-12345678',
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        base_ts = int(time.time())
+
+        # Inserisce un item dovuto da 5 minuti fa (in attesa di dispatch)
+        old_item = {
+            'id': 'rem-due-recently',
+            'deviceId': 'device-12345678',
+            'fireAt': base_ts - 300,
+            'payload': self.enc_payload,
+        }
+        self.server.push_store.replace_schedule([old_item])
+
+        # Ora arriva una nuova pianificazione con un item futuro (senza rem-due-recently)
+        future_item = {
+            'id': 'rem-future',
+            'deviceId': 'device-12345678',
+            'fireAt': base_ts + 3600,
+            'payload': self.enc_payload,
+        }
+        self.request('PUT', '/api/push/schedule', {'items': [future_item]})
+
+        # Verifica che il server conservi ancora rem-due-recently nello schedule
+        with self.server.push_store.lock:
+            data = self.server.push_store._ensure_initialized()
+            sched_ids = [s['id'] for s in data['schedule']]
+            self.assertIn('rem-due-recently', sched_ids)
+            self.assertIn('rem-future', sched_ids)
+
+    def test_push_json_corrotto_solleva_errore_senza_cancellare(self):
+        # Scrive un push.json non valido
+        push_file = self.data_dir / 'push.json'
+        push_file.write_text('{ invalid json ...', encoding='utf-8')
+        with self.assertRaises(RuntimeError):
+            self.server.push_store._read_unlocked()
+        # Assicura che il file non sia stato sovrascritto
+        self.assertEqual(push_file.read_text(encoding='utf-8'), '{ invalid json ...')
+
+    def test_push_json_vapid_incompleto_solleva_errore(self):
+        push_file = self.data_dir / 'push.json'
+        push_file.write_text('{"vapid": {}}', encoding='utf-8')
+        with self.assertRaises(RuntimeError):
+            self.server.push_store._read_unlocked()
+
+    def test_replace_schedule_ordina_per_fireAt(self):
+        sub = {
+            'deviceId': 'device-12345678',
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        base_ts = int(time.time())
+
+        # Item fuori ordine cronologico
+        items = [
+            {'id': 'rem-late', 'deviceId': 'device-12345678', 'fireAt': base_ts + 2000, 'payload': self.enc_payload},
+            {'id': 'rem-early', 'deviceId': 'device-12345678', 'fireAt': base_ts + 100, 'payload': self.enc_payload},
+        ]
+        self.request('PUT', '/api/push/schedule', {'items': items})
+        with self.server.push_store.lock:
+            data = self.server.push_store._ensure_initialized()
+            sched = data['schedule']
+            self.assertEqual(sched[0]['id'], 'rem-early')
+            self.assertEqual(sched[1]['id'], 'rem-late')
+
+    def test_logging_warning_su_errori_push_gateway(self):
+        sub = {
+            'deviceId': 'device-12345678',
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        base_ts = int(time.time())
+
+        items = [
+            {'id': 'rem-403', 'deviceId': 'device-12345678', 'fireAt': base_ts - 10, 'payload': self.enc_payload},
+        ]
+        self.server.push_store.replace_schedule(items)
+
+        # Risposta 403 con body
+        self.next_status = webpush.PushResponse(403, 'BadJwtToken')
+        with self.assertLogs('pocketly.server', level='WARNING') as cm:
+            self.server.push_store.dispatch_due(now_ts=base_ts)
+            self.assertTrue(any('403' in m and 'BadJwtToken' in m for m in cm.output))
+
+        # Test anche per send_test con errore 500
+        self.next_status = webpush.PushResponse(500, 'Internal Server Error')
+        with self.assertLogs('pocketly.server', level='WARNING') as cm:
+            self.server.push_store.send_test('device-12345678', self.enc_payload)
+            self.assertTrue(any('500' in m for m in cm.output))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,31 +10,49 @@ function markReminderShownInIdb(reminderId) {
   if (!reminderId || typeof indexedDB === 'undefined') return Promise.resolve()
   return new Promise((resolve) => {
     try {
-      const openReq = indexedDB.open('keyval-store')
-      openReq.onerror = () => resolve()
-      openReq.onsuccess = () => {
-        const db = openReq.result
-        if (!db.objectStoreNames.contains('keyval')) {
-          db.close()
-          resolve()
-          return
+      const openDb = () => {
+        const openReq = indexedDB.open('keyval-store')
+        openReq.onerror = () => resolve()
+        openReq.onsuccess = () => {
+          const db = openReq.result
+          if (!db.objectStoreNames.contains('keyval')) {
+            db.close()
+            resolve()
+            return
+          }
+          const tx = db.transaction('keyval', 'readwrite')
+          const store = tx.objectStore('keyval')
+          const getReq = store.get(SHOWN_KEY)
+          getReq.onsuccess = () => {
+            const map = getReq.result && typeof getReq.result === 'object' ? { ...getReq.result } : {}
+            map[reminderId] = Date.now()
+            store.put(map, SHOWN_KEY)
+          }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => {
+            db.close()
+            resolve()
+          }
         }
-        const tx = db.transaction('keyval', 'readwrite')
-        const store = tx.objectStore('keyval')
-        const getReq = store.get(SHOWN_KEY)
-        getReq.onsuccess = () => {
-          const map = getReq.result && typeof getReq.result === 'object' ? { ...getReq.result } : {}
-          map[reminderId] = Date.now()
-          store.put(map, SHOWN_KEY)
-        }
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => {
-          db.close()
-          resolve()
-        }
+      }
+
+      if ('databases' in indexedDB) {
+        indexedDB
+          .databases()
+          .then((dbs) => {
+            const exists = (dbs || []).some((db) => db.name === 'keyval-store')
+            if (!exists) {
+              resolve()
+              return
+            }
+            openDb()
+          })
+          .catch(() => openDb())
+      } else {
+        openDb()
       }
     } catch {
       resolve()
@@ -66,7 +84,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body,
     icon: '/pwa-192x192.png',
-    badge: '/favicon.svg',
+    badge: '/pwa-64x64.png',
     tag: payload.tag || payload.id || 'pocketly-reminder',
     data: { url: payload.url || '/ricorrenti' },
   }
@@ -86,18 +104,28 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          if ('navigate' in client) {
-            return client.navigate(fullUrl).then((c) => (c ? c.focus() : undefined))
-          }
-          return client.focus()
-        }
+      const targetClient = clientList.find((c) => c.focused) || clientList[0]
+      if (targetClient && 'focus' in targetClient) {
+        targetClient.postMessage({
+          type: 'POCKETLY_NAVIGATE',
+          url: targetPath,
+        })
+        return targetClient.focus()
       }
       if (self.clients.openWindow) {
         return self.clients.openWindow(fullUrl)
       }
       return undefined
+    }),
+  )
+})
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        client.postMessage({ type: 'POCKETLY_PUSH_SUBSCRIPTION_CHANGED' })
+      }
     }),
   )
 })

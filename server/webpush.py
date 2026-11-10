@@ -10,11 +10,38 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
+import os
 import secrets
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Optional, Tuple
+
+logger = logging.getLogger('pocketly.webpush')
+
+DEFAULT_VAPID_SUBJECT = 'mailto:support@pocketly.local'
+
+
+def get_vapid_subject() -> str:
+    val = os.environ.get('POCKETLY_VAPID_SUBJECT', '').strip()
+    return val if val else DEFAULT_VAPID_SUBJECT
+
+
+class PushResponse(int):
+    """Codice di stato HTTP restituito dal gateway push con il corpo della risposta associato."""
+
+    body: str
+
+    def __new__(cls, status: int, body: str = ''):
+        obj = super().__new__(cls, status)
+        obj.body = body
+        return obj
+
+    def __repr__(self) -> str:
+        return f'PushResponse({int(self)}, body={self.body!r})'
+
 
 # Parametri standard NIST P-256 (secp256r1 / prime256v1)
 P = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
@@ -24,7 +51,7 @@ B = 0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
 GX = 0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296
 GY = 0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
 
-Point = tuple[int, int] | None
+Point = Optional[Tuple[int, int]]
 
 MAX_ENCRYPTED_PAYLOAD_BYTES = 4096
 MIN_ENCRYPTED_PAYLOAD_BYTES = 86 + 17  # 86B header RFC 8188 + almeno 1B record + 16B tag GCM
@@ -156,16 +183,17 @@ def verify_es256(pub_b64: str, signing_input: bytes, sig: bytes) -> bool:
 def create_vapid_auth_header(
     vapid: dict[str, str],
     endpoint: str,
-    subject: str = 'mailto:pocketly@localhost',
+    subject: Optional[str] = None,
     exp_seconds: int = 43200,
 ) -> str:
     """Costruisce il valore dell'intestazione `Authorization: vapid t=..., k=...` (RFC 8292)."""
+    sub = subject if subject is not None else get_vapid_subject()
     parsed = urllib.parse.urlsplit(endpoint)
     audience = f'{parsed.scheme}://{parsed.netloc}'
     header_b64 = b64url_encode(json.dumps({'typ': 'JWT', 'alg': 'ES256'}, separators=(',', ':')).encode('utf-8'))
     claims_b64 = b64url_encode(
         json.dumps(
-            {'aud': audience, 'exp': int(time.time()) + exp_seconds, 'sub': subject},
+            {'aud': audience, 'exp': int(time.time()) + exp_seconds, 'sub': sub},
             separators=(',', ':'),
         ).encode('utf-8')
     )
@@ -234,14 +262,16 @@ def send_web_push(
     vapid: dict[str, str],
     ttl: int = 86400,
     timeout: float = 10.0,
+    subject: Optional[str] = None,
 ) -> int:
     """Invia una notifica Web Push cifrata all'endpoint del dispositivo.
 
     Restituisce il codice di stato HTTP (es. 201 Created, 404/410 sottoscrizione rimossa, 0 errore di rete).
+    Registra con warning gli errori restituiti dal gateway push.
     """
     body = b64url_decode(payload_b64)
     headers = {
-        'Authorization': create_vapid_auth_header(vapid, endpoint),
+        'Authorization': create_vapid_auth_header(vapid, endpoint, subject=subject),
         'Content-Encoding': 'aes128gcm',
         'Content-Type': 'application/octet-stream',
         'TTL': str(ttl),
@@ -250,8 +280,19 @@ def send_web_push(
     req = urllib.request.Request(endpoint, data=body, headers=headers, method='POST')
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return int(resp.status)
+            status = int(resp.status)
+            body_text = resp.read().decode('utf-8', errors='replace')
+            if status < 200 or status >= 300:
+                logger.warning('Push gateway HTTP %d for endpoint %s: %s', status, endpoint, body_text)
+            return PushResponse(status, body_text)
     except urllib.error.HTTPError as e:
-        return int(e.code)
-    except Exception:
-        return 0
+        body_text = ''
+        try:
+            body_text = e.read().decode('utf-8', errors='replace')
+        except Exception:
+            pass
+        logger.warning('Push gateway HTTP error %d for endpoint %s: %s', e.code, endpoint, body_text)
+        return PushResponse(int(e.code), body_text)
+    except Exception as e:
+        logger.warning('Push gateway network/client error for endpoint %s: %s', endpoint, e)
+        return PushResponse(0, str(e))

@@ -21,10 +21,11 @@ Endpoint (dietro nginx, sotto /api/):
   POST   /api/push/test          <- {"deviceId": "...", "payload": "..."}
 
 Configurazione (variabili d'ambiente):
-  POCKETLY_SYNC_KEY   chiave di accesso, obbligatoria (almeno 32 caratteri)
-  POCKETLY_DATA_DIR   cartella dei dati (default /var/lib/pocketly)
-  POCKETLY_HOST       indirizzo di ascolto (default 127.0.0.1: si arriva solo tramite nginx)
-  POCKETLY_PORT       porta (default 8787)
+  POCKETLY_SYNC_KEY      chiave di accesso, obbligatoria (almeno 32 caratteri)
+  POCKETLY_VAPID_SUBJECT contatto VAPID (default mailto:support@pocketly.local)
+  POCKETLY_DATA_DIR      cartella dei dati (default /var/lib/pocketly)
+  POCKETLY_HOST          indirizzo di ascolto (default 127.0.0.1: si arriva solo tramite nginx)
+  POCKETLY_PORT          porta (default 8787)
 
 Richiede solo la libreria standard di Python (3.9 o successivo).
 """
@@ -32,6 +33,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import os
 import sys
 import tempfile
@@ -41,6 +43,9 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Optional, Tuple
+
+logger = logging.getLogger('pocketly.server')
 
 try:
     from server.webpush import (
@@ -68,7 +73,7 @@ HISTORY_KEEP = 30
 ENCRYPTED_FORMAT = 'pocketly-encrypted-backup'
 
 MAX_PUSH_DEVICES = 16
-MAX_PUSH_SCHEDULE = 1000
+MAX_PUSH_SCHEDULE = 5000
 SENT_RETENTION_SECONDS = 30 * 24 * 3600
 PUSH_RETRY_WINDOW_SECONDS = 24 * 3600
 DISPATCH_INTERVAL_SECONDS = 30.0
@@ -149,20 +154,33 @@ class PushStore:
             self._ensure_initialized()
 
     def _read_unlocked(self) -> dict:
+        if not self.file.exists():
+            data = {
+                'vapid': generate_vapid_keys(),
+                'devices': {},
+                'schedule': [],
+                'sent': {},
+            }
+            write_atomic(self.file, data)
+            return data
+
         try:
             with open(self.file, encoding='utf-8') as f:
                 data = json.load(f)
-                if isinstance(data, dict) and isinstance(data.get('vapid'), dict):
-                    return data
-        except (FileNotFoundError, ValueError, json.JSONDecodeError):
-            pass
-        data = {
-            'vapid': generate_vapid_keys(),
-            'devices': {},
-            'schedule': [],
-            'sent': {},
-        }
-        write_atomic(self.file, data)
+        except Exception as e:
+            logger.error('push.json esiste ma non è leggibile o decodificabile: %s', e)
+            raise RuntimeError(f'push data file {self.file} is corrupted: {e}') from e
+
+        vapid = data.get('vapid') if isinstance(data, dict) else None
+        if (
+            not isinstance(data, dict)
+            or not isinstance(vapid, dict)
+            or not isinstance(vapid.get('publicKey'), str)
+            or not isinstance(vapid.get('d'), str)
+        ):
+            logger.error('push.json non contiene una struttura valida (manca vapid o chiavi incomplete)')
+            raise RuntimeError(f'push data file {self.file} has invalid structure')
+
         return data
 
     def _ensure_initialized(self) -> dict:
@@ -236,23 +254,55 @@ class PushStore:
                     'payload': item['payload'],
                 })
 
-            data['schedule'] = valid_items
+            # Conserva le voci dovute recentemente (ultime 24h) ancora in attesa di dispatch o in fase di retry
+            existing_pending = [
+                s
+                for s in data.get('schedule', [])
+                if s.get('deviceId') in devices
+                and f"{s.get('id')}@{s.get('deviceId')}" not in sent
+                and f"{s.get('id')}@{s.get('deviceId')}" not in seen
+                and s.get('fireAt', 0) <= now_ts
+                and now_ts - s.get('fireAt', 0) <= PUSH_RETRY_WINDOW_SECONDS
+            ]
+
+            combined = existing_pending + valid_items
+            combined.sort(key=lambda s: s.get('fireAt', 0))
+            data['schedule'] = combined[:MAX_PUSH_SCHEDULE]
             write_atomic(self.file, data)
             return len(valid_items)
 
-    def send_test(self, device_id: str, payload: str) -> int | None:
+    def send_test(self, device_id: str, payload: str) -> Optional[int]:
         with self.lock:
             data = self._ensure_initialized()
             dev = data.get('devices', {}).get(device_id)
             vapid = data['vapid']
         if not dev:
             return None
-        status = self.sender(dev['endpoint'], payload, vapid, ttl=300)
-        if status in (404, 410):
+        try:
+            status = self.sender(dev['endpoint'], payload, vapid, ttl=300)
+        except Exception as e:
+            logger.warning(
+                'Invio notifica di prova fallito con eccezione per device %s (endpoint %s): %s',
+                device_id,
+                dev['endpoint'],
+                e,
+            )
+            return PushResponse(0, str(e))
+        status_code = int(status)
+        if status_code < 200 or status_code >= 300:
+            resp_body = getattr(status, 'body', '')
+            logger.warning(
+                'Invio notifica di prova fallito per device %s (endpoint %s): HTTP %d %s',
+                device_id,
+                dev['endpoint'],
+                status_code,
+                resp_body,
+            )
+        if status_code in (404, 410):
             self.remove_subscription(device_id)
         return status
 
-    def dispatch_due(self, now_ts: int | None = None) -> int:
+    def dispatch_due(self, now_ts: Optional[int] = None) -> int:
         """Invia i promemoria scaduti (`fireAt <= now_ts`). Restituisce il numero di invii riusciti."""
         now = int(time.time()) if now_ts is None else now_ts
         with self.lock:
@@ -282,15 +332,50 @@ class PushStore:
                 drop_keys.add(key)
                 continue
 
-            status = self.sender(dev['endpoint'], item['payload'], vapid)
-            if 200 <= status < 300:
+            try:
+                status = self.sender(dev['endpoint'], item['payload'], vapid)
+            except Exception as e:
+                logger.warning(
+                    'Eccezione durante invio push gateway per %s (endpoint %s): %s',
+                    key,
+                    dev['endpoint'],
+                    e,
+                )
+                status = PushResponse(0, str(e))
+            status_code = int(status)
+            if 200 <= status_code < 300:
                 delivered_keys.add(key)
                 delivered_count += 1
-            elif status in (404, 410):
+            elif status_code in (404, 410):
+                resp_body = getattr(status, 'body', '')
+                logger.warning(
+                    'Push gateway ha risposto %d per %s (endpoint %s): rimuovo sottoscrizione. Risposta: %s',
+                    status_code,
+                    dev_id,
+                    dev['endpoint'],
+                    resp_body,
+                )
                 expired_devices.add(dev_id)
                 drop_keys.add(key)
-            elif 400 <= status < 500 and status != 429:
+            elif 400 <= status_code < 500 and status_code != 429:
+                resp_body = getattr(status, 'body', '')
+                logger.warning(
+                    'Push gateway ha rifiutato definitivamente il promemoria %s per %s: HTTP %d. Risposta: %s',
+                    key,
+                    dev_id,
+                    status_code,
+                    resp_body,
+                )
                 drop_keys.add(key)
+            else:
+                resp_body = getattr(status, 'body', '')
+                logger.warning(
+                    'Errore temporaneo push gateway per %s (endpoint %s): HTTP %d. Risposta: %s',
+                    key,
+                    dev['endpoint'],
+                    status_code,
+                    resp_body,
+                )
 
         with self.lock:
             data = self._ensure_initialized()
@@ -365,7 +450,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
             # Il server ascolta solo in locale: l'indirizzo vero lo passa nginx.
             return self.headers.get('X-Real-IP') or self.client_address[0]
 
-        def send_json(self, status: int, body: dict | None = None, extra: dict | None = None) -> None:
+        def send_json(self, status: int, body: Optional[dict] = None, extra: Optional[dict] = None) -> None:
             raw = b'' if body is None else json.dumps(body, ensure_ascii=False).encode('utf-8')
             self.send_response(status)
             self.send_header('Cache-Control', 'no-store')
@@ -391,7 +476,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
             self.send_json(HTTPStatus.UNAUTHORIZED, {'error': 'invalid key'})
             return False
 
-        def read_json_body(self) -> dict | None:
+        def read_json_body(self) -> Optional[dict]:
             try:
                 length = int(self.headers.get('Content-Length', ''))
             except ValueError:

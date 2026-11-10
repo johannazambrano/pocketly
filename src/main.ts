@@ -18,3 +18,13 @@ void useFinanceStore()
   .init(i18n.global.locale.value)
   .then(() => Promise.all([useBackupStore().init(), useSyncStore().init(), useNotificationsStore().init()]))
 void requestPersistentStorage()
+
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'POCKETLY_NAVIGATE' && typeof event.data.url === 'string') {
+      void router.isReady().then(() => router.push(event.data.url).catch(() => {}))
+    } else if (event.data?.type === 'POCKETLY_PUSH_SUBSCRIPTION_CHANGED') {
+      void useNotificationsStore().subscribePush()
+    }
+  })
+}

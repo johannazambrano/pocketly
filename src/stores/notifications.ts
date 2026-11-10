@@ -49,9 +49,20 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const lastScheduleHash = ref<string | null>(null)
   const isSyncingSchedule = ref(false)
   const testSending = ref(false)
+  const pushSubscribed = ref(false)
 
   const isSupported = computed(() => {
     return typeof window !== 'undefined' && 'Notification' in window
+  })
+
+  const isPushSupported = computed(() => {
+    return (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      typeof navigator !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window
+    )
   })
 
   const isPermissionGranted = computed(() => permission.value === 'granted')
@@ -81,6 +92,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
     return 'local'
   })
 
+  const isPushActive = computed(() => {
+    return mode.value === 'push' && pushSubscribed.value && isPushSupported.value
+  })
+
   function updatePermission() {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       permission.value = 'unsupported'
@@ -103,6 +118,48 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
+  async function showNotificationSafely(
+    title: string,
+    options: NotificationOptions,
+  ): Promise<boolean> {
+    const swReg = await getServiceWorkerRegistration()
+    if (swReg && 'showNotification' in swReg) {
+      try {
+        await swReg.showNotification(title, options)
+        return true
+      } catch (e) {
+        console.warn('showNotification via ServiceWorker fallito', e)
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      try {
+        const readyReg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
+        ])
+        if (readyReg && 'showNotification' in readyReg) {
+          await readyReg.showNotification(title, options)
+          return true
+        }
+      } catch {
+        // Fallthrough
+      }
+    }
+
+    if (typeof Notification !== 'undefined') {
+      try {
+        new Notification(title, options)
+        return true
+      } catch (e) {
+        console.warn('new Notification fallito (es. Android Chrome)', e)
+        return false
+      }
+    }
+
+    return false
+  }
+
   async function persistConfig() {
     try {
       const config: NotificationConfig = {
@@ -118,13 +175,22 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
 
   async function subscribePush(): Promise<boolean> {
-    if (!sync.enabled || !sync.serverKey) return false
+    if (!sync.enabled || !sync.serverKey) {
+      pushSubscribed.value = false
+      return false
+    }
     const reg = await getServiceWorkerRegistration()
-    if (!reg || !('pushManager' in reg)) return false
+    if (!reg || !('pushManager' in reg)) {
+      pushSubscribed.value = false
+      return false
+    }
     try {
       const api = createPushApi(sync.serverKey)
       const serverConfig = await api.getConfig()
-      if (!serverConfig.vapidPublicKey) return false
+      if (!serverConfig.vapidPublicKey) {
+        pushSubscribed.value = false
+        return false
+      }
 
       let sub = await reg.pushManager.getSubscription()
       const appServerKey = base64UrlToBytes(serverConfig.vapidPublicKey)
@@ -149,7 +215,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
       const p256dhKey = sub.getKey('p256dh')
       const authKey = sub.getKey('auth')
-      if (!p256dhKey || !authKey) return false
+      if (!p256dhKey || !authKey) {
+        pushSubscribed.value = false
+        return false
+      }
 
       const p256dh = bytesToBase64Url(new Uint8Array(p256dhKey))
       const auth = bytesToBase64Url(new Uint8Array(authKey))
@@ -160,35 +229,62 @@ export const useNotificationsStore = defineStore('notifications', () => {
         p256dh,
         auth,
       })
+      pushSubscribed.value = true
       return true
     } catch (e) {
       console.warn('Registrazione sottoscrizione push fallita', e)
+      pushSubscribed.value = false
       return false
     }
   }
 
-  async function syncPushSchedule(force = false): Promise<void> {
-    if (!sync.enabled || !sync.serverKey || isSyncingSchedule.value) {
-      return
-    }
-    isSyncingSchedule.value = true
+  let syncScheduleRunning: Promise<void> | null = null
+  let syncScheduleAgain = false
+  let syncScheduleAgainForce = false
+
+  async function runSyncPushSchedule(force: boolean): Promise<void> {
     try {
+      if (!sync.enabled || !sync.serverKey) return
       const api = createPushApi(sync.serverKey)
       const serverConfig = await api.getConfig()
 
       // Se questo dispositivo ha le notifiche attive, si assicura di essere registrato
+      // e che la chiave p256dh registrata sul server coincida con quella locale.
       if (enabled.value && permission.value === 'granted') {
-        const hasCurrentDevice = serverConfig.devices.some((d) => d.deviceId === deviceId.value)
-        if (!hasCurrentDevice) {
+        const myDevice = serverConfig.devices.find((d) => d.deviceId === deviceId.value)
+        let needSubscribe = !myDevice
+        if (myDevice && isPushSupported.value) {
+          const reg = await getServiceWorkerRegistration()
+          if (reg && 'pushManager' in reg) {
+            const sub = await reg.pushManager.getSubscription()
+            if (!sub) {
+              needSubscribe = true
+            } else {
+              const localKey = sub.getKey('p256dh')
+              if (localKey && bytesToBase64Url(new Uint8Array(localKey)) !== myDevice.p256dh) {
+                needSubscribe = true
+              }
+            }
+          }
+        }
+        if (needSubscribe) {
           const subscribed = await subscribePush()
           if (subscribed) {
+            force = true
             const refreshed = await api.getConfig()
             serverConfig.devices = refreshed.devices
           }
         }
       }
 
-      if (!serverConfig.devices.length) return
+      if (!serverConfig.devices.length) {
+        if (lastScheduleHash.value !== null) {
+          await api.putSchedule([])
+          lastScheduleHash.value = null
+          await persistConfig()
+        }
+        return
+      }
 
       const reminders = calculateUpcomingReminders(finance.data.recurringExpenses, new Date(), 60)
       const locale = i18n.global.locale.value
@@ -196,7 +292,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
       const scheduleSummary = {
         reminders: reminders.map((r) => ({ id: r.id, fireAt: r.fireAt, amount: r.amount, name: r.expenseName })),
-        devices: serverConfig.devices.map((d) => d.deviceId).sort(),
+        devices: serverConfig.devices
+          .map((d) => ({
+            deviceId: d.deviceId,
+            p256dh: d.p256dh,
+            auth: d.auth,
+          }))
+          .sort((a, b) => a.deviceId.localeCompare(b.deviceId)),
         locale,
       }
       const currentHash = fingerprint(stableStringify(scheduleSummary))
@@ -233,14 +335,41 @@ export const useNotificationsStore = defineStore('notifications', () => {
         }
       }
 
-      await api.putSchedule(encryptedItems)
+      const itemsToSend = encryptedItems.slice(0, 5000)
+      await api.putSchedule(itemsToSend)
       lastScheduleHash.value = currentHash
       await persistConfig()
     } catch (e) {
       console.warn('Sincronizzazione pianificazione push non riuscita', e)
-    } finally {
-      isSyncingSchedule.value = false
     }
+  }
+
+  function syncPushSchedule(force = false): Promise<void> {
+    if (!sync.enabled || !sync.serverKey) {
+      return Promise.resolve()
+    }
+    if (syncScheduleRunning) {
+      syncScheduleAgain = true
+      if (force) syncScheduleAgainForce = true
+      return syncScheduleRunning
+    }
+    syncScheduleRunning = (async () => {
+      let currentForce = force
+      do {
+        syncScheduleAgain = false
+        isSyncingSchedule.value = true
+        try {
+          await runSyncPushSchedule(currentForce)
+        } finally {
+          isSyncingSchedule.value = false
+        }
+        currentForce = syncScheduleAgainForce
+        syncScheduleAgainForce = false
+      } while (syncScheduleAgain && sync.enabled && sync.serverKey)
+    })().finally(() => {
+      syncScheduleRunning = null
+    })
+    return syncScheduleRunning
   }
 
   let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined
@@ -270,6 +399,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   async function checkLocalReminders(): Promise<void> {
     if (!enabled.value || permission.value !== 'granted') return
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return
+    // Evita notifiche doppie: se il dispositivo è in modalità push attiva, inibisci il promemoria locale
+    if (isPushActive.value) return
 
     try {
       const due = calculateDueLocalReminders(finance.data.recurringExpenses, new Date(), 24)
@@ -289,30 +420,21 @@ export const useNotificationsStore = defineStore('notifications', () => {
       const intlTag = LOCALES.find((l) => l.code === locale)?.intl ?? locale
       const t = i18n.global.t
 
-      const swReg = await getServiceWorkerRegistration()
-
       for (const r of unshown) {
         const formattedAmount = formatCents(r.amount, intlTag)
         const formattedDueDate = formatDate(r.dueDate, intlTag)
         const msg = formatReminderMessage(r, t, formattedAmount, formattedDueDate)
 
-        if (swReg && 'showNotification' in swReg) {
-          await swReg.showNotification(msg.title, {
-            body: msg.body,
-            icon: '/pwa-192x192.png',
-            badge: '/favicon.svg',
-            tag: r.id,
-            data: { url: '/ricorrenti' },
-          })
-        } else if (typeof Notification !== 'undefined') {
-          new Notification(msg.title, {
-            body: msg.body,
-            icon: '/pwa-192x192.png',
-            tag: r.id,
-            data: { url: '/ricorrenti' },
-          })
+        const shown = await showNotificationSafely(msg.title, {
+          body: msg.body,
+          icon: '/pwa-192x192.png',
+          badge: '/pwa-64x64.png',
+          tag: r.id,
+          data: { url: '/ricorrenti' },
+        })
+        if (shown) {
+          shownMap[r.id] = Date.now()
         }
-        shownMap[r.id] = Date.now()
       }
 
       const cutoff = Date.now() - 30 * 86_400 * 1000
@@ -340,8 +462,12 @@ export const useNotificationsStore = defineStore('notifications', () => {
     await persistConfig()
 
     if (sync.enabled) {
-      await subscribePush()
-      await syncPushSchedule(true)
+      const subscribed = await subscribePush()
+      if (subscribed) {
+        await syncPushSchedule(true)
+      } else {
+        await syncPushSchedule(false)
+      }
     }
 
     await checkLocalReminders()
@@ -350,6 +476,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   async function disable(): Promise<void> {
     enabled.value = false
+    pushSubscribed.value = false
     lastScheduleHash.value = null
     await persistConfig()
 
@@ -386,7 +513,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
       if (sync.enabled && sync.serverKey) {
         try {
           if (enabled.value) {
-            await subscribePush()
+            const subscribed = await subscribePush()
+            if (subscribed) {
+              void syncPushSchedule(true)
+            }
           }
           const api = createPushApi(sync.serverKey)
           const cfg = await api.getConfig()
@@ -412,26 +542,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
         }
       }
 
-      const reg = await getServiceWorkerRegistration()
-      if (reg && 'showNotification' in reg) {
-        await reg.showNotification(title, {
-          body,
-          icon: '/pwa-192x192.png',
-          badge: '/favicon.svg',
-          tag: 'pocketly-test',
-          data: { url: '/ricorrenti' },
-        })
-        return true
-      } else if (typeof Notification !== 'undefined') {
-        new Notification(title, {
-          body,
-          icon: '/pwa-192x192.png',
-          tag: 'pocketly-test',
-          data: { url: '/ricorrenti' },
-        })
-        return true
-      }
-      return false
+      return await showNotificationSafely(title, {
+        body,
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-64x64.png',
+        tag: 'pocketly-test',
+        data: { url: '/ricorrenti' },
+      })
     } catch (e) {
       console.error('Invio notifica di prova fallito', e)
       return false
@@ -445,6 +562,16 @@ export const useNotificationsStore = defineStore('notifications', () => {
     defaultRules.value = norm.length ? norm : [{ ...DEFAULT_NOTIFICATION_RULE }]
     await persistConfig()
   }
+
+  // Coordinamento sincronizzazione: riallinea lo scadenzario dopo stato 'synced'
+  watch(
+    () => sync.status,
+    (newStatus, oldStatus) => {
+      if (newStatus === 'synced' && oldStatus !== 'synced') {
+        void syncPushSchedule()
+      }
+    },
+  )
 
   async function init(): Promise<void> {
     if (ready.value) return
@@ -475,6 +602,18 @@ export const useNotificationsStore = defineStore('notifications', () => {
       await persistConfig()
     }
 
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+      try {
+        const reg = await getServiceWorkerRegistration()
+        if (reg && 'pushManager' in reg) {
+          const sub = await reg.pushManager.getSubscription()
+          pushSubscribed.value = Boolean(sub)
+        }
+      } catch {
+        pushSubscribed.value = false
+      }
+    }
+
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
@@ -496,7 +635,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
 
     void checkLocalReminders()
-    if (sync.enabled) {
+    if (sync.enabled && sync.status === 'synced') {
       void syncPushSchedule()
     }
 
@@ -512,7 +651,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
     lastScheduleHash,
     isSyncingSchedule,
     testSending,
+    pushSubscribed,
     isSupported,
+    isPushSupported,
+    isPushActive,
     isPermissionGranted,
     isIos,
     isStandalone,
