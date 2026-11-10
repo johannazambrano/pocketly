@@ -31,6 +31,7 @@ export type Frequency = 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 - Stringa nel formato rigoroso `YYYY-MM-DD` (es. `"2026-03-15"`).
 - Rappresenta una data di calendario pura senza componente temporale (ore/minuti) e senza fuso orario (`utils/dates.ts`).
 - Non utilizzare oggetti `Date` Javascript all'interno del modello dati memorizzato.
+- Le utility di parsing, manipolazione e confronto date in `src/utils/dates.ts` comprendono: `parseIsoDate`, `toIsoDate`, `todayIso`, `yearOf`, `addDays` (spostamento di `n` giorni), `lastDayOfMonth` (calcolo dell'ultimo giorno del mese per bilanci e proiezioni) e `monthIndex`.
 
 ### `Cents` (Importo Monetario)
 - Numero intero che esprime l'importo in centesimi di euro (es. `1050` corrisponde a € 10,50).
@@ -185,6 +186,8 @@ Il modulo `migration.ts` garantisce che Pocketly possa leggere e importare quals
   Nello schema v1 le spese erano suddivise per anno (`data[year].oneTime`), gli importi erano numeri decimali in euro e le categorie erano stringhe letterali anziché ID. La funzione `migrateV1toV2` normalizza gli importi moltiplicandoli per 100 ed estrae le entità `Tag` con ID univoci.
 - **Validazione difensiva `parseBackup(raw)`:**
   Non assume mai che il file importato sia valido. Convalida la presenza di ciascun array, ripulisce valori `null` o `undefined`, converte tipi non conformi e garantisce il ripristino di una struttura `FinanceData` semanticamente corretta.
+- **Protezione versioni più recenti (`NewerFormatError`):**
+  Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 2`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
 - **Valori predefiniti (`src/domain/defaults.ts`):**
   - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite.
   - `createDefaultData()`: genera un dataset iniziale di benvenuto con categorie essenziali preconfigurate (Casa, Spesa, Trasporti, Svago, ecc.) con colori distinti.

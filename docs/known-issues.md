@@ -31,9 +31,9 @@ Questo documento elenca le caratteristiche note, i limiti architetturali e i com
 - **Classificazione:** `Minor Robustness Risk` / Architettura UI
 - **File coinvolti:** [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
 - **Descrizione:**
-  Nello store `finance.ts` è presente la proprietà reattiva globale `selectedMonth` (`ref<number | 'all'>('all')`), utilizzata da `DashboardView` e `OneTimeView`. La vista `BudgetView.vue`, invece, gestisce internamente un proprio stato locale `const monthIndex = ref(parseIsoDate(finance.today).month)` con pulsanti di navigazione mensile dedicati ("Mese precedente", "Mese successivo", "Mese corrente").
+  Nello store `finance.ts` è presente la proprietà reattiva globale `selectedMonth` (inizializzata al mese corrente `new Date().getMonth()`, con tipo `number | 'all'`), utilizzata da `DashboardView` e `OneTimeView`. La vista `BudgetView.vue`, invece, gestisce internamente un proprio stato locale `const monthIndex = ref(parseIsoDate(finance.today).month)` con pulsanti di navigazione mensile dedicati ("Mese precedente", "Mese successivo", "Mese corrente").
 - **Impatto:**
-  Se l'utente seleziona un mese nella Dashboard o in Spese una tantum e successivamente naviga sulla pagina del Budget, `BudgetView` non eredita il mese selezionato, mostrando di default il mese corrente di calendario.
+  Se l'utente seleziona un mese diverso nella Dashboard o in Spese una tantum e successivamente naviga sulla pagina del Budget, `BudgetView` non eredita il mese selezionato, mostrando di default il mese corrente di calendario.
 - **Soluzione futura consigliata:**
   Valutare se sincronizzare bidirezionalmente il mese di `BudgetView` con lo stato globale `finance.selectedMonth` (convertendo `'all'` nel mese corrente per il budget).
 

@@ -52,7 +52,13 @@ function checkCodeMap() {
   const srcFiles = getFiles(path.join(ROOT, 'src'))
   const serverFiles = getFiles(path.join(ROOT, 'server'))
   const scriptsFiles = getFiles(path.join(ROOT, 'scripts'), ['.py', '.mjs', '.js'])
-  const allExpected = [...srcFiles, ...serverFiles, ...scriptsFiles]
+  const rootAndPublicFiles = [
+    'public/push-worker.js',
+    'index.html',
+    'vite.config.ts',
+    'pwa-assets.config.ts',
+  ]
+  const allExpected = [...srcFiles, ...serverFiles, ...scriptsFiles, ...rootAndPublicFiles]
 
   let missing = []
   for (const f of allExpected) {
@@ -62,9 +68,9 @@ function checkCodeMap() {
   }
 
   if (missing.length > 0) {
-    logError(`I seguenti file di src/, server/ o scripts/ non compaiono in docs/riferimento/mappa-codice.md:\n   - ${missing.join('\n   - ')}`)
+    logError(`I seguenti file non compaiono in docs/riferimento/mappa-codice.md:\n   - ${missing.join('\n   - ')}`)
   } else {
-    logSuccess(`Tutti i ${allExpected.length} file di src/, server/ e scripts/ sono censiti nella mappa del codice.`)
+    logSuccess(`Tutti i ${allExpected.length} file di codice sorgente, worker e configurazione sono censiti nella mappa del codice.`)
   }
 }
 

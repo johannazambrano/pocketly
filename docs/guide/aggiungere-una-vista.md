@@ -40,16 +40,28 @@ const { t } = useFormat()
 
 ## 2. Registrare la Rotta in `src/router/index.ts`
 
-1. Aggiungi il nuovo tab nell'array costante `TABS`:
+1. **Se è una vista principale (tab di navigazione):**
+   Aggiungi il nuovo tab nell'array costante `TABS`:
    ```ts
    export const TABS = [
      // ... tab esistenti ...
      { name: 'analytics', path: '/analisi', icon: 'fa-chart-simple' },
    ] as const
    ```
-2. Aggiungi la definizione della rotta in `routes` con dynamic import:
+   *Nota:* se la schermata è una **vista secondaria o di dettaglio** (es. `BreakdownDetailView.vue` per `/dettaglio/:kind/:id`), non deve comparire nei tab: salta questo passaggio.
+
+2. **Registra la rotta in `routes`:**
+   Aggiungi la definizione con lazy loading (`component: () => import(...)`):
    ```ts
    { path: '/analisi', name: 'analytics', component: () => import('@/views/AnalyticsView.vue') },
+   ```
+   Per viste parametriche di dettaglio:
+   ```ts
+   {
+     path: '/dettaglio/:kind(categoria|metodo)/:id',
+     name: 'detail',
+     component: () => import('@/views/BreakdownDetailView.vue'),
+   },
    ```
 
 ---

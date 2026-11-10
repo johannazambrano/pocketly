@@ -51,8 +51,8 @@ Per testare il server Python di sync e push:
 # Esecuzione test unitari server
 npm run test:server
 
-# Avvio server in locale (porta 8000)
-python3 -m server.main --port 8000 --data-dir ./data
+# Avvio server in locale (porta 8787, allineata al proxy Vite)
+python3 -m server.main --port 8787 --data-dir ./data
 ```
 
 ---

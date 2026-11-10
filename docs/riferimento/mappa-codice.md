@@ -13,15 +13,19 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 ---
 
-## 1. Applicazione Principale, Router e Stile (`src/)
+## 1. Applicazione Principale, Router, Stile e Configurazione PWA (`src/`, `public/`, radice)
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
 | [`src/App.vue`](../../src/App.vue) | Radice dell'albero Vue: coordinamento header, layout, router view, bottom nav, toast, modali e dialoghi di conferma | — | [frontend.md](../architettura/frontend.md) |
 | [`src/main.ts`](../../src/main.ts) | Bootstrap dell'app: creazione istanza Vue, registrazione Pinia, Vue Router, vue-i18n e montaggio su `#app` | — | [frontend.md](../architettura/frontend.md) |
 | [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite | — | [frontend.md](../architettura/frontend.md) |
-| [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4, classi utility e variabili di colore | — | [frontend.md](../architettura/frontend.md) |
+| [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4, safe-area scroll padding, classi utility e variabili colore | — | [frontend.md](../architettura/frontend.md) |
 | [`src/router/index.ts`](../../src/router/index.ts) | Definizione delle 9 rotte (8 principali e 1 di dettaglio), lazy loading viste e metadati dei tab (`TABS`) | — | [frontend.md](../architettura/frontend.md) |
+| [`public/push-worker.js`](../../public/push-worker.js) | Service worker Web Push: gestione ricezione eventi push, icona badge e navigazione su click | — | [NOTIFICHE.md](../NOTIFICHE.md) |
+| [`index.html`](../../index.html) | Entry point HTML dell'applicazione PWA, meta tag viewport, thema e aggancio mount Vue | — | [frontend.md](../architettura/frontend.md) |
+| [`vite.config.ts`](../../vite.config.ts) | Configurazione bundler Vite, integrazione Workbox PWA e proxy di sviluppo per `/api` verso porta 8787 | — | [deploy.md](../architettura/deploy.md) |
+| [`pwa-assets.config.ts`](../../pwa-assets.config.ts) | Configurazione generazione automatica asset e icone PWA | — | [frontend.md](../architettura/frontend.md) |
 
 ---
 
@@ -137,7 +141,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/i18n/it.ts`](../../src/i18n/it.ts) | Traduzioni in lingua italiana | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/en.ts`](../../src/i18n/en.ts) | Traduzioni in lingua inglese | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
 | [`src/utils/colors.ts`](../../src/utils/colors.ts) | Generazione e selezione colori unici non in conflitto per tag e categorie | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
-| [`src/utils/dates.ts`](../../src/utils/dates.ts) | Utility per date IsoDate: parsing `YYYY-MM-DD`, formattazione, calcolo indici mese | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
+| [`src/utils/dates.ts`](../../src/utils/dates.ts) | Utility per date IsoDate: parsing `YYYY-MM-DD`, formattazione, calcolo indici mese, `addDays`, `lastDayOfMonth` | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/hash.ts`](../../src/utils/hash.ts) | Calcolo fingerprint e digest SHA-256 su stringhe | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
 | [`src/utils/id.ts`](../../src/utils/id.ts) | Generatore di ID unici casuali (`newId`) per entità e transazioni | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/money.ts`](../../src/utils/money.ts) | Conversione tra stringhe valutarie dell'utente e interi in centesimi (`toCents`, `formatCents) | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |

@@ -22,7 +22,7 @@ Pocketly dispone di una suite di test rigorosa che copre calcoli finanziari, cri
 ```bash
 npm run test
 ```
-Esegue i 170 test unitari in `src/` (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
+Esegue i 178 test unitari in `src/` (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
 
 ### Controllo Statico dei Tipi (TypeScript)
 ```bash
@@ -35,7 +35,7 @@ Esegue `vue-tsc -b` su tutti i file `.vue` e `.ts`. Non devono esserci errori di
 npm run test:server
 # oppure: python3 -m unittest server.test_main
 ```
-Esegue la suite di 21 test sul server `server/main.py` e `server/webpush.py`, verificando:
+Esegue la suite di 27 test sul server `server/main.py` e `server/webpush.py`, verificando:
 - Autenticazione Bearer e protezione da timing attack.
 - Rate limiting antibruteforce (blocco 429 dopo 10 tentativi falliti).
 - Concorrenza e lock ottimistico basato su ETag / `If-Match`.
