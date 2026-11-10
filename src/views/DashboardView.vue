@@ -71,7 +71,10 @@ const displayBalance = computed(() => {
   if (!ms.value) return s.value.balanceToDate
   return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
 })
+/** Un mese futuro non ha ancora un saldo: c'è solo ciò che è programmato, e l'etichetta lo dice. */
+const isFutureMonth = computed(() => ms.value?.timing === 'future')
 const balanceLabel = computed(() => {
+  if (isFutureMonth.value) return t('dashboard.balanceScheduled', monthArgs.value)
   if (ms.value) return t(monthToDate.value ? 'dashboard.balanceMonthToDate' : 'dashboard.balanceMonth', monthArgs.value)
   return t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')
 })
@@ -90,12 +93,13 @@ const balanceHint = computed(() => {
 const showMonthProjection = computed(
   () => !!ms.value && ms.value.timing !== 'past' && ms.value.projectedBalance !== displayBalance.value,
 )
-/** Se la previsione comprende entrate stimate, la nota dice quanto valgono: è la parte del numero che non è ancora successa. */
-const monthProjectionHint = computed(() => {
-  const estimated = ms.value ? ms.value.projectedIncome - ms.value.income : 0
-  return estimated > 0
-    ? t('dashboard.projectedMonthHintEstimate', { amount: money(estimated) })
-    : t('dashboard.projectedMonthHint')
+/**
+ * La parte del previsto fatta di entrate stimate, cioè non ancora registrate: si mostra come cifra a sé sotto il previsto,
+ * perché è la parte del numero che non è ancora successa.
+ */
+const estimatedIncome = computed(() => {
+  const value = ms.value ? ms.value.projectedIncome - ms.value.income : s.value.projectedIncome - s.value.totalIncome
+  return value > 0 ? value : 0
 })
 
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
@@ -114,14 +118,25 @@ const categoryEmptyText = computed(() => {
 })
 
 /** Il riquadro principale: in alto saldo e previsione affiancati, sotto entrate e uscite che spiegano il saldo. */
-const balanceFigure = computed(() => ({ label: balanceLabel.value, value: displayBalance.value, hint: balanceHint.value }))
+/** Per un mese futuro la cifra resta senza colore di segno: non è un risultato, è un programma. */
+const balanceFigure = computed(() => ({
+  label: balanceLabel.value,
+  value: displayBalance.value,
+  hint: balanceHint.value,
+  neutral: isFutureMonth.value,
+}))
 const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value }))
 const expensesFigure = computed(() => ({ label: expensesLabel.value, value: displayExpenses.value, hint: expensesHint.value }))
 /** Per un anno o un mese passato tutto è avvenuto e il previsto coinciderebbe con il saldo. */
 const projectionFigure = computed(() => {
   if (ms.value) {
     if (!showMonthProjection.value) return null
-    return { label: t('dashboard.projectedMonth', monthArgs.value), value: ms.value.projectedBalance, hint: monthProjectionHint.value }
+    return {
+      label: t('dashboard.projectedMonth', monthArgs.value),
+      value: ms.value.projectedBalance,
+      hint: t('dashboard.projectedMonthHint'),
+      estimated: estimatedIncome.value,
+    }
   }
   if (isPastYear.value) return null
   return {
@@ -131,6 +146,7 @@ const projectionFigure = computed(() => {
       finance.estimatedMonthlyIncome > 0
         ? t('dashboard.projectedHintEstimate', { amount: money(finance.estimatedMonthlyIncome) })
         : t('dashboard.projectedHint'),
+    estimated: estimatedIncome.value,
   }
 })
 

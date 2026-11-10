@@ -11,6 +11,10 @@ interface Figure {
   label: string
   value: number
   hint?: string
+  /** Cifra senza colore di segno: per ciò che è solo programmato, come il saldo di un mese futuro. */
+  neutral?: boolean
+  /** Solo per il previsto: quanto del numero viene da entrate stimate, non ancora registrate. */
+  estimated?: number
 }
 
 /** Una parte delle uscite: ricorrenti o variabili, con il colore del suo pallino e una nota facoltativa. */
@@ -43,7 +47,9 @@ const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
  * Il rosso resta per quando la previsione stessa è negativa.
  */
 const balanceColor = computed(() =>
-  props.projection && props.balance.value < 0 && props.projection.value >= 0 ? 'text-slate-800' : signColor(props.balance.value),
+  props.balance.neutral || (props.projection && props.balance.value < 0 && props.projection.value >= 0)
+    ? 'text-slate-800'
+    : signColor(props.balance.value),
 )
 /** Saldo e previsto si dividono la riga: la misura più grande arriva solo sugli schermi più larghi. */
 const heroSize = 'text-3xl lg:text-4xl'
@@ -69,6 +75,10 @@ const heroSize = 'text-3xl lg:text-4xl'
           <h3 class="text-xs font-medium text-balance text-slate-500">{{ projection.label }}</h3>
           <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize, signColor(projection.value)]">
             {{ money(projection.value) }}
+          </p>
+          <!-- La parte stimata come cifra, non solo nella nota: dice quanto del previsto non è ancora successo. -->
+          <p v-if="projection.estimated" class="mt-1 text-sm font-medium text-slate-700">
+            {{ t('dashboard.projectedEstimatedPart', { amount: money(projection.estimated) }) }}
           </p>
           <p v-if="projection.hint" class="mt-1 text-xs text-slate-500">{{ projection.hint }}</p>
         </div>
