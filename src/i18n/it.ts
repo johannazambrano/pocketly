@@ -366,6 +366,7 @@ export default {
       offline: 'Il server non risponde. Controlla di essere sulla rete di casa.',
       crypto: 'La cifratura non è disponibile a questo indirizzo: serve HTTPS.',
       conflict: 'Un altro dispositivo ha modificato i dati proprio adesso. Riprova.',
+      outdated: 'I dati sul server vengono da una versione più nuova di Pocketly. Aggiorna l’app su questo dispositivo: finché non lo fai, la sincronizzazione resta ferma e i dati non vengono toccati.',
       unknown: 'Si è verificato un errore imprevisto. Riprova.',
     },
     chooseTitle: 'Quali dati vuoi tenere?',

@@ -368,6 +368,7 @@ const en: typeof it = {
       offline: 'The server is not responding. Check that you are on your home network.',
       crypto: 'Encryption is not available at this address: HTTPS is required.',
       conflict: 'Another device changed the data just now. Try again.',
+      outdated: 'The data on the server comes from a newer version of Pocketly. Update the app on this device: until you do, syncing stays paused and the data is left untouched.',
       unknown: 'An unexpected error occurred. Try again.',
     },
     chooseTitle: 'Which data do you want to keep?',

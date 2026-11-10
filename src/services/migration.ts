@@ -13,6 +13,7 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
+import { CURRENT_SCHEMA_VERSION } from '@/types/models'
 import { defaultBudgetSettings, defaultForecastSettings } from '@/domain/defaults'
 import { normalizeNotifications } from '@/domain/notifications'
 import { FREQUENCIES } from '@/domain/recurrence'
@@ -21,6 +22,18 @@ import { isValidIsoDate, todayIso } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export class BackupFormatError extends Error {}
+
+/**
+ * Dati salvati da una versione più nuova dell'app (formato con un numero più alto di quello che questa conosce).
+ * Vanno rifiutati, non interpretati: letti come un formato vecchio perderebbero campi, e rimandati al server
+ * li cancellerebbero anche sugli altri dispositivi.
+ */
+export class NewerFormatError extends BackupFormatError {
+  constructor(version: number) {
+    super(`data format ${version} is newer than this app`)
+    this.name = 'NewerFormatError'
+  }
+}
 
 type Obj = Record<string, unknown>
 
@@ -296,6 +309,9 @@ function normalizeV2(raw: Obj): FinanceData {
  */
 export function parseBackup(raw: unknown): FinanceData {
   if (!isObj(raw)) throw new BackupFormatError('not an object')
+  if (typeof raw.schemaVersion === 'number' && raw.schemaVersion > CURRENT_SCHEMA_VERSION) {
+    throw new NewerFormatError(raw.schemaVersion)
+  }
   if (raw.schemaVersion === 2) return normalizeV2(raw)
   if (isObj(raw.years)) return migrateV1(raw)
   if (Array.isArray(raw.oneTimeExpenses)) {

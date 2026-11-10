@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BackupFormatError, parseBackup } from './migration'
+import { BackupFormatError, NewerFormatError, parseBackup } from './migration'
 
 /** Formato salvato dal prototipo index.html (`finances_tracker_multiyr`). */
 const prototypeBackup = {
@@ -197,5 +197,11 @@ describe('parseBackup – schema v2', () => {
     })
     expect(withTags.tags).toEqual([{ id: 't1', name: 'Vacanza', color: '#123456' }])
     expect(withTags.oneTimeExpenses[0]!.tagIds).toEqual(['t1'])
+  })
+})
+
+describe('dati di una versione più nuova', () => {
+  it('li rifiuta invece di leggerli come un formato vecchio', () => {
+    expect(() => parseBackup({ schemaVersion: 3, oneTimeExpenses: [], categories: [] })).toThrow(NewerFormatError)
   })
 })

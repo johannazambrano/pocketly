@@ -14,6 +14,7 @@ import {
   type SyncState,
 } from '@/services/sync/engine'
 import { useFinanceStore } from '@/stores/finance'
+import { NewerFormatError } from '@/services/migration'
 import type { FinanceData } from '@/types/models'
 
 const CONFIG_KEY = 'sync-config'
@@ -37,7 +38,15 @@ interface SyncConfig {
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error'
 /** Cosa è andato storto, per mostrare il messaggio giusto. */
-export type SyncProblem = 'serverKey' | 'password' | 'blocked' | 'offline' | 'crypto' | 'conflict' | 'unknown'
+export type SyncProblem =
+  | 'serverKey'
+  | 'password'
+  | 'blocked'
+  | 'offline'
+  | 'crypto'
+  | 'conflict'
+  | 'outdated'
+  | 'unknown'
 
 function problemOf(e: unknown): SyncProblem {
   if (e instanceof SyncAuthError) return 'serverKey'
@@ -46,6 +55,8 @@ function problemOf(e: unknown): SyncProblem {
   if (e instanceof SyncUnreachableError || e instanceof SyncBusyError) return 'offline'
   if (e instanceof CryptoUnavailableError) return 'crypto'
   if (e instanceof SyncConflictError) return 'conflict'
+  // I dati sul server vengono da una versione più nuova: questa app non li tocca finché non viene aggiornata.
+  if (e instanceof NewerFormatError) return 'outdated'
   return 'unknown'
 }
 
