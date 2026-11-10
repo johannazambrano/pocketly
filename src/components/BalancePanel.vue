@@ -51,8 +51,14 @@ const balanceColor = computed(() =>
     ? 'text-slate-800'
     : signColor(props.balance.value),
 )
-/** Saldo e previsto si dividono la riga: la misura più grande arriva solo sugli schermi più larghi. */
-const heroSize = 'text-3xl lg:text-4xl'
+/**
+ * Saldo e previsto si dividono la riga: la misura più grande arriva solo sugli schermi più larghi.
+ * Le cifre non vanno mai a capo, quindi quelle molto lunghe (dalle centinaia di migliaia in su) scendono di una misura
+ * per restare dentro il riquadro anche sul telefono e sul tablet.
+ */
+const LONG = 11
+const heroSize = (v: number) => (money(v).length > LONG ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl')
+const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'text-lg')
 </script>
 
 <template>
@@ -62,7 +68,7 @@ const heroSize = 'text-3xl lg:text-4xl'
       <div class="grid gap-x-6 px-4 pt-4 pb-3 sm:grid-cols-2 md:py-5">
         <div>
           <h3 class="text-xs font-medium text-balance text-slate-500">{{ balance.label }}</h3>
-          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize, balanceColor]">
+          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(balance.value), balanceColor]">
             {{ money(balance.value) }}
           </p>
           <p v-if="balance.hint" class="mt-1 text-xs text-slate-500">{{ balance.hint }}</p>
@@ -73,7 +79,7 @@ const heroSize = 'text-3xl lg:text-4xl'
           class="mt-3 border-t border-slate-100 pt-3 sm:mt-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
         >
           <h3 class="text-xs font-medium text-balance text-slate-500">{{ projection.label }}</h3>
-          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize, signColor(projection.value)]">
+          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(projection.value), signColor(projection.value)]">
             {{ money(projection.value) }}
           </p>
           <!-- La parte stimata come cifra, non solo nella nota: dice quanto del previsto non è ancora successo. -->
@@ -90,12 +96,12 @@ const heroSize = 'text-3xl lg:text-4xl'
       >
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>
-          <p class="text-lg font-bold whitespace-nowrap text-emerald-700">{{ money(income.value) }}</p>
+          <p class="font-bold whitespace-nowrap text-emerald-700" :class="pairSize(income.value)">{{ money(income.value) }}</p>
           <p v-if="income.hint" class="text-xs leading-snug text-slate-500">{{ income.hint }}</p>
         </div>
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 border-l border-slate-100 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ expenses.label }}</p>
-          <p class="text-lg font-bold whitespace-nowrap text-rose-600">{{ money(expenses.value) }}</p>
+          <p class="font-bold whitespace-nowrap text-rose-600" :class="pairSize(expenses.value)">{{ money(expenses.value) }}</p>
           <p v-if="expenses.hint" class="text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
         </div>
       </div>
