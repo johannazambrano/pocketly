@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { breakdownItems } from '@/domain/calculations'
@@ -13,6 +13,7 @@ import MonthSelector from '@/components/MonthSelector.vue'
  * della dashboard perché segue le stesse regole (vedi `breakdownItems`).
  */
 const route = useRoute()
+const router = useRouter()
 const finance = useFinanceStore()
 const { t, money, date, month } = useFormat()
 
@@ -41,12 +42,41 @@ const periodLabel = computed(() => {
   return key > now ? t('detail.monthScheduled', args) : t('detail.month', args)
 })
 const kindLabel = computed(() => t(kind.value === 'paymentMethods' ? 'detail.paymentMethod' : 'detail.category'))
+
+/**
+ * Arrivando nella pagina, il nome della scheda del browser e il focus dicono dove si è: chi usa un lettore di schermo
+ * sente subito il nome della categoria, invece di ripartire dall'inizio del documento.
+ */
+const heading = ref<HTMLElement | null>(null)
+const previousTitle = document.title
+watch(
+  () => tag.value?.name,
+  async (name) => {
+    document.title = name ? `${name} · Pocketly` : previousTitle
+    await nextTick()
+    heading.value?.focus()
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => (document.title = previousTitle))
+
+/**
+ * "Torna alla dashboard": se si è arrivati da lì si torna indietro nella cronologia, così la dashboard riappare nel
+ * punto in cui la si era lasciata; aprendo il link direttamente si va alla dashboard dall'inizio.
+ */
+function back(e: MouseEvent) {
+  if (router.options.history.state.back === '/') {
+    e.preventDefault()
+    router.back()
+  }
+}
 </script>
 
 <template>
   <section class="space-y-4">
     <RouterLink
       to="/"
+      @click="back"
       class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-emerald-700 hover:text-emerald-800"
     >
       <i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i>{{ t('detail.back') }}
@@ -59,7 +89,7 @@ const kindLabel = computed(() => t(kind.value === 'paymentMethods' ? 'detail.pay
         <div class="min-w-0">
           <!-- Sta sullo sfondo grigio della pagina, non su un riquadro bianco: serve il grigio più scuro per 4,5:1. -->
           <p class="text-xs font-medium text-slate-600">{{ kindLabel }}</p>
-          <h2 class="flex items-center gap-2 text-lg font-bold text-slate-800">
+          <h2 ref="heading" tabindex="-1" class="flex items-center gap-2 text-lg font-bold text-slate-800 focus:outline-none">
             <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: tag.color }" aria-hidden="true"></span>
             <span class="truncate">{{ tag.name }}</span>
           </h2>

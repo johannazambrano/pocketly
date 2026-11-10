@@ -18,6 +18,8 @@ const route = useRoute()
 
 const moreOpen = ref(false)
 const moreActive = computed(() => moreTabs.some((tab) => tab.name === route.name))
+/** Le pagine di approfondimento (es. il dettaglio di una categoria) tengono evidenziata la voce da cui si arriva. */
+const isParent = (name: string) => route.meta.navParent === name
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') moreOpen.value = false
@@ -47,7 +49,13 @@ const barItem =
     <div v-if="moreOpen" class="fixed inset-0 z-30 md:hidden" @click="moreOpen = false"></div>
     <div class="pb-safe px-safe fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white shadow-lg md:hidden">
       <div class="mx-auto flex max-w-xl">
-        <RouterLink v-for="tab in mainTabs" :key="tab.name" :to="tab.path" :class="barItem" exact-active-class="!text-emerald-700 font-bold">
+        <RouterLink
+          v-for="tab in mainTabs"
+          :key="tab.name"
+          :to="tab.path"
+          :class="[barItem, isParent(tab.name) ? '!text-emerald-700 font-bold' : '']"
+          exact-active-class="!text-emerald-700 font-bold"
+        >
           <i class="fa-solid text-lg" :class="tab.icon"></i>
           <span class="w-full truncate text-center">{{ t(`nav.${tab.name}`) }}</span>
         </RouterLink>
@@ -87,6 +95,7 @@ const barItem =
         :key="tab.name"
         :to="tab.path"
         class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 [@media(max-height:520px)]:min-h-9"
+        :class="{ '!bg-emerald-50 !text-emerald-700': isParent(tab.name) }"
         exact-active-class="!bg-emerald-50 !text-emerald-700"
       >
         <i class="fa-solid w-5 text-center" :class="tab.icon"></i>

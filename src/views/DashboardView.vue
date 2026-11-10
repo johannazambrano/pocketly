@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
@@ -211,22 +211,10 @@ const expensesSplit = computed(() => {
 })
 
 /**
- * Cambiare mese senza cercare le frecce: tasti ← → sulla pagina e swipe orizzontale sul riquadro del saldo.
- * I tasti non agiscono mentre si scrive, quando il focus è su un menu (le frecce lì cambiano già la scelta) o con una
- * finestra aperta.
+ * Cambiare mese senza cercare le frecce: swipe orizzontale sul riquadro del saldo. I tasti ← → li gestisce il
+ * MonthSelector, così valgono su ogni pagina che ha il filtro del mese.
  */
 const { previous, next, go } = useMonthStep()
-
-function onKey(e: KeyboardEvent) {
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
-  const el = e.target as HTMLElement | null
-  if (el?.closest('input, select, textarea, [contenteditable="true"]')) return
-  if (document.querySelector('[aria-modal="true"]')) return
-  if (go(e.key === 'ArrowLeft' ? previous.value : next.value)) e.preventDefault()
-}
-onMounted(() => document.addEventListener('keydown', onKey))
-onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
 /** Uno swipe conta se è soprattutto orizzontale e lungo almeno 60px: lo scorrimento verticale della pagina resta libero. */
 let touchStart: { x: number; y: number } | null = null

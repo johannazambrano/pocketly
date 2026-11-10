@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { parseIsoDate } from '@/utils/dates'
@@ -22,6 +22,22 @@ function goToCurrentMonth() {
 }
 
 const { previous, next, go } = useMonthStep()
+
+/**
+ * Tasti ← → per il mese prima e dopo, su qualunque pagina mostri questo filtro (dashboard, dettaglio, spese variabili).
+ * Non agiscono mentre si scrive, quando il focus è su un menu (lì le frecce cambiano già la scelta) o con una finestra
+ * aperta.
+ */
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+  const el = e.target as HTMLElement | null
+  if (el?.closest('input, select, textarea, [contenteditable="true"]')) return
+  if (document.querySelector('[aria-modal="true"]')) return
+  if (go(e.key === 'ArrowLeft' ? previous.value : next.value)) e.preventDefault()
+}
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
 /** Se dopo il passo la freccia si spegne (fine dell'elenco), il focus passa al menu invece di perdersi sulla pagina. */
 async function step(target: MonthTarget | null, event: MouseEvent) {
