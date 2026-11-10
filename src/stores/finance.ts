@@ -47,7 +47,11 @@ export const useFinanceStore = defineStore('finance', () => {
   const ready = ref(false)
   const saveError = ref(false)
   const selectedYear = ref(new Date().getFullYear())
-  const selectedMonth = ref<number | 'all'>('all')
+  /**
+   * All'apertura si guarda il mese di oggi: la domanda più frequente è "come va questo mese". La scelta non viene
+   * ricordata tra un'apertura e l'altra, così riaprendo il mese dopo non si trova il mese vecchio.
+   */
+  const selectedMonth = ref<number | 'all'>(new Date().getMonth())
   /** Oggi, per separare ciò che è già successo da ciò che è previsto. Si aggiorna quando l'app torna in primo piano. */
   const today = ref(todayIso())
   const dataStore: DataStore = deviceDataStore
@@ -94,6 +98,7 @@ export const useFinanceStore = defineStore('finance', () => {
   function replaceAll(next: FinanceData) {
     data.value = next
     selectedYear.value = new Date().getFullYear()
+    selectedMonth.value = new Date().getMonth()
   }
 
   /** Dati arrivati dalla sincronizzazione: a differenza di un ripristino, la pagina resta sull'anno e sul mese scelti. */

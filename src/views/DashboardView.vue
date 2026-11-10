@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
-import { yearOf } from '@/utils/dates'
+import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
+import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
 const { t, money, month, date, locale } = useFormat()
@@ -21,7 +22,6 @@ const isEmpty = computed(() => {
 /** Tutta la pagina usa lo stesso "oggi" del negozio, che si aggiorna quando l'app torna in primo piano. */
 const currentYear = computed(() => yearOf(finance.today))
 const isPastYear = computed(() => finance.selectedYear < currentYear.value)
-const upcoming = computed(() => upcomingCharges(finance.data, finance.today, 30))
 
 /**
  * Una sola regola per tutta la dashboard: le card e le ripartizioni contano ciò che è già avvenuto,
@@ -102,6 +102,31 @@ const estimatedIncome = computed(() => {
   return value > 0 ? value : 0
 })
 
+/**
+ * Quando oggi sei sotto zero ma a fine periodo torni sopra, una frase collega i due numeri: quanto entra ed esce ancora
+ * da qui alla fine del mese o dell'anno in corso. Solo per il periodo in corso, l'unico in cui "da qui" ha senso.
+ */
+const bridge = computed(() => {
+  const projection = projectionFigure.value
+  if (!projection || displayBalance.value >= 0 || projection.value < 0) return null
+  let incoming: number
+  let outgoing: number
+  let end: string
+  if (ms.value) {
+    if (!monthToDate.value) return null
+    incoming = ms.value.projectedIncome - ms.value.incomeToDate
+    outgoing = ms.value.expenses - ms.value.expensesToDate
+    end = t('dashboard.bridgeEndMonth', monthArgs.value)
+  } else {
+    incoming = s.value.projectedIncome - s.value.incomeToDate
+    outgoing = s.value.totalExpenses - s.value.expensesToDate
+    end = t('dashboard.bridgeEndYear')
+  }
+  if (incoming <= 0) return null
+  const args = { end, income: money(incoming), expenses: money(outgoing) }
+  return outgoing > 0 ? t('dashboard.bridge', args) : t('dashboard.bridgeIncomeOnly', args)
+})
+
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
 const categoryTotals = computed(() => {
   if (!ms.value) return s.value.byCategoryToDate
@@ -142,10 +167,8 @@ const projectionFigure = computed(() => {
   return {
     label: t('dashboard.projected'),
     value: s.value.projectedBalance,
-    hint:
-      finance.estimatedMonthlyIncome > 0
-        ? t('dashboard.projectedHintEstimate', { amount: money(finance.estimatedMonthlyIncome) })
-        : t('dashboard.projectedHint'),
+    // La quota stimata è già una cifra a sé ("di cui …"): la nota non la ripete.
+    hint: t('dashboard.projectedHint'),
     estimated: estimatedIncome.value,
   }
 })
@@ -187,6 +210,66 @@ const expensesSplit = computed(() => {
   ]
 })
 
+/**
+ * Cambiare mese senza cercare le frecce: tasti ← → sulla pagina e swipe orizzontale sul riquadro del saldo.
+ * I tasti non agiscono mentre si scrive, quando il focus è su un menu (le frecce lì cambiano già la scelta) o con una
+ * finestra aperta.
+ */
+const { previous, next, go } = useMonthStep()
+
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+  const el = e.target as HTMLElement | null
+  if (el?.closest('input, select, textarea, [contenteditable="true"]')) return
+  if (document.querySelector('[aria-modal="true"]')) return
+  if (go(e.key === 'ArrowLeft' ? previous.value : next.value)) e.preventDefault()
+}
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
+
+/** Uno swipe conta se è soprattutto orizzontale e lungo almeno 60px: lo scorrimento verticale della pagina resta libero. */
+let touchStart: { x: number; y: number } | null = null
+function onTouchStart(e: TouchEvent) {
+  const t0 = e.touches[0]
+  touchStart = e.touches.length === 1 && t0 ? { x: t0.clientX, y: t0.clientY } : null
+}
+function onTouchEnd(e: TouchEvent) {
+  const t1 = e.changedTouches[0]
+  if (!touchStart || !t1) return
+  const dx = t1.clientX - touchStart.x
+  const dy = t1.clientY - touchStart.y
+  touchStart = null
+  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+  // Il dito verso sinistra porta avanti nel tempo, come sfogliare un calendario.
+  go(dx < 0 ? next.value : previous.value)
+}
+
+/** Chi usa un lettore di schermo sente quale periodo è ora mostrato, comunque lo si cambi. */
+const announcement = ref('')
+watch(
+  () => [finance.selectedYear, finance.selectedMonth] as const,
+  ([year, m]) => {
+    announcement.value = m === 'all' ? `${t('dashboard.allMonths')} ${year}` : `${month(m)} ${year}`
+  },
+)
+
+/**
+ * Ciò che deve ancora uscire. Sul mese in corso arriva a fine mese, così l'elenco e la sua somma coincidono con
+ * "ancora in arrivo" sotto le uscite; sull'anno guarda i prossimi 30 giorni.
+ */
+const upcomingUntil = computed(() =>
+  monthToDate.value ? lastDayOfMonth(finance.selectedYear, finance.selectedMonth as number) : addDays(finance.today, 30),
+)
+const upcoming = computed(() => upcomingCharges(finance.data, finance.today, upcomingUntil.value))
+const upcomingTotal = computed(() => upcoming.value.reduce((acc, c) => acc + c.amount, 0))
+const upcomingTitle = computed(() =>
+  monthToDate.value ? t('dashboard.upcomingMonth', monthArgs.value) : t('dashboard.upcoming'),
+)
+const upcomingEmpty = computed(() =>
+  monthToDate.value ? t('dashboard.noUpcomingMonth', monthArgs.value) : t('dashboard.noUpcoming'),
+)
+
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
   () => finance.selectedYear === currentYear.value && (!ms.value || ms.value.timing === 'current'),
@@ -207,40 +290,64 @@ const showUpcoming = computed(
         <MonthSelector />
       </div>
 
+      <p class="sr-only" aria-live="polite">{{ announcement }}</p>
+
       <BalancePanel
+        @touchstart.passive="onTouchStart"
+        @touchend.passive="onTouchEnd"
         :balance="balanceFigure"
         :income="incomeFigure"
         :expenses="expensesFigure"
         :split="expensesSplit"
         :projection="projectionFigure"
+        :bridge="bridge"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
-          <h3 class="text-sm font-semibold text-slate-700">
-            <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
-          </h3>
-          <!-- Su schermi larghi due colonne: l'importo resta vicino al suo nome invece che all'altro capo della pagina. -->
-          <ul v-if="upcoming.length" class="grid gap-x-8 md:grid-cols-2">
-            <li v-for="c in upcoming" :key="c.id" class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0 md:[&:nth-child(odd):nth-last-child(2)]:border-b-0">
+          <div class="flex items-baseline justify-between gap-3">
+            <h3 class="text-sm font-semibold text-slate-700">
+              <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ upcomingTitle }}
+            </h3>
+            <span v-if="upcoming.length" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
+          </div>
+          <!--
+            Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
+            (metà delle righe ciascuna): l'ordine per data scende lungo la prima colonna e continua nella seconda,
+            invece di andare a zig-zag.
+          -->
+          <ul
+            v-if="upcoming.length"
+            class="grid gap-x-8 md:grid-flow-col md:grid-cols-2 md:[grid-template-rows:repeat(var(--rows),auto)]"
+            :style="{ '--rows': Math.ceil(upcoming.length / 2) }"
+          >
+            <li
+              v-for="(c, i) in upcoming"
+              :key="c.key"
+              class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0"
+              :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
+            >
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium">{{ c.name }}</div>
-                <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
+                <div class="text-xs text-slate-500">
+                  {{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}
+                  <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
+                </div>
               </div>
               <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
             </li>
           </ul>
-          <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
+          <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>
         </div>
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
-          <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="categories" linked :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
-          <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="paymentMethods" linked :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
       </div>
     </template>

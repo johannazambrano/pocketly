@@ -8,6 +8,17 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /*
+     * L'intestazione in alto e, sul telefono, la barra in basso restano fisse: quando la tastiera porta il focus su un
+     * elemento, la pagina scorre tenendolo fuori da entrambe invece di lasciarlo nascosto sotto.
+     */
+    scroll-padding-top: calc(5rem + env(safe-area-inset-top));
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 48rem) {
+    html {
+      scroll-padding-bottom: 1rem;
+    }
   }
   body {
     @apply min-h-dvh font-sans antialiased;

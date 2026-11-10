@@ -23,6 +23,12 @@ export const router = createRouter({
     { path: '/prestiti', name: 'loans', component: () => import('@/views/LoansView.vue') },
     { path: '/previsioni', name: 'forecast', component: () => import('@/views/ForecastView.vue') },
     { path: '/impostazioni', name: 'settings', component: () => import('@/views/SettingsView.vue') },
+    // Dettaglio di una riga della dashboard: tutte le voci di una categoria o di un metodo di pagamento nel periodo scelto.
+    {
+      path: '/dettaglio/:kind(categoria|metodo)/:id',
+      name: 'detail',
+      component: () => import('@/views/BreakdownDetailView.vue'),
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),

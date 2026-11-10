@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, breakdownItems, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -261,11 +261,34 @@ describe('variableSpending', () => {
 
 describe('upcomingCharges', () => {
   it('elenca gli addebiti entro la finestra, ordinati', () => {
-    const list = upcomingCharges(sample(), '2026-11-20', 30)
+    const list = upcomingCharges(sample(), '2026-11-20', '2026-12-20')
     expect(list.map((c) => [c.id, c.date, c.daysLeft])).toEqual([
       ['r1', '2026-12-01', 11],
       ['r2', '2026-12-15', 25],
     ])
+  })
+
+  it('esclude ciò che ha la data di oggi e comprende le spese variabili future', () => {
+    const data = sample()
+    data.oneTimeExpenses.push(
+      { id: 'oggi', name: 'Oggi', amount: 100, date: '2026-11-20', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+      { id: 'dopo', name: 'Concerto', amount: 6000, date: '2026-11-25', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+    )
+    const list = upcomingCharges(data, '2026-11-20', '2026-11-30')
+    expect(list.map((c) => [c.key, c.source])).toEqual([['o-dopo', 'oneTime']])
+  })
+
+  it('sul mese in corso la somma coincide con "ancora in arrivo"', () => {
+    const data = sample()
+    data.oneTimeExpenses.push(
+      { id: 'dopo', name: 'Concerto', amount: 6000, date: '2026-11-25', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+    )
+    data.recurringExpenses.push(
+      { id: 'r3', name: 'Palestra', amount: 4500, frequency: 'monthly', startDate: '2026-01-28', endDate: null, categoryId: 'home', paymentMethodId: 'bank' },
+    )
+    const m = monthSummary(data, 2026, 10, TODAY)
+    const list = upcomingCharges(data, TODAY, '2026-11-30')
+    expect(list.reduce((acc, c) => acc + c.amount, 0)).toBe(m.expenses - m.expensesToDate)
   })
 })
 
@@ -409,5 +432,38 @@ describe('oneTimeTagBreakdown', () => {
       { id: 'alloggio', total: 65000, count: 1 },
       { id: 'regali', total: 5000, count: 1 },
     ])
+  })
+})
+
+describe('breakdownItems', () => {
+  const total = (items: { amount: number }[]) => items.reduce((acc, i) => acc + i.amount, 0)
+
+  it('sull’anno in corso le voci sommano la riga "a oggi" della dashboard', () => {
+    const data = sample()
+    const s = yearSummary(data, 2026, TODAY)
+    for (const row of s.byCategoryToDate) {
+      expect(total(breakdownItems(data, 2026, 'all', 'categoryId', row.id, TODAY))).toBe(row.total)
+    }
+    for (const row of s.byPaymentMethodToDate) {
+      expect(total(breakdownItems(data, 2026, 'all', 'paymentMethodId', row.id, TODAY))).toBe(row.total)
+    }
+  })
+
+  it('nel mese in corso contano solo le voci fino a oggi, nei mesi passati e futuri tutto il mese', () => {
+    const data = sample()
+    for (const month of [9, 10, 11]) {
+      const m = monthSummary(data, 2026, month, TODAY)
+      const rows = m.timing === 'current' ? m.byCategoryToDate : m.byCategory
+      for (const row of rows) {
+        expect(total(breakdownItems(data, 2026, month, 'categoryId', row.id, TODAY))).toBe(row.total)
+      }
+    }
+  })
+
+  it('elenca un addebito ricorrente per ogni scadenza, dalla più recente', () => {
+    const items = breakdownItems(sample(), 2026, 'all', 'categoryId', 'home', TODAY)
+    expect(items.every((i) => i.source === 'recurring')).toBe(true)
+    expect(items[0]!.date).toBe('2026-11-01')
+    expect(new Set(items.map((i) => i.key)).size).toBe(items.length)
   })
 })

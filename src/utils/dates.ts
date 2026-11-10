@@ -30,6 +30,18 @@ export function yearOf(date: IsoDate): number {
   return parseIsoDate(date).year
 }
 
+/** La data `days` giorni dopo (o prima, se negativo). */
+export function addDays(date: IsoDate, days: number): IsoDate {
+  const { year, month, day } = parseIsoDate(date)
+  const d = new Date(Date.UTC(year, month, day + days))
+  return toIsoDate(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+}
+
+/** Ultimo giorno del mese (0–11). */
+export function lastDayOfMonth(year: number, month: number): IsoDate {
+  return toIsoDate(year, month, new Date(Date.UTC(year, month + 1, 0)).getUTCDate())
+}
+
 /** Indice assoluto del mese (anno * 12 + mese), comodo per confronti e differenze. */
 export function monthIndex(year: number, month: number): number {
   return year * 12 + month

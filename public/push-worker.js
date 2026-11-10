@@ -84,7 +84,8 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body,
     icon: '/pwa-192x192.png',
-    badge: '/pwa-64x64.png',
+    // Icona piccola della barra di stato (Android): sagoma bianca su fondo trasparente, il sistema usa solo la forma.
+    badge: '/badge-96x96.png',
     tag: payload.tag || payload.id || 'pocketly-reminder',
     data: { url: payload.url || '/ricorrenti' },
   }

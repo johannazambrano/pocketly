@@ -17,6 +17,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import ipaddress
 from typing import Optional, Tuple
 
 logger = logging.getLogger('pocketly.webpush')
@@ -27,6 +28,27 @@ DEFAULT_VAPID_SUBJECT = 'mailto:support@pocketly.local'
 def get_vapid_subject() -> str:
     val = os.environ.get('POCKETLY_VAPID_SUBJECT', '').strip()
     return val if val else DEFAULT_VAPID_SUBJECT
+
+
+# Domini che non ricevono posta né rispondono su Internet: Apple può rifiutare un mittente così (403 BadJwtToken).
+_NON_PUBLIC_SUFFIXES = ('.local', '.localhost', '.localdomain', '.invalid', '.test', '.example', '.lan', '.home')
+
+
+def vapid_subject_problem(subject: str) -> Optional[str]:
+    """Dice perché il mittente VAPID rischia di essere rifiutato dai servizi push, o None se sembra valido."""
+    s = subject.strip()
+    if s.startswith('mailto:'):
+        address = s[len('mailto:'):]
+        if '@' not in address:
+            return 'il mittente mailto: non contiene un indirizzo email'
+        host = address.rsplit('@', 1)[1].lower()
+    elif s.startswith('https://'):
+        host = s[len('https://'):].split('/', 1)[0].split(':', 1)[0].lower()
+    else:
+        return 'il mittente deve iniziare con mailto: oppure https://'
+    if not host or host == 'localhost' or '.' not in host or host.endswith(_NON_PUBLIC_SUFFIXES):
+        return f'il dominio "{host}" non è pubblico: i servizi push (soprattutto Apple) possono rifiutarlo'
+    return None
 
 
 class PushResponse(int):
@@ -220,11 +242,31 @@ def valid_auth_secret(value: object) -> bool:
         return False
 
 
+def _public_host(host: Optional[str]) -> bool:
+    """Vero se l'host è un nome pubblico: niente indirizzi IP, localhost o domini della rete di casa."""
+    if not host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False  # i servizi push hanno sempre un nome; un IP serve solo a puntare dentro la rete
+    except ValueError:
+        pass
+    host = host.lower().rstrip('.')
+    return '.' in host and host != 'localhost' and not host.endswith(_NON_PUBLIC_SUFFIXES)
+
+
+def endpoint_host(endpoint: str) -> str:
+    """Solo il nome del servizio push, per i log: l'indirizzo completo identifica il dispositivo e non va scritto."""
+    return urllib.parse.urlsplit(endpoint).hostname or '?'
+
+
 def valid_endpoint(value: object) -> bool:
     if not isinstance(value, str) or len(value) > 2048:
         return False
     parsed = urllib.parse.urlsplit(value)
-    if parsed.scheme == 'https' and bool(parsed.netloc):
+    # Il server fa una richiesta verso questo indirizzo: solo https verso host pubblici, così con la chiave di
+    # sincronizzazione non si possono far partire richieste verso la rete locale del container.
+    if parsed.scheme == 'https' and _public_host(parsed.hostname):
         return True
     # In test locale si consente http su 127.0.0.1 / localhost
     return parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost')

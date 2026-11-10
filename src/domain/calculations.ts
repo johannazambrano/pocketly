@@ -1,6 +1,6 @@
 import type { Cents, FinanceData, Id, Loan, OneTimeExpense } from '@/types/models'
 import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
-import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent, nextDueDate } from './recurrence'
+import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
 export interface TagTotal {
   id: Id
@@ -263,6 +263,65 @@ export function monthBreakdown(data: FinanceData, year: number, month: number, c
   }
 }
 
+/** Una voce delle ripartizioni della dashboard: una spesa variabile o un addebito di una spesa ricorrente. */
+export interface BreakdownItem {
+  /** Chiave unica nell'elenco (un addebito ricorrente compare una volta per scadenza). */
+  key: string
+  source: 'oneTime' | 'recurring'
+  sourceId: Id
+  date: string
+  name: string
+  amount: Cents
+}
+
+/**
+ * Le voci che compongono una riga di "Spese per categoria" o "Spese per metodo di pagamento", con le stesse regole
+ * della dashboard, così la somma coincide con il totale della riga:
+ * - anno intero: dal mese di inizio del periodo attivo a dicembre, solo ciò che è avvenuto fino a oggi
+ *   (per un anno passato tutto, per uno futuro niente);
+ * - mese in corso: solo fino a oggi; mese passato o futuro: tutto il mese, compreso ciò che è solo programmato.
+ * Ordinate dalla più recente.
+ */
+export function breakdownItems(
+  data: FinanceData,
+  year: number,
+  month: number | 'all',
+  field: 'categoryId' | 'paymentMethodId',
+  tagId: Id,
+  today: string = todayIso(),
+): BreakdownItem[] {
+  let months: number[]
+  let cutoff: string
+  if (month === 'all') {
+    const start = periodStartMonth(data, year)
+    months = Array.from({ length: 12 - start }, (_, i) => start + i)
+    cutoff = cutoffDate(year, today)
+  } else {
+    const t = parseIsoDate(today)
+    const current = monthIndex(year, month) === monthIndex(t.year, t.month)
+    months = [month]
+    cutoff = current ? today : '9999-12-31'
+  }
+  const inMonths = new Set(months)
+  const items: BreakdownItem[] = []
+
+  for (const e of data.oneTimeExpenses) {
+    if (e[field] !== tagId || e.date > cutoff) continue
+    const d = parseIsoDate(e.date)
+    if (d.year !== year || !inMonths.has(d.month)) continue
+    items.push({ key: `o-${e.id}`, source: 'oneTime', sourceId: e.id, date: e.date, name: e.name, amount: e.amount })
+  }
+  for (const r of data.recurringExpenses) {
+    if (r[field] !== tagId) continue
+    for (const m of months) {
+      const due = dueDateIn(r, year, m)
+      if (!due || due > cutoff) continue
+      items.push({ key: `r-${r.id}-${due}`, source: 'recurring', sourceId: r.id, date: due, name: r.name, amount: r.amount })
+    }
+  }
+  return items.sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name) : a.date < b.date ? 1 : -1))
+}
+
 /** Dove sta un mese rispetto a oggi: passato (tutto avvenuto), corrente o futuro (tutto da avvenire). */
 export type MonthTiming = 'past' | 'current' | 'future'
 
@@ -399,26 +458,42 @@ export function variableSpending(data: FinanceData, today: string): VariableSpen
 }
 
 export interface UpcomingCharge {
+  /** Chiave unica nell'elenco: un addebito ricorrente compare una volta per scadenza. */
+  key: string
   id: Id
+  source: 'recurring' | 'oneTime'
   name: string
   amount: Cents
   date: string
   daysLeft: number
 }
 
-/** Addebiti ricorrenti previsti nei prossimi `days` giorni, dal più vicino. */
-export function upcomingCharges(data: FinanceData, today: string, days: number): UpcomingCharge[] {
+/**
+ * Tutto ciò che deve ancora uscire dopo oggi e fino a `until` compreso: ogni scadenza delle spese ricorrenti e le
+ * spese variabili già registrate con una data futura. Ciò che ha la data di oggi è escluso, perché le cifre "a oggi"
+ * lo contano già come avvenuto. Così, sul mese in corso, la somma coincide con "ancora in arrivo".
+ */
+export function upcomingCharges(data: FinanceData, today: string, until: string): UpcomingCharge[] {
   const t = parseIsoDate(today)
+  const u = parseIsoDate(until)
   const todayMs = Date.UTC(t.year, t.month, t.day)
+  const daysLeft = (iso: string) => {
+    const d = parseIsoDate(iso)
+    return Math.round((Date.UTC(d.year, d.month, d.day) - todayMs) / 86_400_000)
+  }
   const result: UpcomingCharge[] = []
   for (const r of data.recurringExpenses) {
-    const due = nextDueDate(r, today)
-    if (!due) continue
-    const d = parseIsoDate(due)
-    const daysLeft = Math.round((Date.UTC(d.year, d.month, d.day) - todayMs) / 86_400_000)
-    if (daysLeft <= days) result.push({ id: r.id, name: r.name, amount: r.amount, date: due, daysLeft })
+    for (let abs = monthIndex(t.year, t.month); abs <= monthIndex(u.year, u.month); abs++) {
+      const due = dueDateIn(r, Math.floor(abs / 12), abs % 12)
+      if (!due || due <= today || due > until) continue
+      result.push({ key: `r-${r.id}-${due}`, id: r.id, source: 'recurring', name: r.name, amount: r.amount, date: due, daysLeft: daysLeft(due) })
+    }
   }
-  return result.sort((a, b) => a.daysLeft - b.daysLeft)
+  for (const e of data.oneTimeExpenses) {
+    if (e.date <= today || e.date > until) continue
+    result.push({ key: `o-${e.id}`, id: e.id, source: 'oneTime', name: e.name, amount: e.amount, date: e.date, daysLeft: daysLeft(e.date) })
+  }
+  return result.sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name) : a.date < b.date ? -1 : 1))
 }
 
 export function loanStatus(loan: Loan): { repaid: Cents; remaining: Cents } {

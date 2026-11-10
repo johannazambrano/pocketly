@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { parseIsoDate } from '@/utils/dates'
+import { useMonthStep, type MonthTarget } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
 const { t, month } = useFormat()
@@ -20,34 +21,18 @@ function goToCurrentMonth() {
   select.value?.focus()
 }
 
-/**
- * Il mese prima o dopo quello scelto. Da gennaio si torna a dicembre dell'anno prima, da dicembre si va a gennaio
- * dell'anno dopo, ma solo verso anni che compaiono nel menu dell'anno in alto. Con "Tutti i mesi" non c'è un mese da cui partire.
- */
-function neighbour(delta: -1 | 1): { year: number; month: number } | null {
-  if (finance.selectedMonth === 'all') return null
-  let m = finance.selectedMonth + delta
-  let y = finance.selectedYear
-  if (m < 0) {
-    m = 11
-    y -= 1
-  } else if (m > 11) {
-    m = 0
-    y += 1
-  }
-  return finance.years.includes(y) ? { year: y, month: m } : null
-}
-const previous = computed(() => neighbour(-1))
-const next = computed(() => neighbour(1))
+const { previous, next, go } = useMonthStep()
 
-function go(target: { year: number; month: number } | null) {
-  if (!target) return
-  finance.selectedYear = target.year
-  finance.selectedMonth = target.month
+/** Se dopo il passo la freccia si spegne (fine dell'elenco), il focus passa al menu invece di perdersi sulla pagina. */
+async function step(target: MonthTarget | null, event: MouseEvent) {
+  const button = event.currentTarget as HTMLButtonElement
+  if (!go(target)) return
+  await nextTick()
+  if (button.disabled) select.value?.focus()
 }
 
 /** Nel nome sulla freccia l'anno compare solo quando cambia: "Dicembre 2025", ma "Ottobre". */
-function targetName(target: { year: number; month: number } | null): string {
+function targetName(target: MonthTarget | null): string {
   if (!target) return ''
   return target.year === finance.selectedYear ? month(target.month) : `${month(target.month)} ${target.year}`
 }
@@ -91,7 +76,7 @@ const arrow =
         :disabled="!previous"
         :aria-label="previousLabel"
         :title="previousLabel"
-        @click="go(previous)"
+        @click="step(previous, $event)"
       >
         <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
       </button>
@@ -112,7 +97,7 @@ const arrow =
         :disabled="!next"
         :aria-label="nextLabel"
         :title="nextLabel"
-        @click="go(next)"
+        @click="step(next, $event)"
       >
         <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
       </button>

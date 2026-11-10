@@ -28,6 +28,14 @@ import { newId } from '@/utils/id'
 
 const CONFIG_KEY = 'notification-config'
 const SHOWN_KEY = 'notifications-shown'
+/**
+ * Con le notifiche dal server attive, l'app lascia al server qualche minuto per consegnare il promemoria.
+ * Se dopo questo margine il promemoria non risulta mostrato (il push-worker lo segna in SHOWN_KEY quando arriva),
+ * lo mostra l'app da sola: così un 403 di Apple, un server spento o un firewall non fanno perdere il promemoria.
+ */
+const PUSH_GRACE_SECONDS = 10 * 60
+/** Il server accetta al massimo questo numero di voci per volta (MAX_PUSH_SCHEDULE in server/main.py). */
+const MAX_SCHEDULE_ITEMS = 5000
 const SYNC_DEBOUNCE_MS = 2000
 
 export interface NotificationConfig {
@@ -50,6 +58,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const isSyncingSchedule = ref(false)
   const testSending = ref(false)
   const pushSubscribed = ref(false)
+  /**
+   * Perché l'ultimo invio del calendario al server non è andato del tutto: 'tooMany' se le voci superavano il limite
+   * (le più lontane non sono partite), 'failed' se l'invio non è riuscito. Null quando è andato tutto bene.
+   */
+  const scheduleProblem = ref<'tooMany' | 'failed' | null>(null)
 
   const isSupported = computed(() => {
     return typeof window !== 'undefined' && 'Notification' in window
@@ -174,7 +187,12 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
-  async function subscribePush(): Promise<boolean> {
+  /**
+   * Registra l'iscrizione push di questo dispositivo sul server.
+   * Con `fresh` butta l'iscrizione del browser e ne crea una nuova: serve quando il server ha rimosso il dispositivo
+   * (risposta 404/410 del servizio push), perché quella vecchia punta a un indirizzo che non funziona più.
+   */
+  async function subscribePush(fresh = false): Promise<boolean> {
     if (!sync.enabled || !sync.serverKey) {
       pushSubscribed.value = false
       return false
@@ -194,6 +212,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
       let sub = await reg.pushManager.getSubscription()
       const appServerKey = base64UrlToBytes(serverConfig.vapidPublicKey)
+      if (sub && fresh) {
+        await sub.unsubscribe()
+        sub = null
+      }
 
       if (sub && sub.options?.applicationServerKey) {
         const existingKey = new Uint8Array(sub.options.applicationServerKey)
@@ -268,7 +290,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
           }
         }
         if (needSubscribe) {
-          const subscribed = await subscribePush()
+          // Se il server non conosce più il dispositivo, l'iscrizione del browser è da rifare da capo.
+          const subscribed = await subscribePush(!myDevice)
           if (subscribed) {
             force = true
             const refreshed = await api.getConfig()
@@ -335,12 +358,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
         }
       }
 
-      const itemsToSend = encryptedItems.slice(0, 5000)
+      const itemsToSend = encryptedItems.slice(0, MAX_SCHEDULE_ITEMS)
       await api.putSchedule(itemsToSend)
+      scheduleProblem.value = encryptedItems.length > MAX_SCHEDULE_ITEMS ? 'tooMany' : null
       lastScheduleHash.value = currentHash
       await persistConfig()
     } catch (e) {
       console.warn('Sincronizzazione pianificazione push non riuscita', e)
+      scheduleProblem.value = 'failed'
     }
   }
 
@@ -399,11 +424,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
   async function checkLocalReminders(): Promise<void> {
     if (!enabled.value || permission.value !== 'granted') return
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return
-    // Evita notifiche doppie: se il dispositivo è in modalità push attiva, inibisci il promemoria locale
-    if (isPushActive.value) return
-
     try {
-      const due = calculateDueLocalReminders(finance.data.recurringExpenses, new Date(), 24)
+      const now = new Date()
+      let due = calculateDueLocalReminders(finance.data.recurringExpenses, now, 24)
+      // Con la push attiva il promemoria locale è solo un ripiego: niente doppioni finché il server ha tempo di consegnare.
+      if (isPushActive.value) {
+        const graceLimit = Math.floor(now.getTime() / 1000) - PUSH_GRACE_SECONDS
+        due = due.filter((r) => r.fireAt <= graceLimit)
+      }
       if (!due.length) return
 
       let shownMap: Record<string, number> = {}
@@ -428,7 +456,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         const shown = await showNotificationSafely(msg.title, {
           body: msg.body,
           icon: '/pwa-192x192.png',
-          badge: '/pwa-64x64.png',
+          badge: '/badge-96x96.png',
           tag: r.id,
           data: { url: '/ricorrenti' },
         })
@@ -545,7 +573,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       return await showNotificationSafely(title, {
         body,
         icon: '/pwa-192x192.png',
-        badge: '/pwa-64x64.png',
+        badge: '/badge-96x96.png',
         tag: 'pocketly-test',
         data: { url: '/ricorrenti' },
       })
@@ -619,9 +647,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
         if (document.visibilityState === 'visible') {
           updatePermission()
           void checkLocalReminders()
-          if (sync.enabled) {
-            void syncPushSchedule()
-          }
+          // Il calendario non parte da qui: tornando in primo piano la sincronizzazione scarica prima i dati nuovi,
+          // e il watch su sync.status lo invia quando diventa 'synced'. Così non si mandano promemoria di dati vecchi.
         }
       })
     }
@@ -642,8 +669,46 @@ export const useNotificationsStore = defineStore('notifications', () => {
     ready.value = true
   }
 
+  /**
+   * La sincronizzazione sta per essere scollegata: si tolgono dal server l'iscrizione e il calendario di questo
+   * dispositivo, finché la chiave del server è ancora disponibile. Altrimenti il server continuerebbe a mandare
+   * promemoria con dati non più aggiornati. Le notifiche locali restano attive.
+   */
+  async function leaveServer(): Promise<void> {
+    if (sync.serverKey && deviceId.value) {
+      try {
+        await createPushApi(sync.serverKey).deleteSubscription(deviceId.value)
+      } catch (e) {
+        console.warn('Rimozione dal server non riuscita', e)
+      }
+    }
+    const reg = await getServiceWorkerRegistration()
+    if (reg && 'pushManager' in reg) {
+      try {
+        await (await reg.pushManager.getSubscription())?.unsubscribe()
+      } catch (e) {
+        console.warn('Errore durante unsubscribe Web Push', e)
+      }
+    }
+    pushSubscribed.value = false
+    scheduleProblem.value = null
+    lastScheduleHash.value = null
+    await persistConfig()
+  }
+
+  /**
+   * Il browser ha rinnovato l'iscrizione da solo (evento pushsubscriptionchange nel service worker): si registra la
+   * nuova sul server e si rimanda il calendario, che altrimenti resterebbe cifrato con le chiavi vecchie.
+   */
+  async function onSubscriptionChanged(): Promise<void> {
+    if (await subscribePush()) await syncPushSchedule(true)
+  }
+
   return {
     ready,
+    onSubscriptionChanged,
+    leaveServer,
+    scheduleProblem,
     enabled,
     permission,
     deviceId,

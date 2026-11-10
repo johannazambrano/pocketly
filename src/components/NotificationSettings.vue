@@ -72,10 +72,17 @@ function applyDefaults(mode: 'missing' | 'all') {
 
     <!-- Stato attivo -->
     <div v-if="notifications.enabled" class="space-y-3">
-      <p v-if="notifications.isPushActive" class="text-xs font-medium text-emerald-700">
-        <i class="fa-solid fa-check mr-1"></i>
-        {{ t('notifications.modePush') }}
-      </p>
+      <template v-if="notifications.isPushActive">
+        <p class="text-xs font-medium text-emerald-700">
+          <i class="fa-solid fa-check mr-1"></i>
+          {{ t('notifications.modePush') }}
+        </p>
+        <p class="text-xs text-slate-600">{{ t('notifications.horizonHint') }}</p>
+        <p v-if="notifications.scheduleProblem" class="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+          <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+          {{ t(notifications.scheduleProblem === 'tooMany' ? 'notifications.scheduleTooMany' : 'notifications.scheduleFailed') }}
+        </p>
+      </template>
       <p v-else class="text-xs text-slate-600">
         <i class="fa-solid fa-circle-info mr-1 text-indigo-600"></i>
         {{ t('notifications.modeLocalOnly') }}
