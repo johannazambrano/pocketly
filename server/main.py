@@ -141,6 +141,10 @@ class Store:
             p.unlink(missing_ok=True)
 
 
+class PushDataError(RuntimeError):
+    """`push.json` esiste ma non si può leggere: le notifiche restano ferme finché il file non viene sistemato."""
+
+
 class PushStore:
     """Sottoscrizioni Web Push e pianificazione cifrata (`aes128gcm`) su disco."""
 
@@ -150,8 +154,13 @@ class PushStore:
         self.lock = threading.Lock()
         self.sender = sender
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        with self.lock:
-            self._ensure_initialized()
+        # Un push.json rovinato ferma solo le notifiche: il server parte lo stesso, così sincronizzazione e backup
+        # continuano a funzionare. Le rotte /api/push/* rispondono 503 finché il file non viene sistemato.
+        try:
+            with self.lock:
+                self._ensure_initialized()
+        except PushDataError as e:
+            logger.error('Notifiche ferme, la sincronizzazione continua: %s', e)
 
     def _read_unlocked(self) -> dict:
         if not self.file.exists():
@@ -169,7 +178,7 @@ class PushStore:
                 data = json.load(f)
         except Exception as e:
             logger.error('push.json esiste ma non è leggibile o decodificabile: %s', e)
-            raise RuntimeError(f'push data file {self.file} is corrupted: {e}') from e
+            raise PushDataError(f'push data file {self.file} is corrupted: {e}') from e
 
         vapid = data.get('vapid') if isinstance(data, dict) else None
         if (
@@ -179,7 +188,7 @@ class PushStore:
             or not isinstance(vapid.get('d'), str)
         ):
             logger.error('push.json non contiene una struttura valida (manca vapid o chiavi incomplete)')
-            raise RuntimeError(f'push data file {self.file} has invalid structure')
+            raise PushDataError(f'push data file {self.file} has invalid structure')
 
         return data
 
@@ -438,6 +447,19 @@ def valid_schedule_item(item: object) -> bool:
     )
 
 
+def push_safe(method):
+    """Se push.json è rovinato, le sole rotte delle notifiche rispondono 503 invece di far cadere la connessione."""
+
+    def wrapper(self):
+        try:
+            method(self)
+        except PushDataError as e:
+            logger.error('Richiesta notifiche non servita: %s', e)
+            self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {'error': 'push unavailable'})
+
+    return wrapper
+
+
 def make_handler(store: Store, push_store: PushStore, key: str, failures: Failures):
     class Handler(BaseHTTPRequestHandler):
         server_version = 'pocketly-sync'
@@ -498,6 +520,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
         def path_only(self) -> str:
             return self.path.split('?', 1)[0].rstrip('/')
 
+        @push_safe
         def do_GET(self):
             path = self.path_only()
             if path == '/api/health':
@@ -522,6 +545,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
             else:
                 self.send_json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
 
+        @push_safe
         def do_PUT(self):
             path = self.path_only()
             if path == '/api/sync':
@@ -572,6 +596,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
             else:
                 self.send_json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
 
+        @push_safe
         def do_POST(self):
             path = self.path_only()
             if path == '/api/push/test':
@@ -595,6 +620,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
             else:
                 self.send_json(HTTPStatus.NOT_FOUND, {'error': 'not found'})
 
+        @push_safe
         def do_DELETE(self):
             path = self.path_only()
             if path == '/api/push/subscription':

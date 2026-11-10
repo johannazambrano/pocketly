@@ -308,6 +308,23 @@ class WebPushTest(unittest.TestCase):
         # Assicura che il file non sia stato sovrascritto
         self.assertEqual(push_file.read_text(encoding='utf-8'), '{ invalid json ...')
 
+    def test_push_json_corrotto_non_ferma_la_sincronizzazione(self):
+        # Un push.json rovinato all'avvio: il server parte, /api/sync funziona, le notifiche rispondono 503.
+        self.server.shutdown()
+        self.server.server_close()
+        (self.data_dir / 'push.json').write_text('{ invalid json ...', encoding='utf-8')
+        self.server = main.make_server('127.0.0.1', 0, self.data_dir, KEY, start_dispatcher=False)
+        self.url = f'http://127.0.0.1:{self.server.server_address[1]}'
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+        self.assertEqual(self.request('PUT', '/api/sync', {'baseVersion': 0, 'payload': PAYLOAD})[0], 200)
+        self.assertEqual(self.request('GET', '/api/sync')[0], 200)
+        status, body = self.request('GET', '/api/push/config')
+        self.assertEqual((status, body), (503, {'error': 'push unavailable'}))
+        self.assertEqual(self.request('PUT', '/api/push/schedule', {'items': []})[0], 503)
+        # Il file rovinato resta com'è, per poterlo recuperare a mano.
+        self.assertEqual((self.data_dir / 'push.json').read_text(encoding='utf-8'), '{ invalid json ...')
+
     def test_push_json_vapid_incompleto_solleva_errore(self):
         push_file = self.data_dir / 'push.json'
         push_file.write_text('{"vapid": {}}', encoding='utf-8')
