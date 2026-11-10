@@ -136,6 +136,47 @@ describe('parseBackup – schema v2', () => {
     expect(parseBackup({ schemaVersion: 2, budget: 'boh' }).budget).toEqual({ limits: {} })
   })
 
+  it('normalizza e conserva i promemoria delle spese ricorrenti, omettendoli se vuoti', () => {
+    const data = parseBackup({
+      schemaVersion: 2,
+      recurringExpenses: [
+        {
+          id: 'r1',
+          name: 'Affitto',
+          amount: 50000,
+          frequency: 'monthly',
+          startDate: '2026-01-01',
+          endDate: null,
+          categoryId: 'c1',
+          paymentMethodId: 'p1',
+          notifications: [
+            { daysBefore: 0, time: '08:00' },
+            { daysBefore: 2, time: '09:00' },
+            { daysBefore: 2, time: '09:00' },
+            { daysBefore: -5, time: '99:99' },
+          ],
+        },
+        {
+          id: 'r2',
+          name: 'Luce',
+          amount: 4000,
+          frequency: 'monthly',
+          startDate: '2026-01-01',
+          endDate: null,
+          categoryId: 'c1',
+          paymentMethodId: 'p1',
+          notifications: [],
+        },
+      ],
+    })
+    expect(data.recurringExpenses[0]!.notifications).toEqual([
+      { daysBefore: 2, time: '09:00' },
+      { daysBefore: 0, time: '08:00' },
+    ])
+    expect('notifications' in data.recurringExpenses[1]!).toBe(false)
+    expect(parseBackup(JSON.parse(JSON.stringify(data)))).toEqual(data)
+  })
+
   it('rifiuta formati sconosciuti', () => {
     expect(() => parseBackup({ foo: 1 })).toThrow(BackupFormatError)
     expect(() => parseBackup('ciao')).toThrow(BackupFormatError)

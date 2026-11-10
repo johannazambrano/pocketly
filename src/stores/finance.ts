@@ -6,6 +6,7 @@ import type {
   Id,
   Income,
   Loan,
+  NotificationRule,
   OneTimeExpense,
   RecurringExpense,
   Repayment,
@@ -13,6 +14,7 @@ import type {
   Tag,
 } from '@/types/models'
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
+import { normalizeNotifications } from '@/domain/notifications'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
@@ -161,7 +163,31 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   function saveRecurring(item: WithOptionalId<RecurringExpense>) {
-    upsert(data.value.recurringExpenses, item)
+    const notifications = normalizeNotifications(item.notifications)
+    const { notifications: _raw, ...rest } = item
+    upsert(data.value.recurringExpenses, {
+      ...rest,
+      ...(notifications.length ? { notifications } : {}),
+    })
+  }
+
+  /**
+   * Applica le regole indicate alle spese ricorrenti esistenti che non hanno ancora
+   * promemoria configurati (`missing`) oppure a tutte (`all`). Restituisce quante voci sono cambiate.
+   */
+  function applyNotificationsToRecurring(rules: NotificationRule[], mode: 'missing' | 'all' = 'missing'): number {
+    const normalized = normalizeNotifications(rules)
+    let count = 0
+    data.value.recurringExpenses = data.value.recurringExpenses.map((r) => {
+      if (mode === 'missing' && r.notifications?.length) return r
+      const { notifications: _old, ...rest } = r
+      count++
+      return {
+        ...rest,
+        ...(normalized.length ? { notifications: normalized.map((x) => ({ ...x })) } : {}),
+      }
+    })
+    return count
   }
 
   const deleteOneTime = (id: Id) => remove(data.value.oneTimeExpenses, id)
@@ -313,6 +339,7 @@ export const useFinanceStore = defineStore('finance', () => {
     saveOneTime,
     saveIncome,
     saveRecurring,
+    applyNotificationsToRecurring,
     deleteOneTime,
     deleteIncome,
     deleteRecurring,

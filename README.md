@@ -54,6 +54,12 @@ La conversione è automatica. Le spese ricorrenti del prototipo vengono importat
 Lo script `scripts/xlsx_to_pocketly.py` converte il foglio Excel in un backup JSON da importare
 nell'app. La procedura completa è in [`docs/IMPORTA_DA_EXCEL.md`](docs/IMPORTA_DA_EXCEL.md).
 
+## Notifiche e Promemoria delle Spese Ricorrenti
+
+Pocketly supporta notifiche push e promemoria configurabili a regole multiple (stile Google Calendar)
+per le spese ricorrenti, con funzionamento sia in locale/offline che tramite server push crittografato end-to-end.
+La guida tecnica e di configurazione completa è in [`docs/NOTIFICHE.md`](docs/NOTIFICHE.md).
+
 ## Pubblicazione
 
 La cartella `dist/` è un sito statico. Su **Netlify** o **Vercel** basta collegare il repository
