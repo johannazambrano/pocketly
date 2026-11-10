@@ -317,12 +317,14 @@ const showUpcoming = computed(
             >
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium">{{ c.name }}</div>
+                <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
                 <div class="text-xs text-slate-500">
-                  {{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}
+                  {{ date(c.date) }} ·
+                  <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
                   <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
                 </div>
               </div>
-              <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
+              <span class="shrink-0 text-sm font-semibold text-slate-700">{{ money(c.amount) }}</span>
             </li>
           </ul>
           <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>

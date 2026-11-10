@@ -51,7 +51,14 @@ const width = (value: number) => {
   return `${total > 0 ? (value / total) * 100 : 0}%`
 }
 
+/**
+ * Il rosso ha un solo significato in tutta la dashboard: sei, o sarai, sotto zero (un saldo finale o un previsto
+ * negativo). Le uscite normali, le scadenze vicine e gli zeri restano in colori neutri, così il rosso quando compare
+ * si nota davvero.
+ */
 const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
+/** Le entrate sono verdi solo quando c'è qualcosa: uno zero non è una buona notizia. */
+const incomeColor = computed(() => (props.income.value > 0 ? 'text-emerald-700' : 'text-slate-800'))
 
 /**
  * Il previsto c'è per l'anno e il mese in corso e per i mesi futuri; per un periodo passato coinciderebbe con il saldo.
@@ -116,12 +123,12 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
       >
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>
-          <p class="font-bold whitespace-nowrap text-emerald-700" :class="pairSize(income.value)">{{ money(income.value) }}</p>
+          <p class="font-bold whitespace-nowrap" :class="[pairSize(income.value), incomeColor]">{{ money(income.value) }}</p>
           <p v-if="income.hint" class="text-xs leading-snug text-slate-500">{{ income.hint }}</p>
         </div>
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 border-l border-slate-100 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ expenses.label }}</p>
-          <p class="font-bold whitespace-nowrap text-rose-600" :class="pairSize(expenses.value)">{{ money(expenses.value) }}</p>
+          <p class="font-bold whitespace-nowrap text-slate-800" :class="pairSize(expenses.value)">{{ money(expenses.value) }}</p>
           <p v-if="expenses.hint" class="text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
         </div>
       </div>

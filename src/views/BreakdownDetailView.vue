@@ -100,7 +100,7 @@ function back(e: MouseEvent) {
       <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-baseline justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <p class="text-xs font-medium text-slate-500">{{ periodLabel }}</p>
-          <p class="text-lg font-bold whitespace-nowrap text-rose-600">{{ money(total) }}</p>
+          <p class="text-lg font-bold whitespace-nowrap text-slate-800">{{ money(total) }}</p>
         </div>
         <ul v-if="items.length" class="divide-y divide-slate-100">
           <li v-for="item in items" :key="item.key" class="flex items-center justify-between gap-3 px-4 py-2.5">
