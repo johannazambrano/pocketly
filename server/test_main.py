@@ -308,6 +308,15 @@ class WebPushTest(unittest.TestCase):
         # Assicura che il file non sia stato sovrascritto
         self.assertEqual(push_file.read_text(encoding='utf-8'), '{ invalid json ...')
 
+    def test_mittente_vapid_riconosce_i_domini_non_pubblici(self):
+        self.assertIsNotNone(webpush.vapid_subject_problem(webpush.DEFAULT_VAPID_SUBJECT))
+        self.assertIsNotNone(webpush.vapid_subject_problem('mailto:pocketly@localhost'))
+        self.assertIsNotNone(webpush.vapid_subject_problem('mailto:senza-chiocciola'))
+        self.assertIsNotNone(webpush.vapid_subject_problem('pocketly@example.org'))
+        self.assertIsNotNone(webpush.vapid_subject_problem('https://pocketly.lan'))
+        self.assertIsNone(webpush.vapid_subject_problem('mailto:johanna@gmail.com'))
+        self.assertIsNone(webpush.vapid_subject_problem('https://pocketly.example.org/'))
+
     def test_push_json_corrotto_non_ferma_la_sincronizzazione(self):
         # Un push.json rovinato all'avvio: il server parte, /api/sync funziona, le notifiche rispondono 503.
         self.server.shutdown()

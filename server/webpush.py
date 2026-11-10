@@ -29,6 +29,27 @@ def get_vapid_subject() -> str:
     return val if val else DEFAULT_VAPID_SUBJECT
 
 
+# Domini che non ricevono posta né rispondono su Internet: Apple può rifiutare un mittente così (403 BadJwtToken).
+_NON_PUBLIC_SUFFIXES = ('.local', '.localhost', '.localdomain', '.invalid', '.test', '.example', '.lan', '.home')
+
+
+def vapid_subject_problem(subject: str) -> Optional[str]:
+    """Dice perché il mittente VAPID rischia di essere rifiutato dai servizi push, o None se sembra valido."""
+    s = subject.strip()
+    if s.startswith('mailto:'):
+        address = s[len('mailto:'):]
+        if '@' not in address:
+            return 'il mittente mailto: non contiene un indirizzo email'
+        host = address.rsplit('@', 1)[1].lower()
+    elif s.startswith('https://'):
+        host = s[len('https://'):].split('/', 1)[0].split(':', 1)[0].lower()
+    else:
+        return 'il mittente deve iniziare con mailto: oppure https://'
+    if not host or host == 'localhost' or '.' not in host or host.endswith(_NON_PUBLIC_SUFFIXES):
+        return f'il dominio "{host}" non è pubblico: i servizi push (soprattutto Apple) possono rifiutarlo'
+    return None
+
+
 class PushResponse(int):
     """Codice di stato HTTP restituito dal gateway push con il corpo della risposta associato."""
 

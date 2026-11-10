@@ -149,6 +149,17 @@ Lo script crea l'utente `pocketly`, la cartella dati `/var/lib/pocketly` e la ch
 Alla fine **mostra la chiave del server**: copiala, serve su ogni dispositivo. Per rileggerla:
 `cat /etc/pocketly/sync.env`.
 
+**Per le notifiche push** serve anche un mittente reale: i servizi di notifica (Apple, Google, Mozilla) vogliono un
+contatto, e Apple può rifiutare un indirizzo che non esiste. Passalo allo script (anche in un secondo momento,
+rilanciandolo):
+
+```bash
+cd /opt/pocketly && POCKETLY_VAPID_SUBJECT=mailto:tuo.indirizzo@esempio.it deploy/proxmox/install-sync.sh
+```
+
+Lo script lo scrive in `/etc/pocketly/sync.env` e riavvia il servizio. Se manca, il server parte lo stesso ma
+all'avvio scrive un avviso nel log (`journalctl -u pocketly-sync -n 20`).
+
 Poi, su ogni dispositivo: *Impostazioni → Sincronizzazione → Collega questo dispositivo*, con la chiave del server e
 la password dei dati (la stessa su tutti i dispositivi).
 

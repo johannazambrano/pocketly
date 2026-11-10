@@ -697,6 +697,14 @@ def main() -> int:
         print(e, file=sys.stderr)
         return 2
     print(f'Pocketly sync in ascolto su {host}:{port}, dati in {data_dir}', file=sys.stderr)
+    subject = webpush.get_vapid_subject()
+    problem = webpush.vapid_subject_problem(subject)
+    if problem:
+        print(
+            f'ATTENZIONE notifiche: mittente VAPID "{subject}": {problem}. '
+            'Imposta POCKETLY_VAPID_SUBJECT=mailto:indirizzo-vero in /etc/pocketly/sync.env e riavvia il servizio.',
+            file=sys.stderr,
+        )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
