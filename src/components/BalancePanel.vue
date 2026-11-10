@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useFormat } from '@/i18n'
 
 /**
- * Il riquadro principale della dashboard: il saldo in primo piano, entrate e uscite che lo spiegano,
- * e in fondo la previsione, cioè dove si arriverà. Legge dall'alto in basso come una frase:
- * "hai questo, perché è entrato questo e uscito questo, e arriverai qui".
+ * Il riquadro principale della dashboard. In alto, sempre nello stesso posto, dove sei (il saldo) e dove arriverai
+ * (il previsto); sotto, entrate e uscite che spiegano il saldo e di cosa sono fatte le uscite.
+ * La disposizione non dipende dai numeri: cambia solo il colore.
  */
 interface Figure {
   label: string
@@ -32,24 +33,50 @@ const width = (value: number) => {
 }
 
 const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
-/** La riga della previsione ha lo sfondo grigio chiaro: serve la tonalità più scura per restare sopra 4,5:1. */
-const projectionColor = (v: number) => (v >= 0 ? 'text-blue-700' : 'text-rose-700')
+
+/**
+ * Il previsto c'è per l'anno e il mese in corso e per i mesi futuri; per un periodo passato coinciderebbe con il saldo.
+ * Quando c'è sta sempre accanto al saldo, con lo stesso peso: "dove sei" e "dove arriverai" si leggono insieme.
+ */
+/**
+ * Un saldo negativo che a fine periodo torna positivo è un passaggio, non un allarme: grigio scuro, il segno meno basta.
+ * Il rosso resta per quando la previsione stessa è negativa.
+ */
+const balanceColor = computed(() =>
+  props.projection && props.balance.value < 0 && props.projection.value >= 0 ? 'text-slate-800' : signColor(props.balance.value),
+)
+/** Saldo e previsto si dividono la riga: la misura più grande arriva solo sugli schermi più larghi. */
+const heroSize = 'text-3xl lg:text-4xl'
 </script>
 
 <template>
   <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" :aria-label="balance.label">
-    <div class="grid md:grid-cols-[1.3fr_1fr_1fr]">
-      <div class="px-4 pt-4 pb-3 md:py-5 md:pr-6">
-        <h3 class="text-xs font-medium text-balance text-slate-500">{{ balance.label }}</h3>
-        <p class="mt-1 text-3xl font-bold tracking-tight whitespace-nowrap md:text-4xl" :class="signColor(balance.value)">
-          {{ money(balance.value) }}
-        </p>
-        <p v-if="balance.hint" class="mt-1 text-xs text-slate-500">{{ balance.hint }}</p>
+    <div class="grid">
+      <!-- Stessa disposizione per ogni periodo: per un periodo passato il posto del previsto resta vuoto. -->
+      <div class="grid gap-x-6 px-4 pt-4 pb-3 sm:grid-cols-2 md:py-5">
+        <div>
+          <h3 class="text-xs font-medium text-balance text-slate-500">{{ balance.label }}</h3>
+          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize, balanceColor]">
+            {{ money(balance.value) }}
+          </p>
+          <p v-if="balance.hint" class="mt-1 text-xs text-slate-500">{{ balance.hint }}</p>
+        </div>
+        <!-- Previsto accanto al saldo (sotto, sul telefono): è la risposta a "come andrò". -->
+        <div
+          v-if="projection"
+          class="mt-3 border-t border-slate-100 pt-3 sm:mt-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
+        >
+          <h3 class="text-xs font-medium text-balance text-slate-500">{{ projection.label }}</h3>
+          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize, signColor(projection.value)]">
+            {{ money(projection.value) }}
+          </p>
+          <p v-if="projection.hint" class="mt-1 text-xs text-slate-500">{{ projection.hint }}</p>
+        </div>
       </div>
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
       <div
-        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] border-t border-slate-100 md:col-span-2 md:border-t-0 md:border-l"
+        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] border-t border-slate-100"
       >
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>
@@ -79,15 +106,6 @@ const projectionColor = (v: number) => (v >= 0 ? 'text-blue-700' : 'text-rose-70
           <dd v-if="part.note" class="text-xs leading-snug text-slate-500">{{ part.note }}</dd>
         </div>
       </dl>
-    </div>
-
-    <div
-      v-if="projection"
-      class="grid grid-cols-[1fr_auto] items-baseline gap-x-4 border-t border-slate-100 bg-slate-50 px-4 py-3"
-    >
-      <h3 class="text-sm font-semibold text-slate-700">{{ projection.label }}</h3>
-      <p class="text-lg font-bold whitespace-nowrap" :class="projectionColor(projection.value)">{{ money(projection.value) }}</p>
-      <p v-if="projection.hint" class="col-span-2 text-xs text-slate-500">{{ projection.hint }}</p>
     </div>
   </section>
 </template>

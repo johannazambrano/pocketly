@@ -113,7 +113,7 @@ const categoryEmptyText = computed(() => {
   return t('dashboard.emptyMonth', monthArgs.value)
 })
 
-/** Il riquadro principale: saldo in primo piano, entrate e uscite che lo spiegano, previsione in fondo. */
+/** Il riquadro principale: in alto saldo e previsione affiancati, sotto entrate e uscite che spiegano il saldo. */
 const balanceFigure = computed(() => ({ label: balanceLabel.value, value: displayBalance.value, hint: balanceHint.value }))
 const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value }))
 const expensesFigure = computed(() => ({ label: expensesLabel.value, value: displayExpenses.value, hint: expensesHint.value }))
