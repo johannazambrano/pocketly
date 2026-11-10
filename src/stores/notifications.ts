@@ -180,7 +180,12 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
-  async function subscribePush(): Promise<boolean> {
+  /**
+   * Registra l'iscrizione push di questo dispositivo sul server.
+   * Con `fresh` butta l'iscrizione del browser e ne crea una nuova: serve quando il server ha rimosso il dispositivo
+   * (risposta 404/410 del servizio push), perché quella vecchia punta a un indirizzo che non funziona più.
+   */
+  async function subscribePush(fresh = false): Promise<boolean> {
     if (!sync.enabled || !sync.serverKey) {
       pushSubscribed.value = false
       return false
@@ -200,6 +205,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
       let sub = await reg.pushManager.getSubscription()
       const appServerKey = base64UrlToBytes(serverConfig.vapidPublicKey)
+      if (sub && fresh) {
+        await sub.unsubscribe()
+        sub = null
+      }
 
       if (sub && sub.options?.applicationServerKey) {
         const existingKey = new Uint8Array(sub.options.applicationServerKey)
@@ -274,7 +283,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
           }
         }
         if (needSubscribe) {
-          const subscribed = await subscribePush()
+          // Se il server non conosce più il dispositivo, l'iscrizione del browser è da rifare da capo.
+          const subscribed = await subscribePush(!myDevice)
           if (subscribed) {
             force = true
             const refreshed = await api.getConfig()
@@ -628,9 +638,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
         if (document.visibilityState === 'visible') {
           updatePermission()
           void checkLocalReminders()
-          if (sync.enabled) {
-            void syncPushSchedule()
-          }
+          // Il calendario non parte da qui: tornando in primo piano la sincronizzazione scarica prima i dati nuovi,
+          // e il watch su sync.status lo invia quando diventa 'synced'. Così non si mandano promemoria di dati vecchi.
         }
       })
     }
@@ -651,8 +660,17 @@ export const useNotificationsStore = defineStore('notifications', () => {
     ready.value = true
   }
 
+  /**
+   * Il browser ha rinnovato l'iscrizione da solo (evento pushsubscriptionchange nel service worker): si registra la
+   * nuova sul server e si rimanda il calendario, che altrimenti resterebbe cifrato con le chiavi vecchie.
+   */
+  async function onSubscriptionChanged(): Promise<void> {
+    if (await subscribePush()) await syncPushSchedule(true)
+  }
+
   return {
     ready,
+    onSubscriptionChanged,
     enabled,
     permission,
     deviceId,

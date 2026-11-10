@@ -24,7 +24,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     if (event.data?.type === 'POCKETLY_NAVIGATE' && typeof event.data.url === 'string') {
       void router.isReady().then(() => router.push(event.data.url).catch(() => {}))
     } else if (event.data?.type === 'POCKETLY_PUSH_SUBSCRIPTION_CHANGED') {
-      void useNotificationsStore().subscribePush()
+      void useNotificationsStore().onSubscriptionChanged()
     }
   })
 }
