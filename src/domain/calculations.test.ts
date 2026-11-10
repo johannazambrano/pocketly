@@ -261,11 +261,34 @@ describe('variableSpending', () => {
 
 describe('upcomingCharges', () => {
   it('elenca gli addebiti entro la finestra, ordinati', () => {
-    const list = upcomingCharges(sample(), '2026-11-20', 30)
+    const list = upcomingCharges(sample(), '2026-11-20', '2026-12-20')
     expect(list.map((c) => [c.id, c.date, c.daysLeft])).toEqual([
       ['r1', '2026-12-01', 11],
       ['r2', '2026-12-15', 25],
     ])
+  })
+
+  it('esclude ciò che ha la data di oggi e comprende le spese variabili future', () => {
+    const data = sample()
+    data.oneTimeExpenses.push(
+      { id: 'oggi', name: 'Oggi', amount: 100, date: '2026-11-20', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+      { id: 'dopo', name: 'Concerto', amount: 6000, date: '2026-11-25', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+    )
+    const list = upcomingCharges(data, '2026-11-20', '2026-11-30')
+    expect(list.map((c) => [c.key, c.source])).toEqual([['o-dopo', 'oneTime']])
+  })
+
+  it('sul mese in corso la somma coincide con "ancora in arrivo"', () => {
+    const data = sample()
+    data.oneTimeExpenses.push(
+      { id: 'dopo', name: 'Concerto', amount: 6000, date: '2026-11-25', categoryId: 'food', paymentMethodId: 'card', notes: '' },
+    )
+    data.recurringExpenses.push(
+      { id: 'r3', name: 'Palestra', amount: 4500, frequency: 'monthly', startDate: '2026-01-28', endDate: null, categoryId: 'home', paymentMethodId: 'bank' },
+    )
+    const m = monthSummary(data, 2026, 10, TODAY)
+    const list = upcomingCharges(data, TODAY, '2026-11-30')
+    expect(list.reduce((acc, c) => acc + c.amount, 0)).toBe(m.expenses - m.expensesToDate)
   })
 })
 

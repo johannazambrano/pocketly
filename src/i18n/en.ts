@@ -47,8 +47,11 @@ const en: typeof it = {
     current: 'current',
   },
   dashboard: {
-    upcoming: 'Upcoming charges (30 days)',
-    noUpcoming: 'No recurring charges in the next 30 days.',
+    upcoming: 'Due in the next 30 days',
+    noUpcoming: 'Nothing due in the next 30 days.',
+    upcomingMonth: 'Still to come in {month}',
+    upcomingVariable: 'variable expense',
+    noUpcomingMonth: 'Nothing else due in {month}.',
     dueIn: 'today | tomorrow | in {n} days',
     title: 'Dashboard',
     period: '{from} to {to} {year}',

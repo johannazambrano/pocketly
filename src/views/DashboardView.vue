@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
-import { yearOf } from '@/utils/dates'
+import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -22,7 +22,6 @@ const isEmpty = computed(() => {
 /** Tutta la pagina usa lo stesso "oggi" del negozio, che si aggiorna quando l'app torna in primo piano. */
 const currentYear = computed(() => yearOf(finance.today))
 const isPastYear = computed(() => finance.selectedYear < currentYear.value)
-const upcoming = computed(() => upcomingCharges(finance.data, finance.today, 30))
 
 /**
  * Una sola regola per tutta la dashboard: le card e le ripartizioni contano ciò che è già avvenuto,
@@ -255,6 +254,22 @@ watch(
   },
 )
 
+/**
+ * Ciò che deve ancora uscire. Sul mese in corso arriva a fine mese, così l'elenco e la sua somma coincidono con
+ * "ancora in arrivo" sotto le uscite; sull'anno guarda i prossimi 30 giorni.
+ */
+const upcomingUntil = computed(() =>
+  monthToDate.value ? lastDayOfMonth(finance.selectedYear, finance.selectedMonth as number) : addDays(finance.today, 30),
+)
+const upcoming = computed(() => upcomingCharges(finance.data, finance.today, upcomingUntil.value))
+const upcomingTotal = computed(() => upcoming.value.reduce((acc, c) => acc + c.amount, 0))
+const upcomingTitle = computed(() =>
+  monthToDate.value ? t('dashboard.upcomingMonth', monthArgs.value) : t('dashboard.upcoming'),
+)
+const upcomingEmpty = computed(() =>
+  monthToDate.value ? t('dashboard.noUpcomingMonth', monthArgs.value) : t('dashboard.noUpcoming'),
+)
+
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
   () => finance.selectedYear === currentYear.value && (!ms.value || ms.value.timing === 'current'),
@@ -290,9 +305,12 @@ const showUpcoming = computed(
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
-          <h3 class="text-sm font-semibold text-slate-700">
-            <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ t('dashboard.upcoming') }}
-          </h3>
+          <div class="flex items-baseline justify-between gap-3">
+            <h3 class="text-sm font-semibold text-slate-700">
+              <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ upcomingTitle }}
+            </h3>
+            <span v-if="upcoming.length" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
+          </div>
           <!--
             Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
             (metà delle righe ciascuna): l'ordine per data scende lungo la prima colonna e continua nella seconda,
@@ -305,18 +323,21 @@ const showUpcoming = computed(
           >
             <li
               v-for="(c, i) in upcoming"
-              :key="c.id"
+              :key="c.key"
               class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0"
               :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
             >
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium">{{ c.name }}</div>
-                <div class="text-xs text-slate-500">{{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}</div>
+                <div class="text-xs text-slate-500">
+                  {{ date(c.date) }} · {{ t('dashboard.dueIn', c.daysLeft) }}
+                  <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
+                </div>
               </div>
               <span class="shrink-0 text-sm font-semibold" :class="c.daysLeft <= 3 ? 'text-rose-600' : 'text-slate-700'">{{ money(c.amount) }}</span>
             </li>
           </ul>
-          <p v-else class="text-xs text-slate-500">{{ t('dashboard.noUpcoming') }}</p>
+          <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>
         </div>
 
         <div class="card space-y-3">

@@ -45,8 +45,11 @@ export default {
     current: 'corrente',
   },
   dashboard: {
-    upcoming: 'Prossimi addebiti (30 giorni)',
-    noUpcoming: 'Nessun addebito ricorrente nei prossimi 30 giorni.',
+    upcoming: 'In arrivo nei prossimi 30 giorni',
+    upcomingMonth: 'Ancora in arrivo a {month}',
+    upcomingVariable: 'spesa variabile',
+    noUpcoming: 'Niente in arrivo nei prossimi 30 giorni.',
+    noUpcomingMonth: 'Niente altro in arrivo a {month}.',
     dueIn: 'oggi | domani | tra {n} giorni',
     title: 'Dashboard',
     period: 'Da {from} a {to} {year}',
