@@ -308,12 +308,12 @@ const showUpcoming = computed(
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
-          <BreakdownList kind="categories" :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="categories" linked :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
-          <BreakdownList kind="paymentMethods" :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="paymentMethods" linked :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
       </div>
     </template>

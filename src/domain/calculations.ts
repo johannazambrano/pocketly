@@ -263,6 +263,65 @@ export function monthBreakdown(data: FinanceData, year: number, month: number, c
   }
 }
 
+/** Una voce delle ripartizioni della dashboard: una spesa variabile o un addebito di una spesa ricorrente. */
+export interface BreakdownItem {
+  /** Chiave unica nell'elenco (un addebito ricorrente compare una volta per scadenza). */
+  key: string
+  source: 'oneTime' | 'recurring'
+  sourceId: Id
+  date: string
+  name: string
+  amount: Cents
+}
+
+/**
+ * Le voci che compongono una riga di "Spese per categoria" o "Spese per metodo di pagamento", con le stesse regole
+ * della dashboard, così la somma coincide con il totale della riga:
+ * - anno intero: dal mese di inizio del periodo attivo a dicembre, solo ciò che è avvenuto fino a oggi
+ *   (per un anno passato tutto, per uno futuro niente);
+ * - mese in corso: solo fino a oggi; mese passato o futuro: tutto il mese, compreso ciò che è solo programmato.
+ * Ordinate dalla più recente.
+ */
+export function breakdownItems(
+  data: FinanceData,
+  year: number,
+  month: number | 'all',
+  field: 'categoryId' | 'paymentMethodId',
+  tagId: Id,
+  today: string = todayIso(),
+): BreakdownItem[] {
+  let months: number[]
+  let cutoff: string
+  if (month === 'all') {
+    const start = periodStartMonth(data, year)
+    months = Array.from({ length: 12 - start }, (_, i) => start + i)
+    cutoff = cutoffDate(year, today)
+  } else {
+    const t = parseIsoDate(today)
+    const current = monthIndex(year, month) === monthIndex(t.year, t.month)
+    months = [month]
+    cutoff = current ? today : '9999-12-31'
+  }
+  const inMonths = new Set(months)
+  const items: BreakdownItem[] = []
+
+  for (const e of data.oneTimeExpenses) {
+    if (e[field] !== tagId || e.date > cutoff) continue
+    const d = parseIsoDate(e.date)
+    if (d.year !== year || !inMonths.has(d.month)) continue
+    items.push({ key: `o-${e.id}`, source: 'oneTime', sourceId: e.id, date: e.date, name: e.name, amount: e.amount })
+  }
+  for (const r of data.recurringExpenses) {
+    if (r[field] !== tagId) continue
+    for (const m of months) {
+      const due = dueDateIn(r, year, m)
+      if (!due || due > cutoff) continue
+      items.push({ key: `r-${r.id}-${due}`, source: 'recurring', sourceId: r.id, date: due, name: r.name, amount: r.amount })
+    }
+  }
+  return items.sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name) : a.date < b.date ? 1 : -1))
+}
+
 /** Dove sta un mese rispetto a oggi: passato (tutto avvenuto), corrente o futuro (tutto da avvenire). */
 export type MonthTiming = 'past' | 'current' | 'future'
 
