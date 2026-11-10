@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
@@ -8,6 +8,7 @@ import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
+import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
 const { t, money, month, date, locale } = useFormat()
@@ -210,6 +211,50 @@ const expensesSplit = computed(() => {
   ]
 })
 
+/**
+ * Cambiare mese senza cercare le frecce: tasti ← → sulla pagina e swipe orizzontale sul riquadro del saldo.
+ * I tasti non agiscono mentre si scrive, quando il focus è su un menu (le frecce lì cambiano già la scelta) o con una
+ * finestra aperta.
+ */
+const { previous, next, go } = useMonthStep()
+
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+  const el = e.target as HTMLElement | null
+  if (el?.closest('input, select, textarea, [contenteditable="true"]')) return
+  if (document.querySelector('[aria-modal="true"]')) return
+  if (go(e.key === 'ArrowLeft' ? previous.value : next.value)) e.preventDefault()
+}
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
+
+/** Uno swipe conta se è soprattutto orizzontale e lungo almeno 60px: lo scorrimento verticale della pagina resta libero. */
+let touchStart: { x: number; y: number } | null = null
+function onTouchStart(e: TouchEvent) {
+  const t0 = e.touches[0]
+  touchStart = e.touches.length === 1 && t0 ? { x: t0.clientX, y: t0.clientY } : null
+}
+function onTouchEnd(e: TouchEvent) {
+  const t1 = e.changedTouches[0]
+  if (!touchStart || !t1) return
+  const dx = t1.clientX - touchStart.x
+  const dy = t1.clientY - touchStart.y
+  touchStart = null
+  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+  // Il dito verso sinistra porta avanti nel tempo, come sfogliare un calendario.
+  go(dx < 0 ? next.value : previous.value)
+}
+
+/** Chi usa un lettore di schermo sente quale periodo è ora mostrato, comunque lo si cambi. */
+const announcement = ref('')
+watch(
+  () => [finance.selectedYear, finance.selectedMonth] as const,
+  ([year, m]) => {
+    announcement.value = m === 'all' ? `${t('dashboard.allMonths')} ${year}` : `${month(m)} ${year}`
+  },
+)
+
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
   () => finance.selectedYear === currentYear.value && (!ms.value || ms.value.timing === 'current'),
@@ -230,7 +275,11 @@ const showUpcoming = computed(
         <MonthSelector />
       </div>
 
+      <p class="sr-only" aria-live="polite">{{ announcement }}</p>
+
       <BalancePanel
+        @touchstart.passive="onTouchStart"
+        @touchend.passive="onTouchEnd"
         :balance="balanceFigure"
         :income="incomeFigure"
         :expenses="expensesFigure"
