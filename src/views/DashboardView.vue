@@ -1,17 +1,33 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { upcomingCharges } from '@/domain/calculations'
-import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
+import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
+import { addDays, lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
+import TransactionForm from '@/components/TransactionForm.vue'
+import RecurringForm from '@/components/RecurringForm.vue'
+import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
+const router = useRouter()
 const { t, money, month, date, locale } = useFormat()
+
+/**
+ * Tornando indietro da un dettaglio, il focus riparte dalla riga da cui si era entrati, non dall'inizio della pagina:
+ * con la tastiera o un lettore di schermo si continua da lì. La cronologia dice da quale pagina si torna (`forward`);
+ * `preventScroll` lascia la pagina nel punto che il router ha già ripristinato.
+ */
+onMounted(() => {
+  const from = router.options.history.state.forward
+  if (typeof from !== 'string' || !from.startsWith('/dettaglio/')) return
+  document.querySelector<HTMLElement>(`a[href="${CSS.escape(from)}"]`)?.focus({ preventScroll: true })
+})
 
 const s = computed(() => finance.summary)
 /** App ancora vuota: niente saldi a zero, solo il benvenuto con i primi passi. */
@@ -37,13 +53,55 @@ const selectedMonthName = computed(() => {
 })
 const monthArgs = computed(() => ({ month: selectedMonthName.value }))
 
+/**
+ * Il riquadro principale ha una sola cifra grande, la risposta a "dove arriverò": il previsto a fine periodo per
+ * l'anno e il mese in corso e per i mesi futuri, il saldo finale per i periodi passati (lì tutto è già avvenuto).
+ * Il saldo di oggi resta, ma come frase sotto la cifra ("Oggi sei a …"). Sotto ancora, entrate e uscite fino a oggi,
+ * ciascuna con quanto deve ancora arrivare: sono loro a spiegare la distanza tra oggi e la fine del periodo,
+ * e ogni cifra compare una volta sola.
+ */
+const isFutureMonth = computed(() => ms.value?.timing === 'future')
+/** Fino a quando arriva il previsto, nelle note di entrate e uscite: "fine mese" per un mese, "dicembre" per l'anno. */
+const until = computed(() => t(ms.value ? 'dashboard.untilMonthEnd' : 'dashboard.untilDecember'))
+
 const displayIncome = computed(() => {
   if (!ms.value) return s.value.incomeToDate
   return monthToDate.value ? ms.value.incomeToDate : ms.value.income
 })
 const incomeLabel = computed(() => {
-  if (ms.value) return t(monthToDate.value ? 'dashboard.incomeMonthToDate' : 'dashboard.incomeMonth', monthArgs.value)
+  if (ms.value) return t(monthToDate.value ? 'dashboard.incomeToDate' : 'dashboard.incomeMonth', monthArgs.value)
   return t(isPastYear.value ? 'dashboard.income' : 'dashboard.incomeToDate')
+})
+
+/**
+ * Entrate che devono ancora arrivare da qui alla fine del periodo, divise tra quelle già registrate con una data futura
+ * e quelle stimate. "(stima)" si scrive solo sulla parte davvero stimata.
+ */
+const incomeAhead = computed(() => {
+  if (ms.value) {
+    if (ms.value.timing === 'past') return { toCome: 0, estimated: 0 }
+    const from = ms.value.timing === 'future' ? ms.value.income : ms.value.incomeToDate
+    return {
+      toCome: Math.max(0, ms.value.projectedIncome - from),
+      estimated: Math.max(0, ms.value.projectedIncome - ms.value.income),
+    }
+  }
+  if (isPastYear.value) return { toCome: 0, estimated: 0 }
+  return {
+    toCome: Math.max(0, s.value.projectedIncome - s.value.incomeToDate),
+    estimated: Math.max(0, s.value.projectedIncome - s.value.totalIncome),
+  }
+})
+
+/**
+ * La stima si dice una volta sola, nella riga sotto la cifra grande. Qui, tra i fatti delle entrate, compare solo ciò
+ * che è già registrato con una data futura; se in arrivo c'è solo la stima, la nota non c'è.
+ */
+const incomeHint = computed(() => {
+  const { toCome, estimated } = incomeAhead.value
+  const recorded = toCome - estimated
+  if (recorded <= 0) return undefined
+  return t('dashboard.incomeToCome', { amount: money(recorded), until: until.value })
 })
 
 const displayExpenses = computed(() => {
@@ -51,80 +109,158 @@ const displayExpenses = computed(() => {
   return monthToDate.value ? ms.value.expensesToDate : ms.value.expenses
 })
 const expensesLabel = computed(() => {
-  if (ms.value) return t(monthToDate.value ? 'dashboard.expensesMonthToDate' : 'dashboard.expensesMonth', monthArgs.value)
+  if (ms.value) {
+    if (isFutureMonth.value) return t('dashboard.expensesScheduled')
+    return t(monthToDate.value ? 'dashboard.expensesToDate' : 'dashboard.expensesMonth', monthArgs.value)
+  }
   return t(isPastYear.value ? 'dashboard.expenses' : 'dashboard.expensesToDate')
 })
-/** Sotto le uscite "a oggi", quanto è ancora in arrivo: spiega perché il previsto è più basso del saldo. */
+/** Sotto le uscite "a oggi", quanto è ancora in arrivo: insieme alla nota delle entrate spiega il previsto. */
 const expensesHint = computed(() => {
   if (ms.value) {
-    if (ms.value.timing === 'future') return t('dashboard.scheduledHint')
+    if (ms.value.timing === 'future') return t('dashboard.scheduledHint', monthArgs.value)
     if (ms.value.timing === 'past') return undefined
     const toCome = ms.value.expenses - ms.value.expensesToDate
-    return toCome > 0 ? t('dashboard.stillToComeMonth', { amount: money(toCome) }) : t('dashboard.expensesHint')
+    return toCome > 0 ? t('dashboard.stillToCome', { amount: money(toCome), until: until.value }) : t('dashboard.expensesHint')
   }
   if (isPastYear.value) return undefined
   const toCome = s.value.totalExpenses - s.value.expensesToDate
-  return toCome > 0 ? t('dashboard.stillToComeYear', { amount: money(toCome) }) : t('dashboard.expensesHint')
+  return toCome > 0 ? t('dashboard.stillToCome', { amount: money(toCome), until: until.value }) : t('dashboard.expensesHint')
 })
 
+/**
+ * Il risultato (entrate meno uscite) fino a oggi, o finale per un periodo passato; per un mese futuro, ciò che è già
+ * registrato. Nell'interfaccia si chiama sempre "Risultato": non è il saldo del conto, che l'app non conosce, e un nome
+ * solo per ogni periodo evita che la stessa grandezza sembri tre cose diverse.
+ */
 const displayBalance = computed(() => {
   if (!ms.value) return s.value.balanceToDate
   return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
 })
-/** Un mese futuro non ha ancora un saldo: c'è solo ciò che è programmato, e l'etichetta lo dice. */
-const isFutureMonth = computed(() => ms.value?.timing === 'future')
-const balanceLabel = computed(() => {
-  if (isFutureMonth.value) return t('dashboard.balanceScheduled', monthArgs.value)
-  if (ms.value) return t(monthToDate.value ? 'dashboard.balanceMonthToDate' : 'dashboard.balanceMonth', monthArgs.value)
-  return t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate')
-})
-const balanceHint = computed(() => {
-  if (ms.value) {
-    if (ms.value.timing === 'future') return t('dashboard.balanceScheduledHint')
-    return monthToDate.value ? t('dashboard.balanceHint') : undefined
-  }
-  return isPastYear.value ? undefined : t('dashboard.balanceHint')
+/** Il previsto a fine periodo; null per un periodo passato, dove coinciderebbe con il saldo. */
+const projected = computed(() => {
+  if (ms.value) return ms.value.timing === 'past' ? null : ms.value.projectedBalance
+  return isPastYear.value ? null : s.value.projectedBalance
 })
 
 /**
- * Il previsto a fine mese compare solo se dice qualcosa in più del saldo: mai per un mese passato (tutto avvenuto),
- * e per un mese futuro solo quando la stima delle entrate lo rende diverso da ciò che è già programmato.
+ * Un mese chiuso dice com'è andato: il suo saldo rispetto alla media dei mesi precedenti dell'anno.
+ * Per un saldo "sopra" vuol dire meglio, quindi la frase dice meglio o peggio, non sopra o sotto.
  */
-const showMonthProjection = computed(
-  () => !!ms.value && ms.value.timing !== 'past' && ms.value.projectedBalance !== displayBalance.value,
-)
-/**
- * La parte del previsto fatta di entrate stimate, cioè non ancora registrate: si mostra come cifra a sé sotto il previsto,
- * perché è la parte del numero che non è ancora successa.
- */
-const estimatedIncome = computed(() => {
-  const value = ms.value ? ms.value.projectedIncome - ms.value.income : s.value.projectedIncome - s.value.totalIncome
-  return value > 0 ? value : 0
+const pastMonthVerdict = computed(() => {
+  if (ms.value?.timing !== 'past') return undefined
+  const average = averageBalanceBefore(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
+  if (average === null) return undefined
+  const verdict = compareToAverage(ms.value.balance, average)
+  return t(`dashboard.balanceVs${VERDICT_KEY[verdict]}`, { average: money(average) })
 })
 
 /**
- * Quando oggi sei sotto zero ma a fine periodo torni sopra, una frase collega i due numeri: quanto entra ed esce ancora
- * da qui alla fine del mese o dell'anno in corso. Solo per il periodo in corso, l'unico in cui "da qui" ha senso.
+ * La cifra grande. Per un mese futuro è sempre il previsto (non c'è un "oggi"). Per l'anno e il mese in corso è il
+ * previsto, con il saldo di oggi nella frase sotto; se da qui alla fine non cambia più niente i due coincidono, e
+ * resta solo il saldo. Per un periodo passato è il saldo finale.
  */
-const bridge = computed(() => {
-  const projection = projectionFigure.value
-  if (!projection || displayBalance.value >= 0 || projection.value < 0) return null
-  let incoming: number
-  let outgoing: number
-  let end: string
-  if (ms.value) {
-    if (!monthToDate.value) return null
-    incoming = ms.value.projectedIncome - ms.value.incomeToDate
-    outgoing = ms.value.expenses - ms.value.expensesToDate
-    end = t('dashboard.bridgeEndMonth', monthArgs.value)
-  } else {
-    incoming = s.value.projectedIncome - s.value.incomeToDate
-    outgoing = s.value.totalExpenses - s.value.expensesToDate
-    end = t('dashboard.bridgeEndYear')
+/**
+ * Quando il previsto conta su entrate stimate lo dice subito sotto la cifra, sempre visibile: chi guarda solo il numero
+ * grande deve sapere che una parte non è ancora successa. "Contando", non "di cui": la stima può superare il previsto.
+ */
+/**
+ * La cifra grande è positiva solo grazie alla stima (senza sarebbe sotto zero): allora resta in colore neutro. Il blu
+ * vuol dire "va bene" e non deve prometterlo su soldi non ancora arrivati; il rosso resta per quando si è sotto zero
+ * comunque.
+ */
+const estimateDecisive = computed(() => {
+  const p = projected.value
+  const { estimated } = incomeAhead.value
+  return p !== null && estimated > 0 && p >= 0 && p - estimated < 0
+})
+
+const estimateLine = computed(() => {
+  const { estimated } = incomeAhead.value
+  return estimated > 0 ? t('dashboard.countingEstimate', { amount: money(estimated) }) : undefined
+})
+
+const mainFigure = computed(() => {
+  if (isFutureMonth.value && projected.value !== null) {
+    return {
+      label: t('dashboard.projectedMonth', monthArgs.value),
+      value: projected.value,
+      estimate: estimateLine.value,
+      neutral: estimateDecisive.value,
+      // Senza stima la cifra è fatta solo di ciò che è registrato, e lo si dice.
+      note: estimateLine.value ? undefined : t('dashboard.futureNoteRecorded'),
+    }
   }
-  if (incoming <= 0) return null
-  const args = { end, income: money(incoming), expenses: money(outgoing) }
-  return outgoing > 0 ? t('dashboard.bridge', args) : t('dashboard.bridgeIncomeOnly', args)
+  if (projected.value !== null && projected.value !== displayBalance.value) {
+    return {
+      label: ms.value ? t('dashboard.projectedMonth', monthArgs.value) : t('dashboard.projected', { year: finance.selectedYear }),
+      value: projected.value,
+      estimate: estimateLine.value,
+      neutral: estimateDecisive.value,
+      // La portata detta sempre: nel mese è il risultato del mese, nell'anno quello dall'inizio dell'anno. Non è il saldo
+      // del conto, che l'app non conosce.
+      today: {
+        label: ms.value ? t('dashboard.sinceMonthStart', monthArgs.value) : t('dashboard.sinceYearStart'),
+        value: displayBalance.value,
+      },
+    }
+  }
+  if (ms.value) {
+    return {
+      label: t(monthToDate.value ? 'dashboard.balanceMonthToDate' : 'dashboard.balanceMonth', monthArgs.value),
+      value: displayBalance.value,
+      hint: monthToDate.value ? t('dashboard.balanceHint') : pastMonthVerdict.value,
+    }
+  }
+  return {
+    label: t(isPastYear.value ? 'dashboard.balanceYear' : 'dashboard.balanceToDate'),
+    value: displayBalance.value,
+    hint: isPastYear.value ? undefined : t('dashboard.balanceHint'),
+  }
+})
+
+/**
+ * "Come si arriva a questa cifra": il conto dietro il previsto, solo quando la cifra grande è un previsto.
+ * Le righe sommano sempre al previsto: risultato fino a oggi (o, per un mese futuro, niente), più le entrate che devono
+ * ancora arrivare (registrate e stimate separate), meno le uscite in arrivo.
+ */
+const explain = computed(() => {
+  const main = mainFigure.value
+  if (projected.value === null || main.value !== projected.value || (!('today' in main) && !isFutureMonth.value)) return null
+  const { toCome, estimated } = incomeAhead.value
+  const recordedAhead = toCome - estimated
+  const expensesAhead = ms.value
+    ? ms.value.timing === 'future'
+      ? ms.value.expenses
+      : ms.value.expenses - ms.value.expensesToDate
+    : s.value.totalExpenses - s.value.expensesToDate
+  const rows: { key: string; label: string; note?: string; value: number }[] = []
+  if (!isFutureMonth.value) {
+    rows.push({
+      key: 'today',
+      label: ms.value ? t('dashboard.sinceMonthStart', monthArgs.value).replace(/:$/, '') : t('dashboard.sinceYearStart').replace(/:$/, ''),
+      value: displayBalance.value,
+    })
+  }
+  if (recordedAhead > 0) rows.push({ key: 'recorded', label: t('dashboard.explainRecorded'), note: t('dashboard.explainRecordedNote'), value: recordedAhead })
+  if (estimated > 0) rows.push({ key: 'estimated', label: t('dashboard.explainEstimated'), note: t('dashboard.explainEstimatedNote'), value: estimated })
+  if (expensesAhead > 0) {
+    rows.push({
+      key: 'expenses',
+      label: t(isFutureMonth.value ? 'dashboard.expensesScheduled' : 'dashboard.explainExpenses'),
+      value: -expensesAhead,
+    })
+  }
+  let estimate: string | undefined
+  if (estimated > 0 && finance.estimatedMonthlyIncome > 0) {
+    const names = finance.estimateCategories.map((id) => finance.tag('categories', id)?.name).filter(Boolean)
+    estimate = t('dashboard.explainEstimate', {
+      amount: money(finance.estimatedMonthlyIncome),
+      n: ESTIMATE_MONTHS,
+      categories: names.join(', '),
+    })
+  }
+  return { rows, total: { label: main.label, value: main.value, neutral: estimateDecisive.value }, estimate }
 })
 
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
@@ -142,36 +278,8 @@ const categoryEmptyText = computed(() => {
   return t('dashboard.emptyMonth', monthArgs.value)
 })
 
-/** Il riquadro principale: in alto saldo e previsione affiancati, sotto entrate e uscite che spiegano il saldo. */
-/** Per un mese futuro la cifra resta senza colore di segno: non è un risultato, è un programma. */
-const balanceFigure = computed(() => ({
-  label: balanceLabel.value,
-  value: displayBalance.value,
-  hint: balanceHint.value,
-  neutral: isFutureMonth.value,
-}))
-const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value }))
+const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value, hint: incomeHint.value }))
 const expensesFigure = computed(() => ({ label: expensesLabel.value, value: displayExpenses.value, hint: expensesHint.value }))
-/** Per un anno o un mese passato tutto è avvenuto e il previsto coinciderebbe con il saldo. */
-const projectionFigure = computed(() => {
-  if (ms.value) {
-    if (!showMonthProjection.value) return null
-    return {
-      label: t('dashboard.projectedMonth', monthArgs.value),
-      value: ms.value.projectedBalance,
-      hint: t('dashboard.projectedMonthHint'),
-      estimated: estimatedIncome.value,
-    }
-  }
-  if (isPastYear.value) return null
-  return {
-    label: t('dashboard.projected'),
-    value: s.value.projectedBalance,
-    // La quota stimata è già una cifra a sé ("di cui …"): la nota non la ripete.
-    hint: t('dashboard.projectedHint'),
-    estimated: estimatedIncome.value,
-  }
-})
 
 /** In italiano il mese va in minuscolo ("a novembre"), in inglese resta maiuscolo ("in November"). */
 const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLowerCase('it') : month(m))
@@ -179,29 +287,57 @@ const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLower
 /**
  * Le uscite mostrate nel riquadro, divise tra ricorrenti e variabili: le due parti sommano sempre il totale.
  * Se una parte è zero la divisione ripeterebbe il totale, quindi non si mostra.
- * Le note conservano i due confronti utili: il costo medio mensile delle ricorrenti e le variabili del mese
- * di oggi rispetto alla media dei mesi precedenti ("finora", perché il mese non è finito).
+ * Sotto ogni parte una frase sempre visibile dice com'è rispetto alla media, con la media tra parentesi: il confronto
+ * è già fatto, non resta da calcolare a mente. Nel mese in corso le variabili si confrontano con il "ritmo" medio,
+ * cioè la media mensile riportata al giorno di oggi: metà mese contro un mese intero sarebbe un confronto ingiusto.
  */
+const VERDICT_KEY = { above: 'Above', inline: 'Inline', below: 'Below' } as const
+
+/** La media mensile riportata al punto del mese in cui siamo (giorno di oggi su giorni del mese). */
+function paceSoFar(average: number): number {
+  const today = parseIsoDate(finance.today)
+  const days = parseIsoDate(lastDayOfMonth(today.year, today.month)).day
+  return Math.round((average * today.day) / days)
+}
+
 const expensesSplit = computed(() => {
   const m = ms.value
   const recurring = m ? (monthToDate.value ? m.recurringToDate : m.recurringInMonth) : s.value.recurringToDate
   const variable = m ? (monthToDate.value ? m.oneTimeToDate : m.oneTimeTotal) : s.value.oneTimeToDate
   if (recurring <= 0 || variable <= 0) return null
 
-  const v = finance.variableThisMonth
+  const monthlyRecurring = Math.round(s.value.monthlyRecurring)
   let recurringNote: string | undefined
   let variableNote: string | undefined
   if (!m) {
-    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(Math.round(s.value.monthlyRecurring)) })
-    if (v) {
-      const args = { month: monthName(v.month), amount: money(v.toDate) }
-      variableNote =
-        v.previousAverage === null
-          ? t('dashboard.splitVariableSoFar', args)
-          : t('dashboard.splitVariableSoFarAverage', { ...args, average: money(v.previousAverage) })
+    // Sull'anno le ricorrenti hanno solo la loro media; le variabili parlano del mese in corso.
+    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(monthlyRecurring) })
+    const v = finance.variableThisMonth
+    if (v && v.previousAverage !== null) {
+      const verdict = compareToAverage(v.toDate, paceSoFar(v.previousAverage))
+      variableNote = t(`dashboard.splitPaceYear${VERDICT_KEY[verdict]}`, {
+        month: monthName(v.month),
+        average: money(v.previousAverage),
+      })
     }
-  } else if (monthToDate.value && v && v.previousAverage !== null) {
-    variableNote = t('dashboard.splitVariableAverage', { amount: money(v.previousAverage) })
+  } else if (m.timing !== 'future') {
+    // Le ricorrenti del mese a confronto con la loro media mensile (solo a mese finito: a metà mese sarebbero parziali).
+    if (!monthToDate.value) {
+      const verdict = compareToAverage(recurring, monthlyRecurring)
+      recurringNote = t(`dashboard.splitRecurring${VERDICT_KEY[verdict]}`, { average: money(monthlyRecurring) })
+    } else {
+      recurringNote = t('dashboard.splitRecurringAverage', { amount: money(monthlyRecurring) })
+    }
+    const vm = finance.variableOfSelectedMonth
+    if (vm && vm.previousAverage !== null) {
+      variableNote = monthToDate.value
+        ? t(`dashboard.splitPace${VERDICT_KEY[compareToAverage(vm.toDate, paceSoFar(vm.previousAverage))]}`, {
+            average: money(vm.previousAverage),
+          })
+        : t(`dashboard.splitVariable${VERDICT_KEY[compareToAverage(vm.total, vm.previousAverage)]}`, {
+            average: money(vm.previousAverage),
+          })
+    }
   }
 
   return [
@@ -243,20 +379,50 @@ watch(
 )
 
 /**
- * Ciò che deve ancora uscire. Sul mese in corso arriva a fine mese, così l'elenco e la sua somma coincidono con
- * "ancora in arrivo" sotto le uscite; sull'anno guarda i prossimi 30 giorni.
+ * I prossimi addebiti. Sul mese in corso arrivano a fine mese, così l'elenco somma come la nota sotto le uscite ("Più X
+ * in arrivo"): il totale non si ripete nel titolo. Sull'anno guardano i prossimi 30 giorni, una finestra diversa da
+ * quella della nota (fino a dicembre): il titolo lo dice e non usa la stessa parola, e lì il totale resta.
  */
 const upcomingUntil = computed(() =>
   monthToDate.value ? lastDayOfMonth(finance.selectedYear, finance.selectedMonth as number) : addDays(finance.today, 30),
 )
 const upcoming = computed(() => upcomingCharges(finance.data, finance.today, upcomingUntil.value))
 const upcomingTotal = computed(() => upcoming.value.reduce((acc, c) => acc + c.amount, 0))
+const showUpcomingTotal = computed(() => !monthToDate.value && upcoming.value.length > 0)
 const upcomingTitle = computed(() =>
   monthToDate.value ? t('dashboard.upcomingMonth', monthArgs.value) : t('dashboard.upcoming'),
 )
 const upcomingEmpty = computed(() =>
   monthToDate.value ? t('dashboard.noUpcomingMonth', monthArgs.value) : t('dashboard.noUpcoming'),
 )
+
+/**
+ * Ogni addebito si apre per la modifica, con lo stesso modulo delle pagine Variabili e Ricorrenti (per un ricorrente si
+ * modifica la spesa intera). Chiuso il modulo, il focus torna sulla riga, o sul titolo dell'elenco se non c'è più.
+ */
+const editingOneTime = ref<OneTimeExpense | null>(null)
+const editingRecurring = ref<RecurringExpense | null>(null)
+const editingOccurrence = ref<string | null>(null)
+const upcomingHeading = ref<HTMLElement | null>(null)
+let returnKey: string | null = null
+function editCharge(c: UpcomingCharge) {
+  returnKey = c.key
+  if (c.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === c.id) ?? null
+  else {
+    editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === c.id) ?? null
+    editingOccurrence.value = c.date
+  }
+}
+async function closeChargeForm() {
+  editingOneTime.value = null
+  editingRecurring.value = null
+  await nextTick()
+  const row = returnKey ? document.querySelector<HTMLElement>(`[data-charge-key="${CSS.escape(returnKey)}"]`) : null
+  ;(row ?? upcomingHeading.value)?.focus()
+  returnKey = null
+}
+const chargeLabel = (c: UpcomingCharge) =>
+  t('dashboard.editCharge', { name: c.name, date: date(c.date), due: t('dashboard.dueIn', c.daysLeft), amount: money(c.amount) })
 
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
@@ -283,21 +449,20 @@ const showUpcoming = computed(
       <BalancePanel
         @touchstart.passive="onTouchStart"
         @touchend.passive="onTouchEnd"
-        :balance="balanceFigure"
+        :main="mainFigure"
         :income="incomeFigure"
         :expenses="expensesFigure"
         :split="expensesSplit"
-        :projection="projectionFigure"
-        :bridge="bridge"
+        :explain="explain"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
           <div class="flex items-baseline justify-between gap-3">
-            <h3 class="text-sm font-semibold text-slate-700">
-              <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ upcomingTitle }}
+            <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-slate-700 focus:outline-none">
+              <i class="fa-solid fa-clock mr-1 text-indigo-600" aria-hidden="true"></i> {{ upcomingTitle }}
             </h3>
-            <span v-if="upcoming.length" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
+            <span v-if="showUpcomingTotal" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
           </div>
           <!--
             Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
@@ -312,19 +477,30 @@ const showUpcoming = computed(
             <li
               v-for="(c, i) in upcoming"
               :key="c.key"
-              class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0"
+              class="border-b border-slate-100 last:border-b-0"
               :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
             >
-              <div class="min-w-0">
-                <div class="truncate text-sm font-medium">{{ c.name }}</div>
-                <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
-                <div class="text-xs text-slate-500">
-                  {{ date(c.date) }} ·
-                  <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
-                  <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
-                </div>
-              </div>
-              <span class="shrink-0 text-sm font-semibold text-slate-700">{{ money(c.amount) }}</span>
+              <button
+                type="button"
+                :data-charge-key="c.key"
+                :aria-label="chargeLabel(c)"
+                class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-slate-50"
+                @click="editCharge(c)"
+              >
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-medium">{{ c.name }}</span>
+                  <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
+                  <span class="block text-xs text-slate-500">
+                    {{ date(c.date) }} ·
+                    <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
+                    <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
+                  </span>
+                </span>
+                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-700">
+                  {{ money(c.amount) }}
+                  <i class="fa-solid fa-pen text-xs text-slate-400" aria-hidden="true"></i>
+                </span>
+              </button>
             </li>
           </ul>
           <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>
@@ -341,5 +517,7 @@ const showUpcoming = computed(
         </div>
       </div>
     </template>
+    <TransactionForm :open="!!editingOneTime" kind="expense" :item="editingOneTime" @close="closeChargeForm" />
+    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" :occurrence="editingOccurrence" @close="closeChargeForm" />
   </section>
 </template>

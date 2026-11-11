@@ -1,19 +1,20 @@
 <script setup lang="ts">
 /** Modulo per spese una tantum (`kind="expense"`) ed entrate (`kind="income"`). */
 import { computed, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useFormat } from '@/i18n'
 import type { Income, OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
-import { centsToInput, toCents } from '@/utils/money'
+import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null }>()
 const emit = defineEmits<{ close: [] }>()
-const { t } = useI18n()
+const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({
@@ -25,6 +26,8 @@ const form = reactive({
   notes: '',
   tagIds: [] as string[],
 })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
 const title = computed(() => {
@@ -41,13 +44,14 @@ watch(
     error.value = ''
     Object.assign(form, {
       name: i?.name ?? '',
-      amount: i ? centsToInput(i.amount) : '',
+      amount: i ? amountInput(i.amount) : '',
       date: i?.date ?? todayIso(),
       categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
       notes: i && 'notes' in i ? i.notes : '',
       tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds) ? [...i.tagIds] : [],
     })
+    resetDirty()
   },
   { immediate: true },
 )
@@ -73,7 +77,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="title" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="title" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <label class="block">
@@ -104,7 +108,7 @@ function submit() {
       </label>
       <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
+      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
 </template>

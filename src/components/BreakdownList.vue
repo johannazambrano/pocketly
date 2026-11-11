@@ -5,9 +5,19 @@ import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 
 /** Con `linked` ogni riga porta al dettaglio delle voci che la compongono. */
-defineProps<{ kind: TagKind; totals: TagTotal[]; grandTotal: number; emptyText: string; linked?: boolean }>()
+const props = defineProps<{ kind: TagKind; totals: TagTotal[]; grandTotal: number; emptyText: string; linked?: boolean }>()
 const finance = useFinanceStore()
 const { t, money, percent } = useFormat()
+/**
+ * Il nome del link letto da un lettore di schermo: nome, importo e quota separati e la destinazione detta, invece del
+ * testo attaccato della riga ("Altro857,70 € (60%)").
+ */
+const rowLabel = (row: TagTotal) =>
+  t('dashboard.breakdownRowLabel', {
+    name: finance.tag(props.kind, row.id)?.name ?? t('common.unknown'),
+    amount: money(row.total),
+    percent: percent(row.total / props.grandTotal),
+  })
 </script>
 
 <template>
@@ -17,7 +27,7 @@ const { t, money, percent } = useFormat()
       :is="linked ? RouterLink : 'div'"
       v-for="row in totals"
       :key="row.id"
-      v-bind="linked ? { to: `/dettaglio/${kind === 'paymentMethods' ? 'metodo' : 'categoria'}/${row.id}` } : {}"
+      v-bind="linked ? { to: `/dettaglio/${kind === 'paymentMethods' ? 'metodo' : 'categoria'}/${row.id}`, 'aria-label': rowLabel(row) } : {}"
       class="block"
       :class="{ '-mx-2 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50': linked }"
     >

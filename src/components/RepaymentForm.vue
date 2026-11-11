@@ -4,17 +4,20 @@ import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { centsToInput, toCents } from '@/utils/money'
+import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; loan: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
-const { t, money } = useFormat()
+const { t, money, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({ amount: '', date: '' })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 const remaining = computed(() => (props.loan ? loanStatus(props.loan).remaining : 0))
 const exceeds = computed(() => {
@@ -27,8 +30,9 @@ watch(
   (open) => {
     if (!open) return
     error.value = ''
-    form.amount = remaining.value > 0 ? centsToInput(remaining.value) : ''
+    form.amount = remaining.value > 0 ? amountInput(remaining.value) : ''
     form.date = todayIso()
+    resetDirty()
   },
   { immediate: true },
 )
@@ -46,7 +50,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
     <form class="space-y-3" @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
@@ -60,7 +64,7 @@ function submit() {
       </div>
       <p v-if="exceeds" class="text-xs text-amber-700">{{ t('loans.exceedsRemaining', { amount: money(remaining) }) }}</p>
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
+      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
 </template>

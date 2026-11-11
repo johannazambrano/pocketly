@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newId } from './id'
-import { toCents, formatCents } from './money'
+import { centsToInput, toCents, formatCents } from './money'
 import { isValidIsoDate, parseIsoDate } from './dates'
 import { PALETTE, pickUniqueColor, readableTextColor } from './colors'
 
@@ -69,5 +69,14 @@ describe('newId', () => {
     const a = newId()
     expect(a).toMatch(UUID_V4)
     expect(newId()).not.toBe(a)
+  })
+})
+
+describe('centsToInput', () => {
+  it('usa il separatore decimale della lingua, e toCents lo rilegge', () => {
+    expect(centsToInput(1300)).toBe('13.00')
+    expect(centsToInput(1300, 'it-IT')).toBe('13,00')
+    expect(centsToInput(1300, 'en-GB')).toBe('13.00')
+    expect(toCents(centsToInput(123456, 'it-IT'))).toBe(123456)
   })
 })

@@ -12,12 +12,12 @@ const { t } = useI18n()
     <p class="text-sm text-slate-600">{{ ui.confirmRequest?.message }}</p>
     <div class="mt-5 flex gap-2">
       <button type="button" class="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-medium" @click="ui.answerConfirm(false)">
-        {{ t('common.cancel') }}
+        {{ ui.confirmRequest?.cancelLabel ?? t('common.cancel') }}
       </button>
       <button
         type="button"
         class="flex-1 rounded-xl py-2.5 text-sm font-bold text-white"
-        :class="ui.confirmRequest?.danger ? 'bg-rose-600' : 'bg-emerald-600'"
+        :class="ui.confirmRequest?.danger ? 'bg-rose-600' : 'bg-emerald-700'"
         @click="ui.answerConfirm(true)"
       >
         {{ ui.confirmRequest?.confirmLabel }}

@@ -1,5 +1,5 @@
 import type { Cents, Frequency, IsoDate, RecurringExpense } from '@/types/models'
-import { monthIndex, parseIsoDate, toIsoDate } from '@/utils/dates'
+import { addDays, monthIndex, parseIsoDate, toIsoDate } from '@/utils/dates'
 
 export const FREQUENCIES: Frequency[] = ['monthly', 'quarterly', 'semiannual', 'annual']
 
@@ -23,7 +23,14 @@ export function occursIn(r: RecurringExpense, year: number, month: number): bool
   if (offset < 0 || offset % FREQUENCY_MONTHS[r.frequency] !== 0) return false
   if (r.endDate) {
     const end = parseIsoDate(r.endDate)
-    if (target > monthIndex(end.year, end.month)) return false
+    const endIndex = monthIndex(end.year, end.month)
+    if (target > endIndex) return false
+    // Nel mese in cui finisce conta il giorno: una serie che finisce il 14 non ha l'addebito del 15. Senza questo, una
+    // serie divisa (vedi `splitRecurring`) conterebbe due volte il mese della divisione.
+    if (target === endIndex) {
+      const day = Math.min(start.day, new Date(year, month + 1, 0).getDate())
+      if (day > end.day) return false
+    }
   }
   return true
 }
@@ -63,6 +70,25 @@ export function nextDueDate(r: RecurringExpense, from: IsoDate): IsoDate | null 
     return r.endDate && due > r.endDate ? null : due
   }
   return null
+}
+
+/**
+ * Divide una ricorrenza da un addebito in poi: la serie esistente si ferma il giorno prima di `from` (gli addebiti già
+ * passati restano com'erano), e ne parte una nuova da `from` con i valori nuovi. Serve per "Netflix costa di più da
+ * questo mese" senza riscrivere i mesi precedenti.
+ * `from` deve essere una data di addebito successiva al primo: altrimenti non c'è niente da tenere e si modifica la serie
+ * intera. Il giorno degli addebiti della nuova serie è quello di `from` (dopo un 31 accorciato a 30 resta il 30).
+ */
+export function splitRecurring(
+  r: RecurringExpense,
+  from: IsoDate,
+  changes: Omit<RecurringExpense, 'id' | 'startDate'>,
+): { before: RecurringExpense; after: Omit<RecurringExpense, 'id'> } {
+  if (from <= r.startDate) throw new Error('splitRecurring: la data deve essere successiva al primo addebito')
+  return {
+    before: { ...r, endDate: addDays(from, -1) },
+    after: { ...changes, startDate: from },
+  }
 }
 
 /** True se la ricorrenza è attiva in almeno un giorno dell'anno. */

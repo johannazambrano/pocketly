@@ -6,6 +6,10 @@ import { useFormat } from '@/i18n'
 import { breakdownItems } from '@/domain/calculations'
 import { monthIndex, parseIsoDate } from '@/utils/dates'
 import MonthSelector from '@/components/MonthSelector.vue'
+import TransactionForm from '@/components/TransactionForm.vue'
+import RecurringForm from '@/components/RecurringForm.vue'
+import type { BreakdownItem } from '@/domain/calculations'
+import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 
 /**
  * Il dettaglio di una riga della dashboard ("Spese per categoria" o "per metodo di pagamento"): tutte le voci che la
@@ -63,26 +67,71 @@ onBeforeUnmount(() => (document.title = previousTitle))
 /**
  * "Torna alla dashboard": se si è arrivati da lì si torna indietro nella cronologia, così la dashboard riappare nel
  * punto in cui la si era lasciata; aprendo il link direttamente si va alla dashboard dall'inizio.
+ * È un link normale e non un RouterLink: il RouterLink naviga da solo prima di questo gestore, e quel `push('/')` in più
+ * faceva montare la dashboard senza sapere da quale riga si tornava (e quindi senza rimetterci il focus).
+ * Ctrl/Cmd+clic e il tasto centrale restano al browser, che apre la dashboard in un'altra scheda.
  */
-function back(e: MouseEvent) {
-  if (router.options.history.state.back === '/') {
-    e.preventDefault()
-    router.back()
+/**
+ * Ogni voce si apre per la modifica con lo stesso modulo delle pagine Variabili e Ricorrenti: il dettaglio non è un
+ * vicolo cieco. Per un addebito ricorrente si modifica la spesa ricorrente intera (il titolo del modulo lo dice).
+ * Chiuso il modulo, il focus torna sulla voce da cui si era partiti, o sul titolo se la voce non c'è più (per esempio
+ * perché le si è cambiata categoria).
+ */
+const editingOneTime = ref<OneTimeExpense | null>(null)
+const editingRecurring = ref<RecurringExpense | null>(null)
+const editingOccurrence = ref<string | null>(null)
+let returnKey: string | null = null
+function edit(item: BreakdownItem) {
+  returnKey = item.key
+  if (item.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === item.sourceId) ?? null
+  else {
+    editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === item.sourceId) ?? null
+    editingOccurrence.value = item.date
   }
+}
+async function closeForm() {
+  editingOneTime.value = null
+  editingRecurring.value = null
+  await nextTick()
+  const row = returnKey ? document.querySelector<HTMLElement>(`[data-item-key="${CSS.escape(returnKey)}"]`) : null
+  ;(row ?? heading.value)?.focus()
+  returnKey = null
+}
+
+function back(e: MouseEvent) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+  e.preventDefault()
+  if (router.options.history.state.back === '/') router.back()
+  else router.push('/')
 }
 </script>
 
 <template>
   <section class="space-y-4">
-    <RouterLink
-      to="/"
+    <!-- Senza categoria il ritorno è il pulsante dentro il riquadro: qui sarebbe un doppione. -->
+    <a
+      v-if="tag"
+      href="/"
       @click="back"
       class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-emerald-700 hover:text-emerald-800"
     >
       <i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i>{{ t('detail.back') }}
-    </RouterLink>
+    </a>
 
-    <div v-if="!tag" class="card text-sm text-slate-600">{{ t('detail.notFound') }}</div>
+    <!-- Una categoria eliminata, o un indirizzo vecchio: si dice cosa è successo e dove andare. -->
+    <div v-if="!tag" class="card space-y-3">
+      <h2 ref="heading" tabindex="-1" class="text-lg font-bold text-slate-800 focus:outline-none">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethodTitle' : 'detail.notFoundTitle') }}</h2>
+      <p class="text-sm text-slate-600">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethod' : 'detail.notFound') }}</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="/" class="btn-primary" @click="back">{{ t('detail.back') }}</a>
+        <RouterLink
+          to="/impostazioni"
+          class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          {{ t('detail.manageTags') }}
+        </RouterLink>
+      </div>
+    </div>
 
     <template v-else>
       <div class="flex flex-wrap items-end justify-between gap-3">
@@ -103,19 +152,33 @@ function back(e: MouseEvent) {
           <p class="text-lg font-bold whitespace-nowrap text-slate-800">{{ money(total) }}</p>
         </div>
         <ul v-if="items.length" class="divide-y divide-slate-100">
-          <li v-for="item in items" :key="item.key" class="flex items-center justify-between gap-3 px-4 py-2.5">
-            <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-slate-800">{{ item.name }}</p>
-              <p class="text-xs text-slate-500">
-                {{ date(item.date) }} ·
-                {{ t(item.source === 'recurring' ? 'detail.recurring' : 'detail.variable') }}
-              </p>
-            </div>
-            <span class="shrink-0 text-sm font-semibold text-slate-700">{{ money(item.amount) }}</span>
+          <li v-for="item in items" :key="item.key">
+            <button
+              type="button"
+              :data-item-key="item.key"
+              :aria-label="t('detail.editRow', { name: item.name, date: date(item.date), type: t(item.source === 'recurring' ? 'detail.recurring' : 'detail.variable').toLocaleLowerCase(), amount: money(item.amount) })"
+              class="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
+              @click="edit(item)"
+            >
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-medium text-slate-800">{{ item.name }}</span>
+                <span class="block text-xs text-slate-500">
+                  {{ date(item.date) }} ·
+                  {{ t(item.source === 'recurring' ? 'detail.recurring' : 'detail.variable') }}
+                </span>
+              </span>
+              <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-700">
+                {{ money(item.amount) }}
+                <i class="fa-solid fa-pen text-xs text-slate-400" aria-hidden="true"></i>
+              </span>
+            </button>
           </li>
         </ul>
         <p v-else class="px-4 py-6 text-center text-sm text-slate-500">{{ t('detail.empty') }}</p>
       </div>
     </template>
+
+    <TransactionForm :open="!!editingOneTime" kind="expense" :item="editingOneTime" @close="closeForm" />
+    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" :occurrence="editingOccurrence" @close="closeForm" />
   </section>
 </template>

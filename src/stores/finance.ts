@@ -19,7 +19,7 @@ import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { pickUniqueColor, randomUniqueColor } from '@/utils/colors'
-import { parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export type TagKind = 'categories' | 'paymentMethods' | 'tags'
@@ -119,6 +119,19 @@ export const useFinanceStore = defineStore('finance', () => {
   const variableThisMonth = computed(() =>
     selectedYear.value === yearOf(today.value) ? variableSpending(data.value, today.value) : null,
   )
+  /**
+   * Le spese variabili del mese scelto confrontate con la media dei mesi precedenti dello stesso anno: per il mese di
+   * oggi fino a oggi, per un mese passato a mese intero (come se "oggi" fosse il suo ultimo giorno). Un mese futuro non
+   * ha ancora niente da confrontare.
+   */
+  const variableOfSelectedMonth = computed(() => {
+    if (selectedMonth.value === 'all') return null
+    const t = parseIsoDate(today.value)
+    const key = selectedYear.value * 12 + selectedMonth.value
+    const now = t.year * 12 + t.month
+    if (key > now) return null
+    return variableSpending(data.value, key === now ? today.value : lastDayOfMonth(selectedYear.value, selectedMonth.value))
+  })
 
   const oneTimeOfYear = computed(() =>
     data.value.oneTimeExpenses.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
@@ -332,6 +345,7 @@ export const useFinanceStore = defineStore('finance', () => {
     estimatedMonthlyIncome,
     estimateCategories,
     variableThisMonth,
+    variableOfSelectedMonth,
     setForecastSettings,
     setBudgetLimit,
     today,

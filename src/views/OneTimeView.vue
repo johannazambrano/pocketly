@@ -131,7 +131,7 @@ function open(item: OneTimeExpense | null) {
             class="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-all"
             :class="
               selectedTagId === item.id
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             "
             @click="toggleTagFilter(item.id)"

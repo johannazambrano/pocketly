@@ -77,8 +77,12 @@
   @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
 }
 
+/*
+ * Il testo bianco piccolo deve restare sopra 4,5:1 in ogni stato: emerald 700 a riposo (su 600 era 3,7:1), e hover e
+ * pressione si scuriscono invece di schiarirsi, perché sui telefoni lo stato hover resta attaccato dopo il tocco.
+ */
 @utility btn-primary {
-  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50;
 }
 
 /* Bersaglio di tocco di almeno 40 px: con le dita 32 px sono troppo piccoli. */

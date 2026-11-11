@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useFormat } from '@/i18n'
 import type { Loan, LoanType } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
-import { centsToInput, toCents } from '@/utils/money'
+import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; item?: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
-const { t } = useI18n()
+const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({ name: '', amount: '', type: 'given' as LoanType, date: '', notes: '' })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
 watch(
@@ -24,11 +27,12 @@ watch(
     error.value = ''
     Object.assign(form, {
       name: i?.name ?? '',
-      amount: i ? centsToInput(i.amount) : '',
+      amount: i ? amountInput(i.amount) : '',
       type: i?.type ?? 'given',
       date: i?.date ?? todayIso(),
       notes: i?.notes ?? '',
     })
+    resetDirty()
   },
   { immediate: true },
 )
@@ -52,7 +56,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
     <form class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('loans.counterparty') }}</span>
@@ -80,7 +84,7 @@ function submit() {
         <input v-model="form.notes" maxlength="200" class="field" :placeholder="t('loans.notesPlaceholder')" />
       </label>
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
+      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
 </template>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, breakdownItems, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -221,6 +221,32 @@ describe('entrate non ricorrenti', () => {
       expect(rows).toHaveLength(12)
       expect(rows.every((r) => r.income === 200000 && r.incomeEstimated)).toBe(true)
     })
+  })
+})
+
+describe('compareToAverage', () => {
+  it('in linea entro il 10% della media, sopra o sotto oltre', () => {
+    expect(compareToAverage(10500, 10000)).toBe('inline')
+    expect(compareToAverage(9000, 10000)).toBe('inline')
+    expect(compareToAverage(11001, 10000)).toBe('above')
+    expect(compareToAverage(8999, 10000)).toBe('below')
+  })
+
+  it('con una media negativa il margine si calcola sul valore assoluto', () => {
+    expect(compareToAverage(-10500, -10000)).toBe('inline')
+    expect(compareToAverage(-5000, -10000)).toBe('above')
+    expect(compareToAverage(-20000, -10000)).toBe('below')
+  })
+})
+
+describe('averageBalanceBefore', () => {
+  it('fa la media del saldo dei mesi precedenti, dal primo mese con movimenti', () => {
+    // periodo da marzo; saldi: marzo 2000 − 50 − 700 = 1250, aprile 2000 − 700 = 1300 → media 1275
+    expect(averageBalanceBefore(sample(), 2026, 4, TODAY)).toBe(127500)
+  })
+
+  it('il primo mese del periodo non ha mesi con cui confrontarsi', () => {
+    expect(averageBalanceBefore(sample(), 2026, 2, TODAY)).toBeNull()
   })
 })
 
