@@ -66,8 +66,6 @@ export default {
     untilMonthEnd: 'fine mese',
     untilDecember: 'dicembre',
     incomeToCome: 'Più {amount} attesi entro {until}',
-    incomeEstimateCounted: 'Più le entrate stimate, già contate nel previsto',
-    incomeRecordedPlusEstimate: 'Più {amount} già registrati e le entrate stimate contate nel previsto',
     stillToCome: 'Più {amount} in arrivo entro {until}',
     expensesScheduled: 'Uscite già programmate',
     scheduledHint: 'Spese e addebiti con data a {month}',

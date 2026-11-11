@@ -94,17 +94,14 @@ const incomeAhead = computed(() => {
 })
 
 /**
- * Ogni cifra una volta: l'importo stimato sta solo nella riga sotto la cifra grande, dove dice quanto pesa la stima sul
- * previsto. Qui, tra i fatti delle entrate, compare come numero solo ciò che è già registrato con una data futura; la
- * stima si nomina senza ripeterne l'importo, così "0,00 €" non resta senza spiegazione.
+ * La stima si dice una volta sola, nella riga sotto la cifra grande. Qui, tra i fatti delle entrate, compare solo ciò
+ * che è già registrato con una data futura; se in arrivo c'è solo la stima, la nota non c'è.
  */
 const incomeHint = computed(() => {
   const { toCome, estimated } = incomeAhead.value
-  if (toCome <= 0) return undefined
   const recorded = toCome - estimated
-  if (estimated > 0 && recorded > 0) return t('dashboard.incomeRecordedPlusEstimate', { amount: money(recorded) })
-  if (estimated > 0) return t('dashboard.incomeEstimateCounted')
-  return t('dashboard.incomeToCome', { amount: money(toCome), until: until.value })
+  if (recorded <= 0) return undefined
+  return t('dashboard.incomeToCome', { amount: money(recorded), until: until.value })
 })
 
 const displayExpenses = computed(() => {
@@ -167,6 +164,17 @@ const pastMonthVerdict = computed(() => {
  * Quando il previsto conta su entrate stimate lo dice subito sotto la cifra, sempre visibile: chi guarda solo il numero
  * grande deve sapere che una parte non è ancora successa. "Contando", non "di cui": la stima può superare il previsto.
  */
+/**
+ * La cifra grande è positiva solo grazie alla stima (senza sarebbe sotto zero): allora resta in colore neutro. Il blu
+ * vuol dire "va bene" e non deve prometterlo su soldi non ancora arrivati; il rosso resta per quando si è sotto zero
+ * comunque.
+ */
+const estimateDecisive = computed(() => {
+  const p = projected.value
+  const { estimated } = incomeAhead.value
+  return p !== null && estimated > 0 && p >= 0 && p - estimated < 0
+})
+
 const estimateLine = computed(() => {
   const { estimated } = incomeAhead.value
   return estimated > 0 ? t('dashboard.countingEstimate', { amount: money(estimated) }) : undefined
@@ -178,6 +186,7 @@ const mainFigure = computed(() => {
       label: t('dashboard.projectedMonth', monthArgs.value),
       value: projected.value,
       estimate: estimateLine.value,
+      neutral: estimateDecisive.value,
       // Senza stima la cifra è fatta solo di ciò che è registrato, e lo si dice.
       note: estimateLine.value ? undefined : t('dashboard.futureNoteRecorded'),
     }
@@ -187,6 +196,7 @@ const mainFigure = computed(() => {
       label: ms.value ? t('dashboard.projectedMonth', monthArgs.value) : t('dashboard.projected', { year: finance.selectedYear }),
       value: projected.value,
       estimate: estimateLine.value,
+      neutral: estimateDecisive.value,
       // La portata detta sempre: nel mese è il risultato del mese, nell'anno quello dall'inizio dell'anno. Non è il saldo
       // del conto, che l'app non conosce.
       today: {
@@ -250,7 +260,7 @@ const explain = computed(() => {
       categories: names.join(', '),
     })
   }
-  return { rows, total: { label: main.label, value: main.value }, estimate }
+  return { rows, total: { label: main.label, value: main.value, neutral: estimateDecisive.value }, estimate }
 })
 
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */

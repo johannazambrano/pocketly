@@ -68,8 +68,6 @@ const en: typeof it = {
     untilMonthEnd: 'the end of the month',
     untilDecember: 'December',
     incomeToCome: 'Plus {amount} expected by {until}',
-    incomeEstimateCounted: 'Plus the estimated income, already counted in the forecast',
-    incomeRecordedPlusEstimate: 'Plus {amount} already recorded and the estimated income counted in the forecast',
     stillToCome: 'Plus {amount} still to come by {until}',
     expensesScheduled: 'Expenses already scheduled',
     scheduledHint: 'Expenses and charges dated in {month}',

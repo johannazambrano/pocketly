@@ -22,6 +22,8 @@ interface Main extends Figure {
   today?: { label: string; value: number }
   /** Le entrate stimate su cui conta la cifra, dette subito sotto di essa. */
   estimate?: string
+  /** Colore neutro invece di blu/rosso: la cifra è positiva solo grazie alla stima. */
+  neutral?: boolean
   note?: string
 }
 
@@ -31,7 +33,7 @@ interface Main extends Figure {
  */
 export interface Explain {
   rows: { key: string; label: string; note?: string; value: number }[]
-  total: { label: string; value: number }
+  total: { label: string; value: number; neutral?: boolean }
   estimate?: string
 }
 
@@ -93,7 +95,7 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
     <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div class="px-4 pt-4 pb-3 md:py-5 lg:border-r lg:border-slate-100">
         <h3 class="text-xs font-medium text-balance text-slate-500">{{ main.label }}</h3>
-        <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), signColor(main.value)]">
+        <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), main.neutral ? 'text-slate-800' : signColor(main.value)]">
           {{ money(main.value) }}
         </p>
         <!-- Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
@@ -129,7 +131,7 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
               </div>
               <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-slate-200 pt-2">
                 <dt class="text-sm font-semibold text-slate-800">{{ explain.total.label }}</dt>
-                <dd class="shrink-0 text-sm font-bold whitespace-nowrap" :class="signColor(explain.total.value)">{{ money(explain.total.value) }}</dd>
+                <dd class="shrink-0 text-sm font-bold whitespace-nowrap" :class="explain.total.neutral ? 'text-slate-800' : signColor(explain.total.value)">{{ money(explain.total.value) }}</dd>
               </div>
             </dl>
             <p v-if="explain.estimate" class="mt-2 text-xs leading-snug text-slate-600">
