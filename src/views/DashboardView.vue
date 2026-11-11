@@ -320,7 +320,7 @@ const showUpcoming = computed(
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
           <div class="flex items-baseline justify-between gap-3">
             <h3 class="text-sm font-semibold text-slate-700">
-              <i class="fa-solid fa-calendar-day mr-1 text-indigo-600"></i> {{ upcomingTitle }}
+              <i class="fa-solid fa-clock mr-1 text-indigo-600" aria-hidden="true"></i> {{ upcomingTitle }}
             </h3>
             <span v-if="upcoming.length" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
           </div>
