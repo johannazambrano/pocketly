@@ -7,6 +7,7 @@ import { useFormat } from '@/i18n'
 import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; loan: Loan | null }>()
@@ -15,6 +16,8 @@ const { t, money, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({ amount: '', date: '' })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 const remaining = computed(() => (props.loan ? loanStatus(props.loan).remaining : 0))
 const exceeds = computed(() => {
@@ -29,6 +32,7 @@ watch(
     error.value = ''
     form.amount = remaining.value > 0 ? amountInput(remaining.value) : ''
     form.date = todayIso()
+    resetDirty()
   },
   { immediate: true },
 )
@@ -46,7 +50,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
     <form class="space-y-3" @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-2">
         <label class="block">

@@ -26,6 +26,10 @@ const en: typeof it = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
+    discardTitle: 'Discard changes?',
+    discardMessage: 'You changed some fields: if you close now, the changes are not saved.',
+    discardConfirm: 'Discard',
+    discardKeep: 'Keep editing',
     delete: 'Delete',
     edit: 'Edit',
     close: 'Close',

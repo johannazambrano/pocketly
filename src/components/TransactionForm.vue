@@ -7,6 +7,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
@@ -25,6 +26,8 @@ const form = reactive({
   notes: '',
   tagIds: [] as string[],
 })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
 const title = computed(() => {
@@ -48,6 +51,7 @@ watch(
       notes: i && 'notes' in i ? i.notes : '',
       tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds) ? [...i.tagIds] : [],
     })
+    resetDirty()
   },
   { immediate: true },
 )
@@ -73,7 +77,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="title" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="title" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <label class="block">

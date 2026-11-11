@@ -5,6 +5,8 @@ export interface ConfirmRequest {
   title: string
   message: string
   confirmLabel: string
+  /** Il pulsante che rinuncia; di serie "Annulla". */
+  cancelLabel?: string
   danger: boolean
   resolve: (ok: boolean) => void
 }
@@ -22,7 +24,7 @@ export const useUiStore = defineStore('ui', () => {
   const toasts = ref<Toast[]>([])
   let toastSeq = 0
 
-  function confirm(options: { title: string; message: string; confirmLabel: string; danger?: boolean }) {
+  function confirm(options: { title: string; message: string; confirmLabel: string; cancelLabel?: string; danger?: boolean }) {
     return new Promise<boolean>((resolve) => {
       confirmRequest.value?.resolve(false)
       confirmRequest.value = { danger: true, ...options, resolve }

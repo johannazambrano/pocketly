@@ -6,6 +6,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; item?: Loan | null }>()
@@ -14,6 +15,8 @@ const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({ name: '', amount: '', type: 'given' as LoanType, date: '', notes: '' })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
 watch(
@@ -29,6 +32,7 @@ watch(
       date: i?.date ?? todayIso(),
       notes: i?.notes ?? '',
     })
+    resetDirty()
   },
   { immediate: true },
 )
@@ -52,7 +56,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
     <form class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('loans.counterparty') }}</span>

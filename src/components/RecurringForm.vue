@@ -8,6 +8,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { toCents } from '@/utils/money'
 import { toIsoDate } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
+import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import NotificationRulesEditor from './NotificationRulesEditor.vue'
 import SubmitButton from './SubmitButton.vue'
@@ -32,6 +33,8 @@ const form = reactive({
   paymentMethodId: '',
   notifications: [] as NotificationRule[],
 })
+/** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
+const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
 /**
@@ -77,6 +80,7 @@ watch(
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
       notifications: initialNotifications,
     })
+    resetDirty()
   },
   { immediate: true },
 )
@@ -124,7 +128,7 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <!--

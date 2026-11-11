@@ -6,6 +6,8 @@
  * stanno fuori da #app (Teleport), quindi restano usabili.
  */
 let openCount = 0
+/** Le finestre aperte, dall'ultima in cima: solo quella in cima risponde a Esc e tiene il Tab. */
+const stack: symbol[] = []
 function setAppInert(on: boolean) {
   const app = document.getElementById('app')
   if (app) app.inert = on
@@ -15,10 +17,38 @@ function setAppInert(on: boolean) {
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUiStore } from '@/stores/ui'
 
-const props = defineProps<{ open: boolean; title: string }>()
+/** `dirty`: il modulo dentro ha modifiche non salvate; chiudendo con Esc, ✕ o lo sfondo si chiede prima conferma. */
+const props = defineProps<{ open: boolean; title: string; dirty?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
+const ui = useUiStore()
+const me = Symbol('modal')
+/**
+ * Ogni finestra si apre sopra quelle già aperte (una conferma sopra un modulo): il livello cresce con la pila. Senza,
+ * a parità di livello vince l'ordine nella pagina, e la conferma poteva finire nascosta dietro il modulo.
+ */
+const layer = ref(50)
+
+/**
+ * Chiusura "di passaggio" (Esc, ✕, tocco sullo sfondo): se ci sono modifiche non salvate si chiede prima, perché un
+ * tocco sbagliato sul telefono non deve buttare quello che si è scritto. "Annulla" nel modulo resta una scelta
+ * esplicita e chiude subito.
+ */
+async function requestClose() {
+  if (props.dirty) {
+    const ok = await ui.confirm({
+      title: t('common.discardTitle'),
+      message: t('common.discardMessage'),
+      confirmLabel: t('common.discardConfirm'),
+      cancelLabel: t('common.discardKeep'),
+      danger: true,
+    })
+    if (!ok) return
+  }
+  emit('close')
+}
 
 const dialog = ref<HTMLElement | null>(null)
 const heading = ref<HTMLElement | null>(null)
@@ -28,8 +58,9 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 
 /** Tab e Maiusc+Tab girano dentro la finestra; Esc la chiude. */
 function onKey(e: KeyboardEvent) {
+  if (stack[stack.length - 1] !== me) return
   if (e.key === 'Escape') {
-    emit('close')
+    void requestClose()
     return
   }
   if (e.key !== 'Tab' || !dialog.value) return
@@ -59,6 +90,8 @@ async function onOpen() {
   document.addEventListener('keydown', onKey)
   document.body.style.overflow = 'hidden'
   openCount++
+  stack.push(me)
+  layer.value = 50 + stack.length
   setAppInert(true)
   await nextTick()
   heading.value?.focus()
@@ -68,6 +101,8 @@ function onClose() {
   isOpen = false
   document.removeEventListener('keydown', onKey)
   openCount = Math.max(0, openCount - 1)
+  const at = stack.indexOf(me)
+  if (at >= 0) stack.splice(at, 1)
   if (openCount === 0) {
     document.body.style.overflow = ''
     setAppInert(false)
@@ -96,8 +131,9 @@ onBeforeUnmount(onClose)
     >
       <div
         v-if="open"
-        class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
-        @click.self="emit('close')"
+        class="fixed inset-0 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+        :style="{ zIndex: layer }"
+        @click.self="requestClose"
       >
         <div
           ref="dialog"
@@ -110,7 +146,7 @@ onBeforeUnmount(onClose)
             <div class="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
               <h3 :id="titleId" ref="heading" tabindex="-1" class="text-base font-bold text-slate-800 focus:outline-none">{{ title }}</h3>
               <!-- Slate 500: un'icona che serve a qualcosa deve stare almeno a 3:1 sul bianco (slate 400 era 2,6:1). -->
-              <button type="button" class="icon-btn text-slate-500 hover:text-slate-700" :aria-label="t('common.close')" @click="emit('close')">
+              <button type="button" class="icon-btn text-slate-500 hover:text-slate-700" :aria-label="t('common.close')" @click="requestClose">
                 <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
               </button>
             </div>
