@@ -22,7 +22,11 @@ const background = computed(() => tag.value?.color ?? '#94a3b8')
 </script>
 
 <template>
-  <span
+  <!-- Cliccabile (filtra la lista) diventa un vero pulsante: si raggiunge con la tastiera e, nelle righe che sul telefono
+       si aprono al tocco, resta toccabile da solo (vedi `EntryRow`). -->
+  <component
+    :is="clickable ? 'button' : 'span'"
+    :type="clickable ? 'button' : undefined"
     class="inline-flex max-w-[9rem] items-center gap-0.5 truncate rounded px-1.5 py-0.5 text-[11px] font-medium transition-all"
     :class="{
       'cursor-pointer hover:opacity-85 active:scale-95': clickable,
@@ -32,5 +36,5 @@ const background = computed(() => tag.value?.color ?? '#94a3b8')
   >
     <span v-if="kind === 'tags'" class="font-semibold opacity-75">#</span>
     <span class="truncate">{{ tag?.name ?? t('common.unknown') }}</span>
-  </span>
+  </component>
 </template>

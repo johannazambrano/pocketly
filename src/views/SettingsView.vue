@@ -15,6 +15,7 @@ import BaseModal from '@/components/BaseModal.vue'
 import SyncSettings from '@/components/SyncSettings.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import TagManager from '@/components/TagManager.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const finance = useFinanceStore()
 const backup = useBackupStore()
@@ -179,7 +180,7 @@ function changeLocale(code: LocaleCode) {
 
 <template>
   <section class="space-y-4">
-    <h2 class="text-lg font-bold text-ink">{{ t('settings.title') }}</h2>
+    <PageHeader :title="t('settings.title')" />
 
     <div class="lg:columns-2 lg:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
       <div class="card space-y-3">
@@ -331,7 +332,7 @@ function changeLocale(code: LocaleCode) {
         <p>{{ t('settings.privacyText') }}</p>
         <p v-if="persistent === true" class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
         <p v-else-if="persistent === false" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
-        <p class="pt-2 text-[11px] text-ink-5">{{ t('settings.version', { version }) }}</p>
+        <p class="pt-2 text-[11px] text-ink-4">{{ t('settings.version', { version }) }}</p>
       </div>
     </div>
 

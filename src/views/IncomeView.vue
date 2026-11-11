@@ -22,6 +22,15 @@ function open(item: Income | null) {
   editing.value = item
   formOpen.value = true
 }
+
+/** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
+function remove() {
+  const item = editing.value
+  if (item) void confirmDelete(item.name, () => {
+    finance.deleteIncome(item.id)
+    formOpen.value = false
+  })
+}
 </script>
 
 <template>
@@ -38,7 +47,7 @@ function open(item: Income | null) {
         :key="e.id"
         :name="e.name"
         :amount="money(e.amount)"
-        amount-class="text-accent-icon"
+        amount-class="text-accent"
         @edit="open(e)"
         @delete="confirmDelete(e.name, () => finance.deleteIncome(e.id))"
       >
@@ -49,6 +58,6 @@ function open(item: Income | null) {
         </template>
       </EntryRow>
     </EntryList>
-    <TransactionForm :open="formOpen" kind="income" :item="editing" @close="formOpen = false" />
+    <TransactionForm :open="formOpen" kind="income" :item="editing" :deletable="!!editing" @close="formOpen = false" @delete="remove" />
   </section>
 </template>

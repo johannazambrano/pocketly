@@ -4,6 +4,7 @@ import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
+import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import PageHeader from '@/components/PageHeader.vue'
@@ -14,6 +15,7 @@ const finance = useFinanceStore()
 const ui = useUiStore()
 const { t, money, date } = useFormat()
 const confirmDelete = useConfirmDelete()
+const appearance = useAppearanceStore()
 
 const formOpen = ref(false)
 const editing = ref<Loan | null>(null)
@@ -23,6 +25,15 @@ const repaymentOpen = ref(false)
 function open(item: Loan | null) {
   editing.value = item
   formOpen.value = true
+}
+
+/** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
+function remove() {
+  const item = editing.value
+  if (item) void confirmDelete(item.name, () => {
+    finance.deleteLoan(item.id)
+    formOpen.value = false
+  })
 }
 
 function openRepayment(loan: Loan) {
@@ -49,7 +60,7 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
             <div class="truncate text-sm font-bold text-ink">{{ loan.name }}</div>
-            <div class="text-xs text-ink-5">{{ date(loan.date) }}<template v-if="loan.notes"> · {{ loan.notes }}</template></div>
+            <div class="text-xs text-ink-4">{{ date(loan.date) }}<template v-if="loan.notes"> · {{ loan.notes }}</template></div>
           </div>
           <span
             class="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium"
@@ -66,12 +77,12 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
           </div>
           <div>
             <p class="text-xs text-ink-4">{{ t('loans.repaid') }}</p>
-            <p class="font-bold text-accent-icon">{{ money(loanStatus(loan).repaid) }}</p>
+            <p class="font-bold text-accent">{{ money(loanStatus(loan).repaid) }}</p>
           </div>
           <div>
             <p class="text-xs text-ink-4">{{ t('loans.remaining') }}</p>
             <p v-if="loanStatus(loan).remaining > 0" class="font-bold text-negative">{{ money(loanStatus(loan).remaining) }}</p>
-            <p v-else class="font-bold text-ink-5"><i class="fa-solid fa-check mr-1"></i>{{ t('loans.settled') }}</p>
+            <p v-else class="font-bold text-ink-4"><i class="fa-solid fa-check mr-1"></i>{{ t('loans.settled') }}</p>
           </div>
         </div>
 
@@ -83,8 +94,8 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
           >
             <span>{{ t('loans.repaymentOn', { date: date(r.date) }) }}</span>
             <span class="flex items-center gap-1">
-              <span class="font-semibold text-accent-icon">+{{ money(r.amount) }}</span>
-              <button type="button" class="icon-btn text-ink-5 hover:text-negative-light" :aria-label="t('common.delete')" @click="removeRepayment(loan, r.id)">
+              <span class="font-semibold text-accent">+{{ money(r.amount) }}</span>
+              <button type="button" class="icon-btn text-ink-4 hover:text-negative-light" :aria-label="t('common.delete')" @click="removeRepayment(loan, r.id)">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </span>
@@ -99,11 +110,18 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
           >
             <i class="fa-solid fa-plus"></i> {{ t('loans.addRepayment') }}
           </button>
+          <!-- Sul telefono si elimina dal modulo ("Elimina" in fondo), come nelle liste; sul PC c'è anche il cestino. -->
           <div class="flex">
-            <button type="button" class="icon-btn text-recurring" :aria-label="t('common.edit')" @click="open(loan)">
+            <button type="button" class="icon-btn text-recurring" :aria-label="`${t('common.edit')}: ${loan.name}`" @click="open(loan)">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button type="button" class="icon-btn text-negative-light" :aria-label="t('common.delete')" @click="confirmDelete(loan.name, () => finance.deleteLoan(loan.id))">
+            <button
+              v-if="appearance.platform === 'desktop'"
+              type="button"
+              class="icon-btn text-negative-light"
+              :aria-label="`${t('common.delete')}: ${loan.name}`"
+              @click="confirmDelete(loan.name, () => finance.deleteLoan(loan.id))"
+            >
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
@@ -112,9 +130,9 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
 
     </div>
 
-    <p v-if="!finance.loans.length" class="py-6 text-center text-xs text-ink-5">{{ t('loans.empty') }}</p>
+    <p v-if="!finance.loans.length" class="py-6 text-center text-xs text-ink-4">{{ t('loans.empty') }}</p>
 
-    <LoanForm :open="formOpen" :item="editing" @close="formOpen = false" />
+    <LoanForm :open="formOpen" :item="editing" :deletable="!!editing" @close="formOpen = false" @delete="remove" />
     <RepaymentForm :open="repaymentOpen" :loan="repayingLoan" @close="repaymentOpen = false" />
   </section>
 </template>

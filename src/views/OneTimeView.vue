@@ -95,6 +95,15 @@ function open(item: OneTimeExpense | null) {
   editing.value = item
   formOpen.value = true
 }
+
+/** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
+function remove() {
+  const item = editing.value
+  if (item) void confirmDelete(item.name, () => {
+    finance.deleteOneTime(item.id)
+    formOpen.value = false
+  })
+}
 </script>
 
 <template>
@@ -102,7 +111,7 @@ function open(item: OneTimeExpense | null) {
     <PageHeader :title="t('onetime.title')">
       <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
         <MonthSelector />
-        <button type="button" class="btn-primary" @click="open(null)">
+        <button type="button" class="btn-primary page-add" @click="open(null)">
           <i class="fa-solid fa-plus mr-1"></i> {{ t('app.add') }}
         </button>
       </div>
@@ -143,7 +152,7 @@ function open(item: OneTimeExpense | null) {
             <span>#{{ item.name }}</span>
             <span
               class="text-[10px] opacity-75 font-normal"
-              :class="selectedTagId === item.id ? 'text-on-color' : 'text-ink-5'"
+              :class="selectedTagId === item.id ? 'text-on-color' : 'text-ink-4'"
             >
               ({{ item.countInMonth }})
             </span>
@@ -170,7 +179,7 @@ function open(item: OneTimeExpense | null) {
           <h3 class="text-sm font-semibold text-ink-2">
             {{ t('onetime.tagSummary') }}
           </h3>
-          <span class="text-xs text-ink-5">{{ tagBreakdown.length }} tag</span>
+          <span class="text-xs text-ink-4">{{ tagBreakdown.length }} tag</span>
         </div>
         <div class="space-y-2">
           <div
@@ -183,11 +192,11 @@ function open(item: OneTimeExpense | null) {
               <span class="truncate font-medium text-ink-2 flex items-center gap-1.5">
                 <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8' }"></span>
                 <span>#{{ finance.tag('tags', row.id)?.name ?? t('common.unknown') }}</span>
-                <span class="text-[10px] text-ink-5">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
+                <span class="text-[10px] text-ink-4">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
               </span>
               <span class="shrink-0 font-semibold text-ink-2">
                 {{ money(row.total) }}
-                <span class="font-normal text-ink-5">({{ percent(row.total / grandTotalForBreakdown) }})</span>
+                <span class="font-normal text-ink-4">({{ percent(row.total / grandTotalForBreakdown) }})</span>
               </span>
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
@@ -274,6 +283,6 @@ function open(item: OneTimeExpense | null) {
       </EntryRow>
     </EntryList>
 
-    <TransactionForm :open="formOpen" kind="expense" :item="editing" @close="formOpen = false" />
+    <TransactionForm :open="formOpen" kind="expense" :item="editing" :deletable="!!editing" @close="formOpen = false" @delete="remove" />
   </section>
 </template>

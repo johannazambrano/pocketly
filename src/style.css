@@ -116,7 +116,8 @@
   --pk-positive: var(--color-blue-600);
   --pk-positive-soft: var(--color-blue-100);
   --pk-positive-strong: var(--color-blue-700);
-  --pk-negative: var(--color-rose-600);
+  /* Rose 700: il rosso è spesso testo piccolo (importi a 12 px) e rose 600 restava sotto 4,5:1. */
+  --pk-negative: var(--color-rose-700);
   --pk-negative-light: var(--color-rose-500);
   --pk-negative-line: var(--color-rose-200);
   --pk-negative-soft: var(--color-rose-50);
@@ -469,13 +470,29 @@
 
 /*
  * I campi dei moduli per piattaforma. Tutti i moduli usano la stessa struttura (`label` con `.field-label` e `.field`),
- * quindi la forma si decide qui una volta sola. Per ora vale nei fogli (le finestre dei moduli); le pagine seguono.
+ * quindi la forma si decide qui una volta sola.
  * iPhone: campi bianchi senza bordo sul fondo grigio del foglio, alti 44 px, etichette piccole e grigie sopra.
  * Android: campi a contorno di Material, alti 56 px, con l'etichetta appoggiata sul bordo in alto.
  */
+/*
+ * Nelle pagine (campi dentro i riquadri bianchi): su iPhone fondo grigio senza bordo, come i campi di ricerca di
+ * Apple; su Android campo a contorno con gli angoli piccoli di Material. L'altezza resta quella di sempre, perché
+ * nelle pagine i campi stanno spesso in riga con un pulsante. Le regole `.sheet .field` qui sotto sono più specifiche
+ * e vincono nei fogli.
+ */
+:root[data-platform='ios'] .field {
+  border-color: transparent;
+  border-radius: 10px;
+  background-color: var(--color-surface-2);
+}
+:root[data-platform='android'] .field {
+  border-radius: 4px;
+  background-color: transparent;
+}
 :root[data-platform='ios'] .sheet .field {
   border-color: transparent;
   border-radius: 10px;
+  background-color: var(--color-surface);
 }
 /* `.field-compact`: i campi piccoli accanto a un pulsante (il nuovo tag) tengono la loro altezza e il loro rientro. */
 :root[data-platform='ios'] .sheet .field:not(.field-compact) {
@@ -518,4 +535,25 @@
   min-height: 3.5rem;
   padding-left: 1rem;
   padding-right: 1rem;
+}
+
+/*
+ * Il pulsante "Aggiungi" delle pagine (`page-add`, insieme a `btn-primary`). Sul telefono l'azione principale sta già
+ * nella barra (il "+" di iPhone) o nel pulsante flottante (Android): qui diventa un pulsante tenue nella tinta, a
+ * pillola, invece del blocco verde pieno. Sul PC resta il pulsante pieno.
+ */
+:root[data-platform='ios'] .page-add {
+  border-radius: 9999px;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  box-shadow: none;
+}
+:root[data-platform='ios'] .page-add:hover {
+  background-color: var(--color-accent-soft-2);
+}
+:root[data-platform='android'] .page-add {
+  border-radius: 9999px;
+  background-color: var(--color-accent-soft-2);
+  color: var(--color-accent-strongest);
+  box-shadow: none;
 }

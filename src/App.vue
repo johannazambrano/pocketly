@@ -29,7 +29,7 @@ const appearance = useAppearanceStore()
           class="min-w-0 flex-1 p-4 md:p-0"
           :class="appearance.platform === 'android' ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'"
         >
-          <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-5">{{ t('app.loading') }}</p>
+          <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-4">{{ t('app.loading') }}</p>
           <template v-else>
             <BackupReminder />
             <RouterView />

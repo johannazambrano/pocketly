@@ -12,8 +12,9 @@ import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
 
-const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null }>()
-const emit = defineEmits<{ close: [] }>()
+/** `deletable`: modifica di una voce esistente da una pagina che sa eliminarla; mostra "Elimina" ed emette `delete`. */
+const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null; deletable?: boolean }>()
+const emit = defineEmits<{ close: []; delete: [] }>()
 /** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
 const formId = useId()
 const { t, amountInput } = useFormat()
@@ -110,7 +111,13 @@ function submit() {
       </label>
       <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-negative">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
+      <div class="pt-2"><SubmitButton
+          :label="t('common.save')"
+          :cancel-label="t('common.cancel')"
+          :delete-label="deletable ? t('common.delete') : undefined"
+          @cancel="emit('close')"
+          @delete="emit('delete')"
+        /></div>
     </form>
   </BaseModal>
 </template>

@@ -22,7 +22,7 @@ const titleClass = {
   <div class="flex flex-wrap items-center justify-between gap-2">
     <h2 :class="titleClass[appearance.platform]">{{ title }}</h2>
     <slot>
-      <button v-if="addLabel !== undefined" type="button" class="btn-primary" @click="emit('add')">
+      <button v-if="addLabel !== undefined" type="button" class="btn-primary page-add" @click="emit('add')">
         <i class="fa-solid fa-plus mr-1"></i> {{ addLabel || t('app.add') }}
       </button>
     </slot>

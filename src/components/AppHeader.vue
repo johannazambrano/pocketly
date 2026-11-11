@@ -77,7 +77,7 @@ const yearSelect = computed(() => {
       >
         <i v-if="sync.status === 'syncing'" class="fa-solid fa-arrows-rotate fa-spin text-sync"></i>
         <i v-else-if="sync.status === 'error'" class="fa-solid fa-triangle-exclamation text-caution"></i>
-        <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sync' : 'text-ink-5'"></i>
+        <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sync' : 'text-ink-4'"></i>
       </RouterLink>
 
       <!-- iPhone: "+" tondo nella tinta. PC (e Android su schermi larghi): pulsante con il nome dell'azione. -->

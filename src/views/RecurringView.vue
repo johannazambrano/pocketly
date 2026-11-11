@@ -25,6 +25,15 @@ function open(item: RecurringExpense | null) {
   formOpen.value = true
 }
 
+/** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
+function remove() {
+  const item = editing.value
+  if (item) void confirmDelete(item.name, () => {
+    finance.deleteRecurring(item.id)
+    formOpen.value = false
+  })
+}
+
 function period(r: RecurringExpense) {
   const since = t('recurring.since', { date: date(r.startDate) })
   return r.endDate ? `${since} ${t('recurring.until', { date: date(r.endDate) })}` : since
@@ -64,6 +73,6 @@ function period(r: RecurringExpense) {
         </template>
       </EntryRow>
     </EntryList>
-    <RecurringForm :open="formOpen" :item="editing" @close="formOpen = false" />
+    <RecurringForm :open="formOpen" :item="editing" :deletable="!!editing" @close="formOpen = false" @delete="remove" />
   </section>
 </template>

@@ -17,8 +17,9 @@ import SubmitButton from './SubmitButton.vue'
  * `occurrence` è l'addebito da cui si è aperta la modifica (una riga di "Prossimi addebiti" o del dettaglio): da lì in
  * poi si può cambiare la serie senza toccare gli addebiti prima. Senza, si usa il prossimo addebito da oggi.
  */
-const props = defineProps<{ open: boolean; item?: RecurringExpense | null; occurrence?: string | null }>()
-const emit = defineEmits<{ close: [] }>()
+/** `deletable`: modifica di una voce esistente da una pagina che sa eliminarla; mostra "Elimina" ed emette `delete`. */
+const props = defineProps<{ open: boolean; item?: RecurringExpense | null; occurrence?: string | null; deletable?: boolean }>()
+const emit = defineEmits<{ close: []; delete: [] }>()
 /** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
 const formId = useId()
 const { t, amountInput, date } = useFormat()
@@ -200,7 +201,13 @@ function submit() {
         />
       </div>
       <p v-if="error" class="text-xs text-negative">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
+      <div class="pt-2"><SubmitButton
+          :label="t('common.save')"
+          :cancel-label="t('common.cancel')"
+          :delete-label="deletable ? t('common.delete') : undefined"
+          @cancel="emit('close')"
+          @delete="emit('delete')"
+        /></div>
     </form>
   </BaseModal>
 </template>

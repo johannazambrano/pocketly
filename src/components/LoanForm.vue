@@ -9,8 +9,9 @@ import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
-const props = defineProps<{ open: boolean; item?: Loan | null }>()
-const emit = defineEmits<{ close: [] }>()
+/** `deletable`: modifica di una voce esistente da una pagina che sa eliminarla; mostra "Elimina" ed emette `delete`. */
+const props = defineProps<{ open: boolean; item?: Loan | null; deletable?: boolean }>()
+const emit = defineEmits<{ close: []; delete: [] }>()
 /** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
 const formId = useId()
 const { t, amountInput } = useFormat()
@@ -86,7 +87,13 @@ function submit() {
         <input v-model="form.notes" maxlength="200" class="field" :placeholder="t('loans.notesPlaceholder')" />
       </label>
       <p v-if="error" class="text-xs text-negative">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
+      <div class="pt-2"><SubmitButton
+          :label="t('common.save')"
+          :cancel-label="t('common.cancel')"
+          :delete-label="deletable ? t('common.delete') : undefined"
+          @cancel="emit('close')"
+          @delete="emit('delete')"
+        /></div>
     </form>
   </BaseModal>
 </template>

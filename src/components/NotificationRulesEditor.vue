@@ -188,7 +188,7 @@ function removeRule(index: number) {
     </div>
 
     <div v-if="!showToggle || isEnabled" class="space-y-2">
-      <div v-if="localRules.length === 0" class="text-xs italic text-ink-5">
+      <div v-if="localRules.length === 0" class="text-xs italic text-ink-4">
         {{ t('notifications.none') }}
       </div>
 
@@ -243,7 +243,7 @@ function removeRule(index: number) {
         <button
           type="button"
           :disabled="disabled"
-          class="rounded p-1.5 text-ink-5 hover:text-negative disabled:opacity-50"
+          class="rounded p-1.5 text-ink-4 hover:text-negative disabled:opacity-50"
           :aria-label="t('notifications.removeRule')"
           @click="removeRule(index)"
         >

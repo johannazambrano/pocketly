@@ -4,6 +4,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { ESTIMATE_MONTHS } from '@/domain/calculations'
 import { toCents } from '@/utils/money'
+import PageHeader from '@/components/PageHeader.vue'
 
 const finance = useFinanceStore()
 const { t, money, month } = useFormat()
@@ -47,7 +48,7 @@ function addSimulation() {
 
 <template>
   <section class="space-y-4">
-    <h2 class="text-lg font-bold text-ink">{{ t('forecast.title') }}</h2>
+    <PageHeader :title="t('forecast.title')" />
 
     <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
       <div class="space-y-4">
@@ -80,13 +81,13 @@ function addSimulation() {
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <p v-if="!finance.simulationsOfYear.length" class="text-xs text-ink-5 italic">{{ t('forecast.noSimulations') }}</p>
+            <p v-if="!finance.simulationsOfYear.length" class="text-xs text-ink-4 italic">{{ t('forecast.noSimulations') }}</p>
           </div>
         </div>
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-ink-2">
-            <i class="fa-solid fa-sack-dollar mr-1 text-accent-icon"></i> {{ t('forecast.estimateTitle') }}
+            <i class="fa-solid fa-sack-dollar mr-1 text-accent"></i> {{ t('forecast.estimateTitle') }}
           </h3>
           <p class="text-xs text-ink-4">{{ t('forecast.estimateHint') }}</p>
           <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-ink-2">
@@ -123,7 +124,7 @@ function addSimulation() {
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2">
-          <i class="fa-solid fa-chart-line mr-1 text-accent-icon"></i> {{ t('forecast.projectionTitle') }}
+          <i class="fa-solid fa-chart-line mr-1 text-accent"></i> {{ t('forecast.projectionTitle') }}
         </h3>
         <p class="text-xs text-ink-4">{{ t('forecast.projectionHint') }}</p>
         <div class="-mx-4 overflow-x-auto px-4">
@@ -140,7 +141,7 @@ function addSimulation() {
             <tbody class="divide-y divide-line-soft whitespace-nowrap">
               <tr v-for="row in finance.forecastRows" :key="row.month">
                 <td class="p-2 font-medium">{{ month(row.month, 'short') }}</td>
-                <td class="p-2 text-right text-accent-icon" :class="{ italic: row.incomeEstimated }">{{ money(row.income) }}</td>
+                <td class="p-2 text-right text-accent" :class="{ italic: row.incomeEstimated }">{{ money(row.income) }}</td>
                 <td class="p-2 text-right text-negative">{{ money(row.expenses) }}</td>
                 <td class="p-2 text-right font-bold" :class="row.balance >= 0 ? 'text-positive' : 'text-negative'">{{ money(row.balance) }}</td>
                 <td class="p-2 text-right" :class="row.cumulative >= 0 ? 'text-ink-2' : 'text-negative'">{{ money(row.cumulative) }}</td>
