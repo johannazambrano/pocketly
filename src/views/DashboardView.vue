@@ -215,13 +215,14 @@ const mainFigure = computed(() => {
     return {
       label: ms.value ? t('dashboard.projectedMonth', monthArgs.value) : t('dashboard.projected', { year: finance.selectedYear }),
       value: projected.value,
-      estimate: estimateLine.value,
       neutral: estimateDecisive.value,
       // La portata detta sempre: nel mese è il risultato del mese, nell'anno quello dall'inizio dell'anno. Non è il saldo
-      // del conto, che l'app non conosce.
+      // del conto, che l'app non conosce. Se il previsto conta su entrate stimate, la stessa frase dice quanto ne manca:
+      // è il motivo per cui oggi si può essere sotto e a fine periodo sopra.
       today: {
         label: ms.value ? t('dashboard.sinceMonthStart', monthArgs.value) : t('dashboard.sinceYearStart'),
         value: displayBalance.value,
+        after: incomeAhead.value.estimated > 0 ? t('dashboard.estimateStillToCome', { amount: money(incomeAhead.value.estimated) }) : undefined,
       },
     }
   }

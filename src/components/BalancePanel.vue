@@ -20,7 +20,7 @@ interface Figure {
  * oggi: …"), con `note` una frase che dice cosa conta.
  */
 interface Main extends Figure {
-  today?: { label: string; value: number }
+  today?: { label: string; value: number; after?: string }
   /** Le entrate stimate su cui conta la cifra, dette subito sotto di essa. */
   estimate?: string
   /** Colore neutro invece di blu/rosso: la cifra è positiva solo grazie alla stima. */
@@ -118,9 +118,13 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         <p v-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-ink-2">
           <i class="fa-solid fa-circle-info mt-1 text-xs text-ink-4" aria-hidden="true"></i>{{ main.estimate }}
         </p>
+        <!--
+          Con la stima, il risultato di oggi e le entrate che mancano stanno nella stessa frase: chi vede −1.087,20 € sotto
+          un previsto positivo legge subito il perché, invece di mettere insieme due righe.
+        -->
         <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-ink-2">
           {{ main.today.label }}
-          <b class="font-bold whitespace-nowrap text-ink">{{ money(main.today.value) }}</b>
+          <b class="font-bold whitespace-nowrap text-ink">{{ money(main.today.value) }}</b><template v-if="main.today.after">; {{ main.today.after }}</template>
         </p>
         <p v-if="main.note" class="mt-1.5 text-sm font-medium text-ink-2">{{ main.note }}</p>
         <p v-if="main.hint" class="mt-1 text-xs text-ink-4">{{ main.hint }}</p>
