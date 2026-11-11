@@ -9,22 +9,30 @@
  */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { useFormat } from '@/i18n'
 import { TABS } from '@/router'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFinanceStore } from '@/stores/finance'
 import { useSyncStore } from '@/stores/sync'
 import { useUiStore } from '@/stores/ui'
 
-const { t } = useI18n()
+const { t, month } = useFormat()
 const route = useRoute()
 const appearance = useAppearanceStore()
 const finance = useFinanceStore()
 const sync = useSyncStore()
 const ui = useUiStore()
 
-/** Il nome della pagina per la barra di Android: quello della voce di menu, anche per le pagine di approfondimento. */
+/**
+ * Il nome della pagina per la barra di Android: quello della voce di menu, anche per le pagine di approfondimento.
+ * Sulla dashboard è il periodo che si sta guardando ("Novembre 2026", "Tutto il 2026"): lo stato del selettore si legge
+ * sempre in alto, anche quando il selettore è scorso via.
+ */
 const pageTitle = computed(() => {
+  if (route.name === 'dashboard') {
+    const year = finance.selectedYear
+    return finance.selectedMonth === 'all' ? t('dashboard.yearTitle', { year }) : `${month(finance.selectedMonth)} ${year}`
+  }
   const name = (route.meta.navParent as string | undefined) ?? (route.name as string | undefined)
   return TABS.some((tab) => tab.name === name) ? t(`nav.${name}`) : t('app.name')
 })

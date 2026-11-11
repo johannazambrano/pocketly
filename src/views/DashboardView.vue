@@ -395,7 +395,7 @@ const announcement = ref('')
 watch(
   () => [finance.selectedYear, finance.selectedMonth] as const,
   ([year, m]) => {
-    announcement.value = m === 'all' ? `${t('dashboard.allMonths')} ${year}` : `${month(m)} ${year}`
+    announcement.value = m === 'all' ? t('dashboard.yearTitle', { year }) : `${month(m)} ${year}`
   },
 )
 
@@ -466,8 +466,9 @@ const showUpcoming = computed(
         class="flex gap-3"
         :class="appearance.platform === 'desktop' ? 'flex-wrap items-center justify-between' : 'flex-col'"
       >
-        <h2 :class="periodTitleClass">{{ periodTitle }}</h2>
-        <MonthSelector />
+        <h2 v-if="appearance.platform !== 'ios'" :class="periodTitleClass">{{ periodTitle }}</h2>
+        <!-- Su iPhone il titolo grande è il menu del periodo: lo disegna il selettore. -->
+        <MonthSelector :heading="appearance.platform === 'ios' ? periodTitle : undefined" />
       </div>
 
       <p class="sr-only" aria-live="polite">{{ announcement }}</p>
