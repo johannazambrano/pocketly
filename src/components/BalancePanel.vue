@@ -163,9 +163,13 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
       <div class="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
         <div v-for="part in split" :key="part.key" class="h-full first:rounded-l-full last:rounded-r-full" :class="part.dot" :style="{ width: width(part.value) }"></div>
       </div>
-      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 md:flex md:gap-x-12">
-        <div v-for="part in split" :key="part.key" class="min-w-0 md:max-w-xs">
-          <dt class="flex items-center gap-1.5 text-xs text-slate-600">
+      <!--
+        Ogni parte sta sotto il suo colore nella barretta: la prima a sinistra, dove comincia, l'ultima allineata a destra,
+        dove finisce. Così la legenda occupa tutta la larghezza della barra e nessuna metà resta vuota sugli schermi larghi.
+      -->
+      <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+        <div v-for="part in split" :key="part.key" class="min-w-0 last:text-right">
+          <dt class="flex items-center gap-1.5 text-xs text-slate-600 [div:last-child>&]:justify-end">
             <span class="h-2 w-2 shrink-0 rounded-full" :class="part.dot" aria-hidden="true"></span>{{ part.label }}
           </dt>
           <dd class="text-sm font-semibold whitespace-nowrap text-slate-800">{{ money(part.value) }}</dd>
