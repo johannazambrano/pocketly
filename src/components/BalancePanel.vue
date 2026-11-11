@@ -3,18 +3,20 @@ import { computed } from 'vue'
 import { useFormat } from '@/i18n'
 
 /**
- * Il riquadro principale della dashboard. In alto, sempre nello stesso posto, dove sei (il saldo) e dove arriverai
- * (il previsto); sotto, entrate e uscite che spiegano il saldo e di cosa sono fatte le uscite.
- * La disposizione non dipende dai numeri: cambia solo il colore.
+ * Il riquadro principale della dashboard. In alto una sola cifra grande, la risposta del periodo (di solito il previsto,
+ * per un periodo passato il saldo finale), con sotto il saldo di oggi in una frase; poi entrate e uscite che spiegano
+ * la cifra e di cosa sono fatte le uscite. La disposizione non dipende dai numeri: cambia solo il colore.
  */
 interface Figure {
   label: string
   value: number
   hint?: string
-  /** Cifra senza colore di segno: per ciò che è solo programmato, come il saldo di un mese futuro. */
-  neutral?: boolean
-  /** Solo per il previsto: le entrate stimate, non ancora registrate, su cui il numero conta. */
-  estimated?: number
+}
+
+/** La cifra grande: con `today` sotto compare "Oggi sei a …", con `note` una frase che dice cosa conta. */
+interface Main extends Figure {
+  today?: number
+  note?: string
 }
 
 /** Una parte delle uscite: ricorrenti o variabili, con il colore del suo pallino e una nota facoltativa. */
@@ -27,10 +29,9 @@ interface Part {
 }
 
 const props = defineProps<{
-  balance: Figure
+  main: Main
   income: Figure
   expenses: Figure
-  projection?: Figure | null
   split?: Part[] | null
 }>()
 
@@ -59,22 +60,8 @@ const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
 const incomeColor = computed(() => (props.income.value > 0 ? 'text-emerald-700' : 'text-slate-800'))
 
 /**
- * Il previsto c'è per l'anno e il mese in corso e per i mesi futuri; per un periodo passato coinciderebbe con il saldo.
- * Quando c'è sta sempre accanto al saldo, con lo stesso peso: "dove sei" e "dove arriverai" si leggono insieme.
- */
-/**
- * Un saldo negativo che a fine periodo torna positivo è un passaggio, non un allarme: grigio scuro, il segno meno basta.
- * Il rosso resta per quando la previsione stessa è negativa.
- */
-const balanceColor = computed(() =>
-  props.balance.neutral || (props.projection && props.balance.value < 0 && props.projection.value >= 0)
-    ? 'text-slate-800'
-    : signColor(props.balance.value),
-)
-/**
- * Saldo e previsto si dividono la riga: la misura più grande arriva solo sugli schermi più larghi.
- * Le cifre non vanno mai a capo, quindi quelle molto lunghe (dalle centinaia di migliaia in su) scendono di una misura
- * per restare dentro il riquadro anche sul telefono e sul tablet.
+ * La cifra grande cresce di una misura sugli schermi più larghi. Le cifre non vanno mai a capo, quindi quelle molto
+ * lunghe (dalle centinaia di migliaia in su) scendono di una misura per restare dentro il riquadro anche sul telefono.
  */
 const LONG = 11
 const heroSize = (v: number) => (money(v).length > LONG ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl')
@@ -82,32 +69,20 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" :aria-label="balance.label">
+  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" :aria-label="main.label">
     <div class="grid">
-      <!-- Stessa disposizione per ogni periodo: per un periodo passato il posto del previsto resta vuoto. -->
-      <div class="grid gap-x-6 px-4 pt-4 pb-3 sm:grid-cols-2 md:py-5">
-        <div>
-          <h3 class="text-xs font-medium text-balance text-slate-500">{{ balance.label }}</h3>
-          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(balance.value), balanceColor]">
-            {{ money(balance.value) }}
-          </p>
-          <p v-if="balance.hint" class="mt-1 text-xs text-slate-500">{{ balance.hint }}</p>
-        </div>
-        <!-- Previsto accanto al saldo (sotto, sul telefono): è la risposta a "come andrò". -->
-        <div
-          v-if="projection"
-          class="mt-3 border-t border-slate-100 pt-3 sm:mt-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
-        >
-          <h3 class="text-xs font-medium text-balance text-slate-500">{{ projection.label }}</h3>
-          <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(projection.value), signColor(projection.value)]">
-            {{ money(projection.value) }}
-          </p>
-          <!-- Le entrate stimate su cui conta il previsto: dice quanto del numero dipende da cose non ancora successe. -->
-          <p v-if="projection.estimated" class="mt-1 text-sm font-medium text-slate-700">
-            {{ t('dashboard.projectedEstimatedPart', { amount: money(projection.estimated) }) }}
-          </p>
-          <p v-if="projection.hint" class="mt-1 text-xs text-slate-500">{{ projection.hint }}</p>
-        </div>
+      <div class="px-4 pt-4 pb-3 md:py-5">
+        <h3 class="text-xs font-medium text-balance text-slate-500">{{ main.label }}</h3>
+        <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), signColor(main.value)]">
+          {{ money(main.value) }}
+        </p>
+        <!-- Il saldo di oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
+        <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-slate-700">
+          {{ t('dashboard.todayBefore') }}
+          <b class="font-bold whitespace-nowrap text-slate-800">{{ money(main.today) }}</b>{{ t('dashboard.todayAfter') }}
+        </p>
+        <p v-if="main.note" class="mt-1.5 text-sm font-medium text-slate-700">{{ main.note }}</p>
+        <p v-if="main.hint" class="mt-1 text-xs text-slate-500">{{ main.hint }}</p>
       </div>
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
