@@ -8,6 +8,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { TABS } from '@/router'
+import { useAppearanceStore } from '@/stores/appearance'
+import { useUiStore } from '@/stores/ui'
 
 const MAIN_COUNT = 4
 const mainTabs = TABS.slice(0, MAIN_COUNT)
@@ -15,6 +17,9 @@ const moreTabs = TABS.slice(MAIN_COUNT)
 
 const { t } = useI18n()
 const route = useRoute()
+const appearance = useAppearanceStore()
+const ui = useUiStore()
+const android = computed(() => appearance.platform === 'android')
 
 const moreOpen = ref(false)
 const moreActive = computed(() => moreTabs.some((tab) => tab.name === route.name))
@@ -40,23 +45,55 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
  * "Dashboard" in grassetto (voce attiva) stia per intero.
  */
 const barItem =
-  'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] tracking-tight text-ink-4 transition hover:text-accent-icon'
+  'group flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] tracking-tight text-ink-4 transition hover:text-accent-icon'
+/**
+ * La barra in basso per piattaforma: su iPhone traslucida con il colore della tinta sulla voce attiva; su Android la
+ * "navigation bar" di Material, con la pillola dietro l'icona attiva ed etichette di 12px; altrove la barra di sempre.
+ */
+const barShell = computed(() => {
+  switch (appearance.platform) {
+    case 'ios':
+      return 'border-t border-line bg-surface/85 backdrop-blur-xl'
+    case 'android':
+      return 'bg-surface-3'
+    default:
+      return 'border-t border-line bg-surface shadow-lg'
+  }
+})
+/** Su Android l'icona sta in una pillola: piena (secondary container) sulla voce attiva. */
+const pill = (active: boolean) =>
+  android.value
+    ? ['flex h-8 w-14 items-center justify-center rounded-full transition', active ? 'bg-accent-soft text-ink' : '']
+    : []
+const isActive = (name: string) => route.name === name || isParent(name)
 </script>
 
 <template>
   <nav :aria-label="t('nav.menu')" class="md:sticky md:top-[calc(5rem+env(safe-area-inset-top))] md:order-first md:w-52 md:shrink-0 md:self-start">
     <!-- Telefono: barra in basso -->
     <div v-if="moreOpen" class="fixed inset-0 z-30 md:hidden" @click="moreOpen = false"></div>
-    <div class="pb-safe px-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface shadow-lg md:hidden">
-      <div class="mx-auto flex max-w-xl">
+    <!--
+      Android: il "+" è il pulsante flottante in basso a destra, dove arriva il pollice (Material: una sola azione
+      principale per schermata). Su schermi larghi torna nell'intestazione.
+    -->
+    <button
+      v-if="android"
+      type="button"
+      class="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft-2 text-accent-strongest shadow-lg transition hover:brightness-95 md:hidden"
+      :aria-label="t('onetime.new')"
+      @click="ui.quickAddOpen = true"
+    >
+      <i class="fa-solid fa-plus text-xl" aria-hidden="true"></i>
+    </button>
+    <div class="pb-safe px-safe fixed inset-x-0 bottom-0 z-40 md:hidden" :class="barShell">
+      <div class="mx-auto flex max-w-xl" :class="{ 'py-1.5': android }">
         <RouterLink
           v-for="tab in mainTabs"
           :key="tab.name"
           :to="tab.path"
-          :class="[barItem, isParent(tab.name) ? '!text-accent font-bold' : '']"
-          exact-active-class="!text-accent font-bold"
+          :class="[barItem, isActive(tab.name) ? (android ? '!text-ink font-semibold' : '!text-accent font-bold') : '', android ? '!text-xs' : '']"
         >
-          <i class="fa-solid text-lg" :class="tab.icon"></i>
+          <span :class="pill(isActive(tab.name))"><i class="fa-solid text-lg" :class="tab.icon" aria-hidden="true"></i></span>
           <span class="w-full truncate text-center">{{ t(`nav.${tab.name}`) }}</span>
         </RouterLink>
 
@@ -64,12 +101,12 @@ const barItem =
           <button
             type="button"
             class="w-full"
-            :class="[barItem, moreActive || moreOpen ? '!text-accent font-bold' : '']"
+            :class="[barItem, moreActive || moreOpen ? (android ? '!text-ink font-semibold' : '!text-accent font-bold') : '', android ? '!text-xs' : '']"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             @click="moreOpen = !moreOpen"
           >
-            <i class="fa-solid fa-ellipsis text-lg"></i>
+            <span :class="pill(moreActive || moreOpen)"><i class="fa-solid fa-ellipsis text-lg" aria-hidden="true"></i></span>
             <span class="w-full truncate text-center">{{ t('nav.more') }}</span>
           </button>
           <div v-if="moreOpen" class="absolute right-1 bottom-full mb-2 w-56 rounded-xl border border-line bg-surface p-1.5 shadow-xl">

@@ -116,9 +116,9 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ## 2. Inventario dei Componenti UI (`src/components/`)
 
 ### Layout e Navigazione
-- **`AppHeader.vue`**: Intestazione superiore con titolo e selettore anno globale che controlla `finance.selectedYear`.
-- **`BottomNav.vue`**: Barra inferiore con accesso rapido: su mobile presenta 4 tab principali e il menu a comparsa "Altro" per le restanti schede; su schermi larghi si estende a menu laterale fisso. Tramite l'helper `isParent` controlla `route.meta.navParent`, mantenendo evidenziata la voce padre (es. dashboard) quando l'utente consulta schermate di approfondimento come `BreakdownDetailView`.
-- **`PageHeader.vue`**: Testata standard per ciascuna schermata con titolo, subtitolo facoltativo e pulsante per l'azione primaria.
+- **`AppHeader.vue`**: Intestazione superiore, diversa per piattaforma (`appearance.platform`): su iPhone barra traslucida senza titolo, con l'anno a sinistra nella tinta e il "+" tondo a destra; su Android top app bar con il nome della pagina (`pageTitle`, anche per le viste figlie tramite `navParent`), l'anno e lo stato della sincronizzazione, mentre il "+" è il pulsante flottante di `BottomNav` (su schermi larghi torna qui); sul PC barra chiara con il marchio "Pocketly", l'anno e il pulsante "+ Nuova spesa". Il selettore dell'anno controlla `finance.selectedYear`. L'`h1` "Pocketly" resta per i lettori di schermo anche dove non si vede.
+- **`BottomNav.vue`**: Barra inferiore con accesso rapido, con l'aspetto della piattaforma (iPhone: traslucida, voce attiva nella tinta; Android: "navigation bar" di Material con la pillola dietro l'icona attiva e, fino a `md`, il pulsante flottante "+" in basso a destra che apre la nuova spesa): su mobile presenta 4 tab principali e il menu a comparsa "Altro" per le restanti schede; su schermi larghi si estende a menu laterale fisso. Tramite l'helper `isParent` controlla `route.meta.navParent`, mantenendo evidenziata la voce padre (es. dashboard) quando l'utente consulta schermate di approfondimento come `BreakdownDetailView`.
+- **`PageHeader.vue`**: Testata di ciascuna schermata con titolo e pulsante per l'azione primaria. Il titolo segue la piattaforma: grande (34px) su iPhone, solo per i lettori di schermo su Android, medio sul PC.
 
 ### Liste e Righe Dati
 - **`EntryList.vue`**: Wrapper per elenchi dati con gestione stato vuoto personalizzato e riga del totale.

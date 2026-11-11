@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
+import { useAppearanceStore } from '@/stores/appearance'
 import AppHeader from '@/components/AppHeader.vue'
 import BackupReminder from '@/components/BackupReminder.vue'
 import BottomNav from '@/components/BottomNav.vue'
@@ -13,6 +14,7 @@ import TransactionForm from '@/components/TransactionForm.vue'
 const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
+const appearance = useAppearanceStore()
 </script>
 
 <template>
@@ -22,7 +24,11 @@ const ui = useUiStore()
     <div class="px-safe w-full flex-grow">
       <!-- Telefono: una colonna. Tablet e PC: menu a sinistra e contenuto largo a destra. -->
       <div class="mx-auto flex w-full max-w-xl md:max-w-6xl md:gap-6 md:px-6 md:py-6">
-        <main class="min-w-0 flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-0">
+        <!-- Su Android il "+" flottante sta sopra la barra in basso: più spazio in fondo, così non copre l'ultima riga. -->
+        <main
+          class="min-w-0 flex-1 p-4 md:p-0"
+          :class="appearance.platform === 'android' ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'"
+        >
           <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-5">{{ t('app.loading') }}</p>
           <template v-else>
             <BackupReminder />

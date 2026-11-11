@@ -1,5 +1,6 @@
 export default {
   app: {
+    newExpense: 'Nuova spesa',
     name: 'Pocketly',
     loading: 'Caricamento…',
     saveError: 'Impossibile salvare i dati su questo dispositivo. Esporta un backup per sicurezza.',

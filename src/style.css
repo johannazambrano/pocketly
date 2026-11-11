@@ -2,6 +2,15 @@
 /* Icone incluse nel pacchetto: nessun caricamento da internet. Solo lo stile "solid". */
 @import '@fortawesome/fontawesome-free/css/fontawesome.css';
 @import '@fortawesome/fontawesome-free/css/solid.css';
+/* Caratteri inclusi nell'app (niente internet): Roboto per Android, Inter per il PC. Il browser scarica un file solo se
+   la pagina lo usa davvero, quindi su ogni piattaforma arriva soltanto il suo. iPhone usa il carattere di sistema. */
+@import '@fontsource/roboto/latin-400.css';
+@import '@fontsource/roboto/latin-500.css';
+@import '@fontsource/roboto/latin-700.css';
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
 
 /*
  * Gettoni di colore: nomi di significato (superficie, testo, linea, azione…) invece di colori fissi. Le classi Tailwind
@@ -218,6 +227,102 @@
   --pk-caution-fill: var(--color-amber-500);
 }
 
+/*
+ * iPhone e iPad: i colori di sistema di Apple. Fondo raggruppato grigio chiaro (nero di notte), celle bianche
+ * (grigio scuro di notte), grigi neutri invece dei grigio-blu, separatori sottili.
+ */
+:root[data-platform='ios'] {
+  --pk-canvas: #f2f2f7;
+  --pk-surface: #ffffff;
+  --pk-surface-2: #f2f2f7;
+  --pk-surface-3: #e5e5ea;
+  --pk-surface-4: #d1d1d6;
+  --pk-line-soft: #e5e5ea;
+  --pk-line: #d1d1d6;
+  --pk-line-strong: #c7c7cc;
+  --pk-ink-strong: #000000;
+  --pk-ink: #1c1c1e;
+  --pk-ink-2: #2c2c2e;
+  --pk-ink-3: #48484a;
+  --pk-ink-4: #6c6c70;
+  --pk-ink-5: #8e8e93;
+  --pk-ink-6: #aeaeb2;
+}
+:root[data-platform='ios'][data-theme='dark'] {
+  --pk-canvas: #000000;
+  --pk-surface: #1c1c1e;
+  --pk-surface-2: #2c2c2e;
+  --pk-surface-3: #2c2c2e;
+  --pk-surface-4: #3a3a3c;
+  --pk-line-soft: #2c2c2e;
+  --pk-line: #38383a;
+  --pk-line-strong: #48484a;
+  --pk-ink-strong: #ffffff;
+  --pk-ink: #f2f2f7;
+  --pk-ink-2: #e5e5ea;
+  --pk-ink-3: #d1d1d6;
+  --pk-ink-4: #aeaeb2;
+  --pk-ink-5: #98989d;
+  --pk-ink-6: #636366;
+}
+
+/*
+ * Android: i ruoli colore di Material 3 ricavati dal verde di Pocketly. Superfici a toni di verde, contenitori un po'
+ * più scuri del fondo, "secondary container" per la voce attiva e i chip scelti, "primary container" per il "+".
+ */
+:root[data-platform='android'] {
+  --pk-canvas: #f5fbf6;
+  --pk-surface: #eef4ef;
+  --pk-surface-2: #e9efea;
+  --pk-surface-3: #e3eae4;
+  --pk-surface-4: #dee5df;
+  --pk-line-soft: #dae4de;
+  --pk-line: #bfc9c3;
+  --pk-line-strong: #6f7974;
+  --pk-ink-strong: #0f1512;
+  --pk-ink: #171d1a;
+  --pk-ink-2: #2b322e;
+  --pk-ink-3: #3f4944;
+  --pk-ink-4: #4f5853;
+  --pk-ink-5: #5e6863;
+  --pk-ink-6: #89938e;
+  --pk-accent: #006c4c;
+  --pk-accent-icon: #006c4c;
+  --pk-accent-soft: #cde9da;
+  --pk-accent-soft-2: #8ef6c4;
+  --pk-accent-strongest: #002114;
+  --pk-accent-fill: #006c4c;
+  /* Sulle superfici verdine di Material il rosso e l'ambra piccoli scendevano sotto 4,5:1: un grado più scuri. */
+  --pk-negative: var(--color-rose-700);
+  --pk-caution: var(--color-amber-800);
+}
+:root[data-platform='android'][data-theme='dark'] {
+  --pk-canvas: #0f1512;
+  --pk-surface: #1b211e;
+  --pk-surface-2: #252b28;
+  --pk-surface-3: #252b28;
+  --pk-surface-4: #303633;
+  --pk-line-soft: #2a312d;
+  --pk-line: #3f4944;
+  --pk-line-strong: #89938e;
+  --pk-ink-strong: #f2f8f4;
+  --pk-ink: #dee4df;
+  --pk-ink-2: #cdd5d0;
+  --pk-ink-3: #bfc9c3;
+  --pk-ink-4: #a7b1ac;
+  --pk-ink-5: #8f9a94;
+  --pk-ink-6: #6f7974;
+  --pk-accent: #72d9a9;
+  --pk-accent-icon: #72d9a9;
+  --pk-accent-soft: #334b40;
+  --pk-accent-soft-2: #005138;
+  --pk-accent-strongest: #8ef6c4;
+  --pk-accent-fill: #00704f;
+  /* Le regole di Android vengono dopo quelle dello scuro: rosso e ambra vanno ridetti per il buio. */
+  --pk-negative: var(--color-rose-400);
+  --pk-caution: var(--color-amber-400);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
@@ -234,6 +339,16 @@
     html {
       scroll-padding-bottom: 1rem;
     }
+  }
+  /* Il carattere di ogni piattaforma: sistema su iPhone, Roboto su Android, Inter sul PC. */
+  :root[data-platform='ios'] body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  }
+  :root[data-platform='android'] body {
+    font-family: Roboto, system-ui, sans-serif;
+  }
+  :root[data-platform='desktop'] body {
+    font-family: Inter, system-ui, sans-serif;
   }
   body {
     @apply min-h-dvh font-sans antialiased;

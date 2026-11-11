@@ -31,6 +31,16 @@ function write(key: string, value: string) {
  * dispositivo e il tema segue il sistema; dalle Impostazioni si possono scegliere a mano. Il risultato va su <html>
  * come `data-platform` e `data-theme`, che gli stili usano per cambiare i valori dei gettoni (vedi `style.css`).
  */
+/** Un colore calcolato (anche oklch) in esadecimale, che il meta theme-color capisce su tutti i browser. */
+function toHex(color: string): string {
+  const ctx = document.createElement('canvas').getContext('2d')
+  if (!ctx) return color
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, 1, 1)
+  const [r = 0, g = 0, b = 0] = ctx.getImageData(0, 0, 1, 1).data
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
 export const useAppearanceStore = defineStore('appearance', () => {
   const platformChoice = ref<PlatformChoice>(read(PLATFORM_KEY, ['auto', 'ios', 'android', 'desktop'] as const, 'auto'))
   const themeChoice = ref<ThemeChoice>(read(THEME_KEY, ['system', 'light', 'dark'] as const, 'system'))
@@ -65,6 +75,12 @@ export const useAppearanceStore = defineStore('appearance', () => {
       root.dataset.theme = theme.value
       // I controlli del browser (campi data, menu, barre di scorrimento) seguono lo stesso tema.
       root.style.colorScheme = theme.value
+      // La barra di sistema del telefono prende il colore del fondo dell'app, a stili già applicati.
+      requestAnimationFrame(() => {
+        const meta = document.querySelector('meta[name="theme-color"]')
+        const bg = getComputedStyle(document.body).backgroundColor
+        if (meta && bg) meta.setAttribute('content', toHex(bg))
+      })
     })
   }
 

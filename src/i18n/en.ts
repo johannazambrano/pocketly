@@ -2,6 +2,7 @@ import type it from './it'
 
 const en: typeof it = {
   app: {
+    newExpense: 'New expense',
     name: 'Pocketly',
     loading: 'Loading…',
     saveError: 'Unable to save data on this device. Export a backup to be safe.',
