@@ -66,6 +66,15 @@
   --color-chrome-2: var(--pk-chrome-2);
   --color-chrome-3: var(--pk-chrome-3);
   --color-chrome-line: var(--pk-chrome-line);
+  --color-accent-fill: var(--pk-accent-fill);
+  --color-accent-fill-strong: var(--pk-accent-fill-strong);
+  --color-accent-fill-stronger: var(--pk-accent-fill-stronger);
+  --color-accent-fill-light: var(--pk-accent-fill-light);
+  --color-negative-fill: var(--pk-negative-fill);
+  --color-negative-fill-strong: var(--pk-negative-fill-strong);
+  --color-negative-fill-light: var(--pk-negative-fill-light);
+  --color-recurring-fill: var(--pk-recurring-fill);
+  --color-caution-fill: var(--pk-caution-fill);
 }
 
 :root {
@@ -125,6 +134,88 @@
   --pk-chrome-2: var(--color-slate-800);
   --pk-chrome-3: var(--color-slate-700);
   --pk-chrome-line: var(--color-slate-700);
+  --pk-accent-fill: var(--color-emerald-700);
+  --pk-accent-fill-strong: var(--color-emerald-800);
+  --pk-accent-fill-stronger: var(--color-emerald-900);
+  --pk-accent-fill-light: var(--color-emerald-600);
+  --pk-negative-fill: var(--color-rose-600);
+  --pk-negative-fill-strong: var(--color-rose-700);
+  --pk-negative-fill-light: var(--color-rose-500);
+  --pk-recurring-fill: var(--color-indigo-600);
+  --pk-caution-fill: var(--color-amber-600);
+}
+
+/*
+ * Scuro: stessi gettoni, valori per il buio. Testi e linee si schiariscono; i fondi pieni (`*-fill`) restano abbastanza
+ * scuri da reggere il testo bianco; le tinte tenui diventano trasparenze della tinta piena.
+ */
+:root[data-theme='dark'] {
+  --pk-canvas: var(--color-slate-950);
+  --pk-surface: var(--color-slate-900);
+  --pk-surface-2: #172033;
+  --pk-surface-3: var(--color-slate-800);
+  --pk-surface-4: var(--color-slate-700);
+  --pk-line-soft: var(--color-slate-800);
+  --pk-line: var(--color-slate-700);
+  --pk-line-strong: var(--color-slate-600);
+  --pk-ink-strong: var(--color-slate-50);
+  --pk-ink: var(--color-slate-100);
+  --pk-ink-2: var(--color-slate-200);
+  --pk-ink-3: var(--color-slate-300);
+  --pk-ink-4: var(--color-slate-400);
+  /* Il testo più tenue resta leggibile anche al buio (4,5:1): slate 500 sul grigio scuro arrivava a 3,7:1. */
+  --pk-ink-5: var(--color-slate-400);
+  --pk-ink-6: var(--color-slate-500);
+  --pk-on-color: var(--color-white);
+  --pk-accent: var(--color-emerald-400);
+  --pk-accent-bright: var(--color-emerald-500);
+  --pk-accent-icon: var(--color-emerald-400);
+  --pk-accent-light: var(--color-emerald-300);
+  --pk-accent-line: var(--color-emerald-800);
+  --pk-accent-soft: color-mix(in oklab, var(--color-emerald-500) 14%, transparent);
+  --pk-accent-soft-2: color-mix(in oklab, var(--color-emerald-500) 24%, transparent);
+  --pk-accent-strong: var(--color-emerald-300);
+  --pk-accent-stronger: var(--color-emerald-200);
+  --pk-accent-strongest: var(--color-emerald-100);
+  --pk-positive: var(--color-blue-400);
+  --pk-positive-soft: color-mix(in oklab, var(--color-blue-500) 20%, transparent);
+  --pk-positive-strong: var(--color-blue-300);
+  --pk-negative: var(--color-rose-400);
+  --pk-negative-light: var(--color-rose-400);
+  --pk-negative-line: var(--color-rose-800);
+  --pk-negative-soft: color-mix(in oklab, var(--color-rose-500) 14%, transparent);
+  --pk-negative-soft-2: color-mix(in oklab, var(--color-rose-500) 24%, transparent);
+  --pk-negative-strong: var(--color-rose-300);
+  --pk-caution: var(--color-amber-400);
+  --pk-caution-bright: var(--color-amber-500);
+  --pk-caution-icon: var(--color-amber-400);
+  --pk-caution-light: var(--color-amber-300);
+  --pk-caution-line: var(--color-amber-800);
+  --pk-caution-line-strong: var(--color-amber-700);
+  --pk-caution-soft: color-mix(in oklab, var(--color-amber-500) 14%, transparent);
+  --pk-caution-soft-2: color-mix(in oklab, var(--color-amber-500) 24%, transparent);
+  --pk-caution-strong: var(--color-amber-300);
+  --pk-caution-stronger: var(--color-amber-200);
+  --pk-recurring: var(--color-indigo-300);
+  --pk-recurring-dot: var(--color-indigo-400);
+  --pk-recurring-soft: color-mix(in oklab, var(--color-indigo-500) 16%, transparent);
+  --pk-recurring-strong: var(--color-indigo-200);
+  --pk-variable: var(--color-orange-400);
+  --pk-sync: var(--color-sky-400);
+  --pk-sync-light: var(--color-sky-300);
+  --pk-chrome: var(--color-slate-900);
+  --pk-chrome-2: var(--color-slate-800);
+  --pk-chrome-3: var(--color-slate-700);
+  --pk-chrome-line: var(--color-slate-700);
+  --pk-accent-fill: var(--color-emerald-700);
+  --pk-accent-fill-strong: var(--color-emerald-800);
+  --pk-accent-fill-stronger: var(--color-emerald-900);
+  --pk-accent-fill-light: var(--color-emerald-600);
+  --pk-negative-fill: var(--color-rose-600);
+  --pk-negative-fill-strong: var(--color-rose-700);
+  --pk-negative-fill-light: var(--color-rose-500);
+  --pk-recurring-fill: var(--color-indigo-500);
+  --pk-caution-fill: var(--color-amber-500);
 }
 
 @layer base {
@@ -206,7 +297,7 @@
  * pressione si scuriscono invece di schiarirsi, perché sui telefoni lo stato hover resta attaccato dopo il tocco.
  */
 @utility btn-primary {
-  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-color shadow-sm transition hover:bg-accent-strong active:bg-accent-stronger disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-accent-fill px-4 py-2 text-sm font-medium text-on-color shadow-sm transition hover:bg-accent-fill-strong active:bg-accent-fill-stronger disabled:opacity-50;
 }
 
 /* Bersaglio di tocco di almeno 40 px: con le dita 32 px sono troppo piccoli. */

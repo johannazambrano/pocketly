@@ -17,7 +17,7 @@ const { t } = useI18n()
       <button
         type="button"
         class="flex-1 rounded-xl py-2.5 text-sm font-bold text-on-color"
-        :class="ui.confirmRequest?.danger ? 'bg-negative' : 'bg-accent'"
+        :class="ui.confirmRequest?.danger ? 'bg-negative-fill' : 'bg-accent-fill'"
         @click="ui.answerConfirm(true)"
       >
         {{ ui.confirmRequest?.confirmLabel }}

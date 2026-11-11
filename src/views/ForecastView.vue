@@ -63,7 +63,7 @@ function addSimulation() {
               <select v-model.number="sim.month" class="field" :aria-label="t('common.month')">
                 <option v-for="m in simMonths" :key="m" :value="m">{{ month(m) }}</option>
               </select>
-              <button type="submit" class="col-span-2 min-h-10 rounded-lg bg-recurring px-4 text-sm font-medium text-on-color sm:col-span-1">{{ t('forecast.simulate') }}</button>
+              <button type="submit" class="col-span-2 min-h-10 rounded-lg bg-recurring-fill px-4 text-sm font-medium text-on-color sm:col-span-1">{{ t('forecast.simulate') }}</button>
             </div>
           </form>
           <div class="space-y-1 pt-1">

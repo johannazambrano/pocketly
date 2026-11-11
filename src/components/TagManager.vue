@@ -136,7 +136,7 @@ function confirmDelete() {
         </button>
         <button
           type="button"
-          class="flex-1 rounded-xl bg-negative py-2.5 text-sm font-bold text-on-color disabled:opacity-40"
+          class="flex-1 rounded-xl bg-negative-fill py-2.5 text-sm font-bold text-on-color disabled:opacity-40"
           :disabled="kind !== 'tags' && deletingUsage > 0 && !alternatives.length"
           @click="confirmDelete"
         >

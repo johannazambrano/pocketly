@@ -7,7 +7,7 @@ const props = defineProps<{ limit: number; spent: number; scheduled: number; sta
 /** La barra non esce mai dal suo riquadro: oltre il limite resta piena e cambia colore. */
 const spentPct = computed(() => Math.min(100, (props.spent / props.limit) * 100))
 const scheduledPct = computed(() => Math.min(100 - spentPct.value, (props.scheduled / props.limit) * 100))
-const color = computed(() => ({ ok: 'bg-accent-bright', warning: 'bg-caution-bright', over: 'bg-negative-light' })[props.status])
+const color = computed(() => ({ ok: 'bg-accent-bright', warning: 'bg-caution-bright', over: 'bg-negative-fill-light' })[props.status])
 </script>
 
 <template>

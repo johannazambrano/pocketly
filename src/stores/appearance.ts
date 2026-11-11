@@ -63,6 +63,8 @@ export const useAppearanceStore = defineStore('appearance', () => {
       const root = document.documentElement
       root.dataset.platform = platform.value
       root.dataset.theme = theme.value
+      // I controlli del browser (campi data, menu, barre di scorrimento) seguono lo stesso tema.
+      root.style.colorScheme = theme.value
     })
   }
 

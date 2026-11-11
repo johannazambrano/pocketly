@@ -14,7 +14,7 @@ const { t } = useI18n()
         v-for="toast in ui.toasts"
         :key="toast.id"
         class="flex max-w-md items-start gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-on-color shadow-lg"
-        :class="toast.kind === 'error' ? 'pointer-events-auto bg-negative-strong' : 'bg-chrome'"
+        :class="toast.kind === 'error' ? 'pointer-events-auto bg-negative-fill-strong' : 'bg-chrome'"
         :role="toast.kind === 'error' ? 'alert' : undefined"
       >
         <span>{{ toast.message }}</span>

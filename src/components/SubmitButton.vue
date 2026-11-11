@@ -17,7 +17,7 @@ const emit = defineEmits<{ cancel: [] }>()
     >
       {{ cancelLabel }}
     </button>
-    <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-color shadow transition hover:bg-accent-strong active:bg-accent-stronger">
+    <button type="submit" class="w-full rounded-xl bg-accent-fill py-3 text-sm font-bold text-on-color shadow transition hover:bg-accent-fill-strong active:bg-accent-fill-stronger">
       {{ label }}
     </button>
   </div>

@@ -15,7 +15,7 @@ const backup = useBackupStore()
     <div class="mt-2 flex gap-2">
       <RouterLink
         to="/impostazioni"
-        class="inline-flex min-h-10 items-center rounded-lg bg-caution-icon px-4 text-sm font-medium text-on-color hover:bg-caution-bright"
+        class="inline-flex min-h-10 items-center rounded-lg bg-caution-fill px-4 text-sm font-medium text-on-color hover:bg-caution-bright"
       >
         {{ t('settings.reminderAction') }}
       </RouterLink>

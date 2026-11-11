@@ -38,7 +38,7 @@ const ui = useUiStore()
       </RouterLink>
       <button
         type="button"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-icon text-base shadow transition hover:bg-accent-bright"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-fill-light text-base shadow transition hover:bg-accent-bright"
         :aria-label="t('onetime.new')"
         @click="ui.quickAddOpen = true"
       >

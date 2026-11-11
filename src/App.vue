@@ -18,7 +18,7 @@ const ui = useUiStore()
 <template>
   <div class="flex min-h-dvh flex-col">
     <AppHeader />
-    <div v-if="finance.saveError" class="bg-negative px-4 py-2 text-center text-xs text-on-color">{{ t('app.saveError') }}</div>
+    <div v-if="finance.saveError" class="bg-negative-fill px-4 py-2 text-center text-xs text-on-color">{{ t('app.saveError') }}</div>
     <div class="px-safe w-full flex-grow">
       <!-- Telefono: una colonna. Tablet e PC: menu a sinistra e contenuto largo a destra. -->
       <div class="mx-auto flex w-full max-w-xl md:max-w-6xl md:gap-6 md:px-6 md:py-6">
