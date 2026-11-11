@@ -60,7 +60,7 @@ export default {
     expensesHint: 'Spese e addebiti fino a oggi',
     incomeToComeMonth: '{amount} attesi entro fine mese',
     incomeToComeYear: '{amount} attesi entro dicembre',
-    incomeEstimatedFuture: '{amount} attesi in più, stimati',
+    incomeEstimatedFuture: 'Più {amount} di entrate stimate',
     stillToComeYear: '{amount} ancora in arrivo entro dicembre',
     stillToComeMonth: '{amount} ancora in arrivo questo mese',
     scheduledHint: 'Spese e addebiti già programmati',
@@ -101,7 +101,7 @@ export default {
     balanceMonthToDate: 'Saldo di {month} a oggi',
     projectedMonth: 'Previsto a fine {month}',
     projectedMonthHint: 'Con tutte le uscite del mese',
-    projectedEstimatedPart: 'di cui {amount} di entrate stimate',
+    projectedEstimatedPart: 'Conta su {amount} di entrate stimate, non ancora registrate',
   },
   welcome: {
     title: 'Per cominciare',

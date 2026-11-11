@@ -131,8 +131,8 @@ const showMonthProjection = computed(
   () => !!ms.value && ms.value.timing !== 'past' && ms.value.projectedBalance !== displayBalance.value,
 )
 /**
- * La parte del previsto fatta di entrate stimate, cioè non ancora registrate: si mostra come cifra a sé sotto il previsto,
- * perché è la parte del numero che non è ancora successa.
+ * Le entrate stimate, cioè non ancora registrate, su cui conta il previsto. Non sono "una parte" del previsto (possono
+ * superarlo, quando le uscite sono alte): il previsto dipende da loro, e la riga sotto la cifra lo dice così.
  */
 const estimatedIncome = computed(() => {
   const value = ms.value ? ms.value.projectedIncome - ms.value.income : s.value.projectedIncome - s.value.totalIncome
@@ -179,7 +179,7 @@ const projectionFigure = computed(() => {
   return {
     label: t('dashboard.projected'),
     value: s.value.projectedBalance,
-    // La quota stimata è già una cifra a sé ("di cui …"): la nota non la ripete.
+    // La quota stimata è già una riga a sé ("Conta su …"): la nota non la ripete.
     hint: t('dashboard.projectedHint'),
     estimated: estimatedIncome.value,
   }

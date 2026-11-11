@@ -62,7 +62,7 @@ const en: typeof it = {
     expensesHint: 'Expenses and charges up to today',
     incomeToComeMonth: '{amount} expected by the end of the month',
     incomeToComeYear: '{amount} expected by December',
-    incomeEstimatedFuture: '{amount} more expected, estimated',
+    incomeEstimatedFuture: 'Plus {amount} of estimated income',
     stillToComeYear: '{amount} still to come by December',
     stillToComeMonth: '{amount} still to come this month',
     scheduledHint: 'Expenses and charges already scheduled',
@@ -103,7 +103,7 @@ const en: typeof it = {
     balanceMonthToDate: 'Balance in {month} to date',
     projectedMonth: 'Projected at end of {month}',
     projectedMonthHint: 'Including all of this month’s expenses',
-    projectedEstimatedPart: 'of which {amount} is estimated income',
+    projectedEstimatedPart: 'Counts on {amount} of estimated income, not yet recorded',
   },
   welcome: {
     title: 'Getting started',

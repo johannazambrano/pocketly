@@ -13,7 +13,7 @@ interface Figure {
   hint?: string
   /** Cifra senza colore di segno: per ciò che è solo programmato, come il saldo di un mese futuro. */
   neutral?: boolean
-  /** Solo per il previsto: quanto del numero viene da entrate stimate, non ancora registrate. */
+  /** Solo per il previsto: le entrate stimate, non ancora registrate, su cui il numero conta. */
   estimated?: number
 }
 
@@ -102,7 +102,7 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
           <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(projection.value), signColor(projection.value)]">
             {{ money(projection.value) }}
           </p>
-          <!-- La parte stimata come cifra, non solo nella nota: dice quanto del previsto non è ancora successo. -->
+          <!-- Le entrate stimate su cui conta il previsto: dice quanto del numero dipende da cose non ancora successe. -->
           <p v-if="projection.estimated" class="mt-1 text-sm font-medium text-slate-700">
             {{ t('dashboard.projectedEstimatedPart', { amount: money(projection.estimated) }) }}
           </p>
