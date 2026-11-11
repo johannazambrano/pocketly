@@ -392,12 +392,16 @@ const upcomingEmpty = computed(() =>
  */
 const editingOneTime = ref<OneTimeExpense | null>(null)
 const editingRecurring = ref<RecurringExpense | null>(null)
+const editingOccurrence = ref<string | null>(null)
 const upcomingHeading = ref<HTMLElement | null>(null)
 let returnKey: string | null = null
 function editCharge(c: UpcomingCharge) {
   returnKey = c.key
   if (c.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === c.id) ?? null
-  else editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === c.id) ?? null
+  else {
+    editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === c.id) ?? null
+    editingOccurrence.value = c.date
+  }
 }
 async function closeChargeForm() {
   editingOneTime.value = null
@@ -504,6 +508,6 @@ const showUpcoming = computed(
       </div>
     </template>
     <TransactionForm :open="!!editingOneTime" kind="expense" :item="editingOneTime" @close="closeChargeForm" />
-    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" @close="closeChargeForm" />
+    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" :occurrence="editingOccurrence" @close="closeChargeForm" />
   </section>
 </template>

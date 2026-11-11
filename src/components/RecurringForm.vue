@@ -2,7 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Frequency, NotificationRule, RecurringExpense } from '@/types/models'
-import { FREQUENCIES } from '@/domain/recurrence'
+import { FREQUENCIES, nextDueDate, splitRecurring } from '@/domain/recurrence'
 import { useFinanceStore } from '@/stores/finance'
 import { useNotificationsStore } from '@/stores/notifications'
 import { toCents } from '@/utils/money'
@@ -12,7 +12,11 @@ import TagSelect from './TagSelect.vue'
 import NotificationRulesEditor from './NotificationRulesEditor.vue'
 import SubmitButton from './SubmitButton.vue'
 
-const props = defineProps<{ open: boolean; item?: RecurringExpense | null }>()
+/**
+ * `occurrence` è l'addebito da cui si è aperta la modifica (una riga di "Prossimi addebiti" o del dettaglio): da lì in
+ * poi si può cambiare la serie senza toccare gli addebiti prima. Senza, si usa il prossimo addebito da oggi.
+ */
+const props = defineProps<{ open: boolean; item?: RecurringExpense | null; occurrence?: string | null }>()
 const emit = defineEmits<{ close: [] }>()
 const { t, amountInput, date } = useFormat()
 const finance = useFinanceStore()
@@ -29,6 +33,26 @@ const form = reactive({
   notifications: [] as NotificationRule[],
 })
 const error = ref('')
+
+/**
+ * Da quale addebito può partire una modifica "da qui in poi": quello da cui si è aperto il modulo, o il prossimo da oggi.
+ * Se coincide con il primo addebito non c'è niente prima da tenere com'era, e la scelta non si mostra.
+ */
+const splitDate = computed(() => {
+  const i = props.item
+  if (!i) return null
+  const d = props.occurrence ?? nextDueDate(i, finance.today)
+  return d && d > i.startDate ? d : null
+})
+/** "from": da questo addebito in poi (di serie: i mesi passati restano com'erano); "all": tutta la serie. */
+const scope = ref<'from' | 'all'>('from')
+const splitting = computed(() => !!splitDate.value && scope.value === 'from')
+/** Con "da questo addebito in poi" la nuova serie parte da lì: il campo lo mostra e non si cambia. */
+watch(scope, (s) => {
+  if (!props.item) return
+  form.startDate = s === 'from' && splitDate.value ? splitDate.value : props.item.startDate
+})
+
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
 
 watch(
@@ -37,6 +61,7 @@ watch(
     if (!open) return
     const i = props.item
     error.value = ''
+    scope.value = 'from'
     const initialNotifications = i
       ? (i.notifications ? [...i.notifications] : [])
       : notificationsStore.defaultRules.map((r) => ({ ...r }))
@@ -46,7 +71,7 @@ watch(
       amount: i ? amountInput(i.amount) : '',
       frequency: i?.frequency ?? 'monthly',
       // Di default la ricorrenza parte da gennaio dell'anno selezionato.
-      startDate: i?.startDate ?? toIsoDate(finance.selectedYear, 0, 1),
+      startDate: (i && splitDate.value) || i?.startDate || toIsoDate(finance.selectedYear, 0, 1),
       endDate: i?.endDate ?? '',
       categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
@@ -66,17 +91,34 @@ function submit() {
     error.value = t('recurring.endBeforeStart')
     return
   }
-  finance.saveRecurring({
-    id: props.item?.id,
+  const values = {
     name: form.name.trim(),
     amount,
     frequency: form.frequency,
-    startDate: form.startDate,
     endDate: form.endDate || null,
     categoryId: form.categoryId,
     paymentMethodId: form.paymentMethodId,
     notifications: form.notifications,
-  })
+  }
+  const item = props.item
+  if (item && splitting.value && splitDate.value) {
+    // Se non è cambiato niente, dividere la serie creerebbe solo un doppione.
+    const unchanged =
+      values.name === item.name &&
+      values.amount === item.amount &&
+      values.frequency === item.frequency &&
+      values.endDate === item.endDate &&
+      values.categoryId === item.categoryId &&
+      values.paymentMethodId === item.paymentMethodId &&
+      JSON.stringify(values.notifications) === JSON.stringify(item.notifications ?? [])
+    if (!unchanged) {
+      const { before, after } = splitRecurring(item, splitDate.value, values)
+      finance.saveRecurring(before)
+      finance.saveRecurring(after)
+    }
+  } else {
+    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values })
+  }
   emit('close')
 }
 </script>
@@ -86,10 +128,30 @@ function submit() {
     <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <!--
-        Modificando una spesa ricorrente si cambia tutta la serie, non solo l'addebito da cui si è arrivati (per esempio
-        una riga di "Prossimi addebiti"): lo si dice prima dei campi.
+        Modificare una spesa ricorrente non deve riscrivere i mesi già passati senza volerlo: se c'è un addebito da cui
+        partire, si sceglie se la modifica vale da lì in poi (di serie) o per tutta la serie. Il caso più comune è
+        "Netflix costa di più da questo mese".
       -->
-      <p v-if="item" class="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-xs leading-snug text-slate-700">
+      <fieldset v-if="item && splitDate" class="space-y-1 rounded-lg bg-slate-50 p-3">
+        <legend class="sr-only">{{ t('recurring.scopeLegend') }}</legend>
+        <p class="text-xs font-medium text-slate-700" aria-hidden="true">{{ t('recurring.scopeLegend') }}</p>
+        <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
+          <input v-model="scope" type="radio" value="from" class="mt-0.5 accent-emerald-700" />
+          <span class="text-sm text-slate-800">
+            {{ t('recurring.scopeFrom', { date: date(splitDate) }) }}
+            <span class="block text-xs text-slate-600">{{ t('recurring.scopeFromHint') }}</span>
+          </span>
+        </label>
+        <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
+          <input v-model="scope" type="radio" value="all" class="mt-0.5 accent-emerald-700" />
+          <span class="text-sm text-slate-800">
+            {{ t('recurring.scopeAll', { date: date(item.startDate) }) }}
+            <span class="block text-xs text-slate-600">{{ t('recurring.scopeAllHint') }}</span>
+          </span>
+        </label>
+      </fieldset>
+      <!-- Dal primo addebito (o a serie finita) non c'è niente da tenere: la modifica vale per tutta la serie, e lo si dice. -->
+      <p v-else-if="item" class="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-xs leading-snug text-slate-700">
         <i class="fa-solid fa-circle-info mt-0.5 text-slate-500" aria-hidden="true"></i>
         {{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}
       </p>
@@ -112,7 +174,7 @@ function submit() {
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('recurring.startDate') }}</span>
-          <input v-model="form.startDate" type="date" required class="field" />
+          <input v-model="form.startDate" type="date" required class="field" :readonly="splitting" :class="{ 'bg-slate-50 text-slate-600': splitting }" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('recurring.endDate') }}</span>

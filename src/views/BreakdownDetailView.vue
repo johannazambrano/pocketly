@@ -79,11 +79,15 @@ onBeforeUnmount(() => (document.title = previousTitle))
  */
 const editingOneTime = ref<OneTimeExpense | null>(null)
 const editingRecurring = ref<RecurringExpense | null>(null)
+const editingOccurrence = ref<string | null>(null)
 let returnKey: string | null = null
 function edit(item: BreakdownItem) {
   returnKey = item.key
   if (item.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === item.sourceId) ?? null
-  else editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === item.sourceId) ?? null
+  else {
+    editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === item.sourceId) ?? null
+    editingOccurrence.value = item.date
+  }
 }
 async function closeForm() {
   editingOneTime.value = null
@@ -175,6 +179,6 @@ function back(e: MouseEvent) {
     </template>
 
     <TransactionForm :open="!!editingOneTime" kind="expense" :item="editingOneTime" @close="closeForm" />
-    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" @close="closeForm" />
+    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" :occurrence="editingOccurrence" @close="closeForm" />
   </section>
 </template>
