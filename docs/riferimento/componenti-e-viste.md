@@ -37,7 +37,7 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/UpdatePrompt.vue
   - src/components/WelcomePanel.vue
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Riferimento: Componenti e Viste
@@ -52,15 +52,20 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 - **Ruolo:** Hub visivo principale dell'applicazione. All'avvio si posiziona automaticamente sul mese corrente (`finance.selectedMonth`).
 - **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Mostra il saldo iniziale, le entrate, le spese una tantum e le spese ricorrenti.
 - **Interattività e Accessibilità:**
-  - Navigazione mese sequenziale tramite tasti freccia tastiera (← e →) o swipe orizzontale touch su `BalancePanel` (delegati a `useMonthStep`).
+  - Navigazione mese da tastiera: delegata centralmente ai listener globali di [`MonthSelector`](../../src/components/MonthSelector.vue) (tasti ← e →), mentre lo swipe orizzontale touch sul riquadro del saldo in [`BalancePanel`](../../src/components/BalancePanel.vue) è gestito con `useMonthStep`.
   - Annuncio per screen reader (`aria-live="polite"`) sul cambio di periodo.
   - Frase ponte esplicativa (`bridge`) quando il saldo attuale è sotto zero ma la proiezione a fine mese/anno è positiva.
   - Sezione prossimi addebiti: mostra tutte le uscite programmate (ricorrenti e variabili con data futura) fino a fine mese (sul mese corrente) o nei successivi 30 giorni (sull'intero anno), con totale aggregato e disposizione a colonne su schermi larghi.
+  - Colori semantici e avvisi: per le scadenze imminenti (`daysLeft <= 3`), l'importo resta in grigio neutro (`text-slate-700`) e l'attenzione visiva viene focalizzata sul conteggio dei giorni, evidenziato con accento ambra (`text-amber-700 font-medium`), riservando rigorosamente il rosso solo a saldi negativi sotto zero.
 - **Componenti inclusi:** [`AppHeader`](../../src/components/AppHeader.vue), [`BalancePanel`](../../src/components/BalancePanel.vue), [`BackupReminder`](../../src/components/BackupReminder.vue), [`BreakdownList`](../../src/components/BreakdownList.vue), [`WelcomePanel`](../../src/components/WelcomePanel.vue).
 
 ### `BreakdownDetailView.vue` (`/dettaglio/:kind(categoria|metodo)/:id`)
 - **Ruolo:** Vista di dettaglio analitico di una riga delle ripartizioni della Dashboard.
-- **Funzionalità:** Raggiungibile cliccando su una categoria o metodo di pagamento dalla Dashboard (tramite la prop `linked` di `BreakdownList`). Mostra l'elenco completo delle voci che compongono quella riga (sia spese una tantum che singole scadenze di spese ricorrenti nel periodo) tramite `breakdownItems`, ordinate dalla più recente. Include la navigazione di ritorno alla Dashboard, la specifica del periodo (es. "Fino a oggi", "Solo programmato", "Anno intero") e il selettore mese [`MonthSelector`](../../src/components/MonthSelector.vue) per cambiare periodo senza tornare indietro. Il totale coincide sempre con l'importo mostrato nella riga della Dashboard.
+- **Funzionalità:** Raggiungibile cliccando su una categoria o metodo di pagamento dalla Dashboard (tramite la prop `linked` di `BreakdownList`). Mostra l'elenco completo delle voci che compongono quella riga (sia spese una tantum che singole scadenze di spese ricorrenti nel periodo) tramite `breakdownItems`, ordinate dalla più recente. Include la specifica del periodo (es. "Fino a oggi", "Solo programmato", "Anno intero") e il selettore mese [`MonthSelector`](../../src/components/MonthSelector.vue) per cambiare periodo senza tornare indietro. Il totale coincide sempre con l'importo mostrato nella riga della Dashboard ed è formattato in grigio neutro (`text-slate-800`), coerentemente con la semantica cromatica che evita il rosso per spese ordinarie.
+- **Accessibilità e Navigazione:**
+  - Autofocus programmatico: al montaggio della pagina e al variare dell'entità, `document.title` si aggiorna dinamicamente (`"{name} · Pocketly"`) e l'intestazione principale `h2` riceve immediatamente il focus (`ref="heading"`, `tabindex="-1"`, `focus:outline-none`), informando subito gli screen reader e gli utenti da tastiera del nuovo contesto.
+  - Navigazione di ritorno intelligente (`back`): il pulsante di ritorno verifica la cronologia precedente (`router.options.history.state.back === '/'`); se si proviene dalla dashboard viene eseguito `router.back()`, permettendo a `scrollBehavior` di riposizionare la dashboard nell'esatta posizione di scorrimento precedente. Aprendo direttamente l'URL, la navigazione reindirizza normalmente alla radice `/`.
+  - Compatibilità scorciatoie: `MonthSelector` non intercetta tasti modificatori, preservando le scorciatoie del browser come `Alt+ArrowLeft` per tornare indietro nella cronologia.
 
 ### `OneTimeView.vue` (`/una-tantum`)
 - **Ruolo:** Gestione transazioni puntuali.
@@ -100,7 +105,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### Layout e Navigazione
 - **`AppHeader.vue`**: Intestazione superiore con titolo e selettore anno globale che controlla `finance.selectedYear`.
-- **`BottomNav.vue`**: Barra inferiore con accesso rapido: su mobile presenta 4 tab principali e il menu a comparsa "Altro" per le restanti schede; su schermi larghi si estende a menu laterale fisso.
+- **`BottomNav.vue`**: Barra inferiore con accesso rapido: su mobile presenta 4 tab principali e il menu a comparsa "Altro" per le restanti schede; su schermi larghi si estende a menu laterale fisso. Tramite l'helper `isParent` controlla `route.meta.navParent`, mantenendo evidenziata la voce padre (es. dashboard) quando l'utente consulta schermate di approfondimento come `BreakdownDetailView`.
 - **`PageHeader.vue`**: Testata standard per ciascuna schermata con titolo, subtitolo facoltativo e pulsante per l'azione primaria.
 
 ### Liste e Righe Dati
@@ -108,8 +113,8 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 - **`EntryRow.vue`**: Singola voce interattiva con slot per badge/metadati e pulsanti contestuali di modifica ed eliminazione.
 - **`BreakdownList.vue`**: Lista ripartizioni percentuali con barre di progresso colorate per categoria o tag; con prop `linked` trasforma ogni riga in link di navigazione verso `BreakdownDetailView`.
 - **`BudgetBar.vue`**: Visualizzazione a doppia barra per mostrare l'importo già speso e la quota già programmata rispetto al tetto limite.
-- **`BalancePanel.vue`**: Riquadro bilancio con entrate, uscite e saldo a data odierna; supporta note e confronti espandibili su richiesta per ricorrenti e variabili (`notesOpen`), frase ponte saldo/previsto (`bridge`) e swipe touch per il cambio mese.
-- **`MonthSelector.vue`**: Navigatore a schede orizzontali per scorrere i 12 mesi o visualizzare "Tutto l'anno", integrato con `useMonthStep` e gestione accessibile del focus.
+- **`BalancePanel.vue`**: Riquadro bilancio con entrate, uscite e saldo a data odierna. Applica la convenzione cromatica semantica: il rosso è riservato esclusivamente a saldi o previsti negativi (`signColor`, con transizione a colore neutro se il rientro a fine periodo è positivo via `bridge`), le entrate sono verdi (`incomeColor`) solo se strettamente positive (`> 0`), e le uscite contabili sono in grigio neutro (`text-slate-800`). Include note espandibili per il confronto ricorrenti/variabili (`notesOpen`), frase ponte saldo/previsto (`bridge`) e gesture swipe touch orizzontali per il cambio mese delegate a `useMonthStep`.
+- **`MonthSelector.vue`**: Controllo unificato per il filtro mese con pulsante rapido «Questo mese», menu a tendina `<select>` (opzione «Tutti i mesi» e 12 mesi) e pulsanti freccia passo a passo (‹ e ›). Centralizza i listener globali da tastiera per le frecce ← e → (`ArrowLeft`/`ArrowRight`), applica la preservazione del focus (reindirizzato al menu a tendina quando un pulsante si nasconde o si disabilita), fornisce etichette ARIA contestuali parlanti per l'ingresso da «Tutti i mesi» (`dashboard.goToMonth`) e gestisce il cambio mese/anno tramite `useMonthStep`.
 
 ### Moduli e Form
 - **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (importo, data, nome, categoria, metodo, tag, note).

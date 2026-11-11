@@ -4,7 +4,7 @@ source-files:
   - src/components/BottomNav.vue
   - src/i18n/it.ts
   - src/i18n/en.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Guida: Aggiungere una Nuova Vista
@@ -55,14 +55,31 @@ const { t } = useFormat()
    ```ts
    { path: '/analisi', name: 'analytics', component: () => import('@/views/AnalyticsView.vue') },
    ```
-   Per viste parametriche di dettaglio:
+   Per viste parametriche di secondo livello o di dettaglio, specifica `meta.navParent`:
    ```ts
    {
      path: '/dettaglio/:kind(categoria|metodo)/:id',
      name: 'detail',
      component: () => import('@/views/BreakdownDetailView.vue'),
+     // Mantiene evidenziata la tab padre nella barra di navigazione
+     meta: { navParent: 'dashboard' },
    },
    ```
+
+3. **Routing gerarchico con `meta.navParent` e convenzioni per viste di dettaglio:**
+   Se la nuova schermata è un approfondimento analitico o una vista figlia (come `BreakdownDetailView.vue`), non deve essere inclusa nell'array `TABS`. Tuttavia, per fornire all'utente un punto di riferimento visivo chiaro:
+   - Registra nei metadati la proprietà `meta: { navParent: '<tabName>' }`, dove `<tabName>` è il nome della vista padre definito in `TABS` (es. `'dashboard'`). In questo modo [`BottomNav.vue`](../../src/components/BottomNav.vue) riconosce la gerarchia e mantiene visivamente attiva la tab padre sia su dispositivi mobili sia nella sidebar desktop.
+   - **Ritorno intelligente con cronologia:** adotta la funzione di ritorno che sfrutta `router.options.history.state.back`:
+     ```ts
+     function back(e: MouseEvent) {
+       if (router.options.history.state.back === '/') {
+         e.preventDefault()
+         router.back()
+       }
+     }
+     ```
+     In combinazione con la politica di `scrollBehavior` configurata in `src/router/index.ts` (`savedPosition ?? { top: 0 }`), questo consente a chi torna indietro dalla schermata figlia di ritrovare esattamente il punto e la posizione di scorrimento della pagina padre in cui si trovava.
+   - **Accessibilità e focus del titolo:** implementa l'autofocus programmatico sul titolo `h2` (`ref="heading"`, `tabindex="-1"`, `focus:outline-none`) e aggiorna dinamicamente `document.title` al montaggio (ripristinando il titolo precedente in `onBeforeUnmount`) per consentire a screen reader e utenti da tastiera di recepire subito il nuovo contesto.
 
 ---
 

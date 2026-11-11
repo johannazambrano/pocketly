@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Mappa del Codice
@@ -67,7 +67,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
-| [`src/views/DashboardView.vue`](../../src/views/DashboardView.vue) | Vista principale (`/`): saldo, entrate, uscite, ripartizioni per categoria e metodo, stato backup | — | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/views/DashboardView.vue`](../../src/views/DashboardView.vue) | Vista principale (`/`): saldo, ripartizioni, scadenze con badge ambra, delega tasti a `MonthSelector` | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/OneTimeView.vue`](../../src/views/OneTimeView.vue) | Vista spese una tantum (`/una-tantum`): lista spese, filtro per mese, filtro e spaccato per tag | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/RecurringView.vue`](../../src/views/RecurringView.vue) | Vista spese ricorrenti (`/ricorrenti`): lista, frequenze, costo equivalente mensile e configurazione promemoria | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/IncomeView.vue`](../../src/views/IncomeView.vue) | Vista entrate (`/entrate`): registrazione e consultazione delle entrate dell'anno | — | [componenti-e-viste.md](./componenti-e-viste.md) |
@@ -75,7 +75,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/views/LoansView.vue`](../../src/views/LoansView.vue) | Vista prestiti (`/prestiti`): tracciamento crediti e debiti, storico rimborsi parziali e saldo residuo | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/ForecastView.vue`](../../src/views/ForecastView.vue) | Vista previsioni (`/previsioni`): proiezione fino a dicembre, simulazioni d'acquisto, stima automatica/manuale | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/SettingsView.vue`](../../src/views/SettingsView.vue) | Vista impostazioni (`/impostazioni`): anagrafiche (categorie, metodi, tag), backup AES-GCM, sync e Web Push | — | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/views/BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue) | Vista dettaglio ripartizioni (`/dettaglio/:kind/:id`): elenco analitico delle voci (variabili e ricorrenti) di una riga | — | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/views/BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue) | Dettaglio ripartizioni (`/dettaglio/:kind/:id`): voci analitiche, a11y focus heading, `back()` protetto | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 
 ---
 
@@ -85,16 +85,16 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|
 | [`src/components/AppHeader.vue`](../../src/components/AppHeader.vue) | Barra superiore: titolo app, selettore anno globale e indicatore di stato | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BackupReminder.vue`](../../src/components/BackupReminder.vue) | Banner discreto nella dashboard che avvisa se non si effettua un backup da molti giorni | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/BalancePanel.vue`](../../src/components/BalancePanel.vue) | Pannello principale del saldo con entrate, uscite e bilancio fino a oggi | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/BalancePanel.vue`](../../src/components/BalancePanel.vue) | Pannello saldo: entrate (verdi solo se > 0), uscite neutre, saldo e previsto (rosso solo per disavanzo contabile senza rientro) | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BaseModal.vue`](../../src/components/BaseModal.vue) | Modale generica accessibile con backdrop, gestione ESC e pulsante di chiusura | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/BottomNav.vue`](../../src/components/BottomNav.vue) | Barra inferiore fissa con gli 8 tab di navigazione principale | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/BottomNav.vue`](../../src/components/BottomNav.vue) | Barra di navigazione inferiore/laterale: evidenziazione tab principale anche per viste figlie (`navParent`) | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BreakdownList.vue`](../../src/components/BreakdownList.vue) | Ripartizione percentuale delle spese per categoria o per metodo di pagamento | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BudgetBar.vue`](../../src/components/BudgetBar.vue) | Barra progressiva colorata per il monitoraggio visivo dei limiti di spesa | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/ConfirmHost.vue`](../../src/components/ConfirmHost.vue) | Host globale per mostrare dialoghi di conferma distruttiva (es. eliminazione) | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/EntryList.vue`](../../src/components/EntryList.vue) | Contenitore standard per liste di transazioni con stato vuoto e totale in fondo | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/EntryRow.vue`](../../src/components/EntryRow.vue) | Singola riga di transazione con pulsanti modifica ed elimina | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/LoanForm.vue`](../../src/components/LoanForm.vue) | Modulo di creazione/modifica prestito (tipo dato/ricevuto, importo, date, note) | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/MonthSelector.vue`](../../src/components/MonthSelector.vue) | Componente a schede per filtrare per mese o visualizzare l'intero anno | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/MonthSelector.vue`](../../src/components/MonthSelector.vue) | Filtro mese unificato (menu e frecce ‹ ›): listener tastiera globali ← →, preservazione focus, transizione da `'all'` | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/NotificationRulesEditor.vue`](../../src/components/NotificationRulesEditor.vue) | Editor multi-regola di promemoria (giorni prima e orario) per spese ricorrenti | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/components/NotificationSettings.vue`](../../src/components/NotificationSettings.vue) | Pannello impostazioni notifiche: permessi browser, Web Push e test notifica | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/components/PageHeader.vue`](../../src/components/PageHeader.vue) | Intestazione standard di ciascuna vista con titolo e pulsante primario d'azione | [componenti-e-viste.md](./componenti-e-viste.md) |
@@ -136,7 +136,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
 | [`src/composables/useConfirmDelete.ts`](../../src/composables/useConfirmDelete.ts) | Composable per richiedere conferma utente prima di eliminare voci | — | [frontend.md](../architettura/frontend.md) |
-| [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Navigazione mensile sequenziale (avanti/indietro con cambio anno automatico) per frecce, swipe touch e tasti freccia | — | [frontend.md](../architettura/frontend.md) |
+| [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Navigazione mensile sequenziale (avanti/indietro con cambio anno) e transizione da `'all'` a mese specifico | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua e composable helper `useFormat` | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/it.ts`](../../src/i18n/it.ts) | Traduzioni in lingua italiana | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/en.ts`](../../src/i18n/en.ts) | Traduzioni in lingua inglese | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
