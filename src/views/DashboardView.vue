@@ -198,8 +198,8 @@ const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLower
 /**
  * Le uscite mostrate nel riquadro, divise tra ricorrenti e variabili: le due parti sommano sempre il totale.
  * Se una parte è zero la divisione ripeterebbe il totale, quindi non si mostra.
- * Le note conservano i due confronti utili: il costo medio mensile delle ricorrenti e le variabili del mese
- * di oggi rispetto alla media dei mesi precedenti ("finora", perché il mese non è finito).
+ * Le note conservano i due confronti utili, per l'anno e per ogni mese già iniziato: il costo medio mensile delle
+ * ricorrenti e le variabili rispetto alla media dei mesi precedenti (per il mese in corso "finora", perché non è finito).
  */
 const expensesSplit = computed(() => {
   const m = ms.value
@@ -219,8 +219,15 @@ const expensesSplit = computed(() => {
           ? t('dashboard.splitVariableSoFar', args)
           : t('dashboard.splitVariableSoFarAverage', { ...args, average: money(v.previousAverage) })
     }
-  } else if (monthToDate.value && v && v.previousAverage !== null) {
-    variableNote = t('dashboard.splitVariableAverage', { amount: money(v.previousAverage) })
+  } else if (m.timing !== 'future') {
+    // Nei mesi, passati o in corso, le stesse medie dell'anno: costo medio delle ricorrenti e variabili a confronto.
+    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(Math.round(s.value.monthlyRecurring)) })
+    const vm = finance.variableOfSelectedMonth
+    if (vm && vm.previousAverage !== null) {
+      // Nel mese in corso le variabili sono "finora": la frase dice che la media è di mesi interi.
+      const key = monthToDate.value ? 'dashboard.splitVariableAverageSoFar' : 'dashboard.splitVariableAverage'
+      variableNote = t(key, { amount: money(vm.previousAverage) })
+    }
   }
 
   return [
