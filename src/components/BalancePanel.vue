@@ -13,9 +13,12 @@ interface Figure {
   hint?: string
 }
 
-/** La cifra grande: con `today` sotto compare "Oggi sei a …", con `note` una frase che dice cosa conta. */
+/**
+ * La cifra grande: con `today` sotto compare il risultato fino a oggi, detto con la sua portata ("Da inizio novembre a
+ * oggi: …"), con `note` una frase che dice cosa conta.
+ */
 interface Main extends Figure {
-  today?: number
+  today?: { label: string; value: number }
   note?: string
 }
 
@@ -76,10 +79,10 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), signColor(main.value)]">
           {{ money(main.value) }}
         </p>
-        <!-- Il saldo di oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
+        <!-- Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
         <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-slate-700">
-          {{ t('dashboard.todayBefore') }}
-          <b class="font-bold whitespace-nowrap text-slate-800">{{ money(main.today) }}</b>{{ t('dashboard.todayAfter') }}
+          {{ main.today.label }}
+          <b class="font-bold whitespace-nowrap text-slate-800">{{ money(main.today.value) }}</b>
         </p>
         <p v-if="main.note" class="mt-1.5 text-sm font-medium text-slate-700">{{ main.note }}</p>
         <p v-if="main.hint" class="mt-1 text-xs text-slate-500">{{ main.hint }}</p>

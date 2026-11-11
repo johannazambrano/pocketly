@@ -155,9 +155,14 @@ const mainFigure = computed(() => {
   }
   if (projected.value !== null && projected.value !== displayBalance.value) {
     return {
-      label: ms.value ? t('dashboard.projectedMonth', monthArgs.value) : t('dashboard.projected'),
+      label: ms.value ? t('dashboard.projectedMonth', monthArgs.value) : t('dashboard.projected', { year: finance.selectedYear }),
       value: projected.value,
-      today: displayBalance.value,
+      // La portata detta sempre: nel mese è il risultato del mese, nell'anno quello dall'inizio dell'anno. Non è il saldo
+      // del conto, che l'app non conosce.
+      today: {
+        label: ms.value ? t('dashboard.sinceMonthStart', monthArgs.value) : t('dashboard.sinceYearStart'),
+        value: displayBalance.value,
+      },
     }
   }
   if (ms.value) {
