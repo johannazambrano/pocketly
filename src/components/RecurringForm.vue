@@ -129,34 +129,34 @@ function submit() {
 
 <template>
   <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
-    <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
+    <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <!--
         Modificare una spesa ricorrente non deve riscrivere i mesi già passati senza volerlo: se c'è un addebito da cui
         partire, si sceglie se la modifica vale da lì in poi (di serie) o per tutta la serie. Il caso più comune è
         "Netflix costa di più da questo mese".
       -->
-      <fieldset v-if="item && splitDate" class="space-y-1 rounded-lg bg-slate-50 p-3">
+      <fieldset v-if="item && splitDate" class="space-y-1 rounded-lg bg-surface-2 p-3">
         <legend class="sr-only">{{ t('recurring.scopeLegend') }}</legend>
-        <p class="text-xs font-medium text-slate-700" aria-hidden="true">{{ t('recurring.scopeLegend') }}</p>
+        <p class="text-xs font-medium text-ink-2" aria-hidden="true">{{ t('recurring.scopeLegend') }}</p>
         <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
-          <input v-model="scope" type="radio" value="from" class="mt-0.5 accent-emerald-700" />
-          <span class="text-sm text-slate-800">
+          <input v-model="scope" type="radio" value="from" class="mt-0.5 accent-accent" />
+          <span class="text-sm text-ink">
             {{ t('recurring.scopeFrom', { date: date(splitDate) }) }}
-            <span class="block text-xs text-slate-600">{{ t('recurring.scopeFromHint') }}</span>
+            <span class="block text-xs text-ink-3">{{ t('recurring.scopeFromHint') }}</span>
           </span>
         </label>
         <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
-          <input v-model="scope" type="radio" value="all" class="mt-0.5 accent-emerald-700" />
-          <span class="text-sm text-slate-800">
+          <input v-model="scope" type="radio" value="all" class="mt-0.5 accent-accent" />
+          <span class="text-sm text-ink">
             {{ t('recurring.scopeAll', { date: date(item.startDate) }) }}
-            <span class="block text-xs text-slate-600">{{ t('recurring.scopeAllHint') }}</span>
+            <span class="block text-xs text-ink-3">{{ t('recurring.scopeAllHint') }}</span>
           </span>
         </label>
       </fieldset>
       <!-- Dal primo addebito (o a serie finita) non c'è niente da tenere: la modifica vale per tutta la serie, e lo si dice. -->
-      <p v-else-if="item" class="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-xs leading-snug text-slate-700">
-        <i class="fa-solid fa-circle-info mt-0.5 text-slate-500" aria-hidden="true"></i>
+      <p v-else-if="item" class="flex items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs leading-snug text-ink-2">
+        <i class="fa-solid fa-circle-info mt-0.5 text-ink-4" aria-hidden="true"></i>
         {{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}
       </p>
       <label class="block">
@@ -178,7 +178,7 @@ function submit() {
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('recurring.startDate') }}</span>
-          <input v-model="form.startDate" type="date" required class="field" :readonly="splitting" :class="{ 'bg-slate-50 text-slate-600': splitting }" />
+          <input v-model="form.startDate" type="date" required class="field" :readonly="splitting" :class="{ 'bg-surface-2 text-ink-3': splitting }" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('recurring.endDate') }}</span>
@@ -189,7 +189,7 @@ function submit() {
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect v-model="form.paymentMethodId" kind="paymentMethods" :label="t('common.paymentMethod')" />
       </div>
-      <div class="space-y-1 border-t border-slate-100 pt-3">
+      <div class="space-y-1 border-t border-line-soft pt-3">
         <NotificationRulesEditor
           v-model="form.notifications"
           :show-toggle="true"
@@ -197,7 +197,7 @@ function submit() {
           :default-fallback-rules="notificationsStore.defaultRules"
         />
       </div>
-      <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
+      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>

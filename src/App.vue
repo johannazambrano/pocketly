@@ -18,12 +18,12 @@ const ui = useUiStore()
 <template>
   <div class="flex min-h-dvh flex-col">
     <AppHeader />
-    <div v-if="finance.saveError" class="bg-rose-600 px-4 py-2 text-center text-xs text-white">{{ t('app.saveError') }}</div>
+    <div v-if="finance.saveError" class="bg-negative px-4 py-2 text-center text-xs text-on-color">{{ t('app.saveError') }}</div>
     <div class="px-safe w-full flex-grow">
       <!-- Telefono: una colonna. Tablet e PC: menu a sinistra e contenuto largo a destra. -->
       <div class="mx-auto flex w-full max-w-xl md:max-w-6xl md:gap-6 md:px-6 md:py-6">
         <main class="min-w-0 flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-0">
-          <p v-if="!finance.ready" class="py-10 text-center text-sm text-slate-400">{{ t('app.loading') }}</p>
+          <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-5">{{ t('app.loading') }}</p>
           <template v-else>
             <BackupReminder />
             <RouterView />

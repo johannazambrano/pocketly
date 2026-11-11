@@ -29,22 +29,22 @@ const rowLabel = (row: TagTotal) =>
       :key="row.id"
       v-bind="linked ? { to: `/dettaglio/${kind === 'paymentMethods' ? 'metodo' : 'categoria'}/${row.id}`, 'aria-label': rowLabel(row) } : {}"
       class="block"
-      :class="{ '-mx-2 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50': linked }"
+      :class="{ '-mx-2 rounded-lg px-2 py-2 transition-colors hover:bg-surface-2': linked }"
     >
       <div class="mb-1 flex items-center justify-between gap-2 text-xs">
         <span class="truncate font-medium">{{ finance.tag(kind, row.id)?.name ?? t('common.unknown') }}</span>
-        <span class="flex shrink-0 items-center gap-2 text-slate-500">
+        <span class="flex shrink-0 items-center gap-2 text-ink-4">
           {{ money(row.total) }} ({{ percent(row.total / grandTotal) }})
-          <i v-if="linked" class="fa-solid fa-chevron-right text-xs text-slate-400" aria-hidden="true"></i>
+          <i v-if="linked" class="fa-solid fa-chevron-right text-xs text-ink-5" aria-hidden="true"></i>
         </span>
       </div>
-      <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
         <div
           class="h-full rounded-full"
           :style="{ width: `${(row.total / grandTotal) * 100}%`, backgroundColor: finance.tag(kind, row.id)?.color ?? '#94a3b8' }"
         ></div>
       </div>
     </component>
-    <p v-if="!totals.length" class="text-xs text-slate-500">{{ emptyText }}</p>
+    <p v-if="!totals.length" class="text-xs text-ink-4">{{ emptyText }}</p>
   </div>
 </template>

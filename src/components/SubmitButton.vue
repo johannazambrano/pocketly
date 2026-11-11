@@ -12,12 +12,12 @@ const emit = defineEmits<{ cancel: [] }>()
     <button
       v-if="cancelLabel"
       type="button"
-      class="w-full rounded-xl border border-slate-300 bg-white py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+      class="w-full rounded-xl border border-line-strong bg-surface py-3 text-sm font-medium text-ink-2 transition hover:bg-surface-2"
       @click="emit('cancel')"
     >
       {{ cancelLabel }}
     </button>
-    <button type="submit" class="w-full rounded-xl bg-emerald-700 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-800 active:bg-emerald-900">
+    <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-color shadow transition hover:bg-accent-strong active:bg-accent-stronger">
       {{ label }}
     </button>
   </div>

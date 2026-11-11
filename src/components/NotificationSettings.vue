@@ -54,52 +54,52 @@ function applyDefaults(mode: 'missing' | 'all') {
 
 <template>
   <div class="card space-y-3">
-    <h3 class="text-sm font-semibold text-slate-700">
-      <i class="fa-solid fa-bell mr-1 text-emerald-600"></i>
+    <h3 class="text-sm font-semibold text-ink-2">
+      <i class="fa-solid fa-bell mr-1 text-accent-icon"></i>
       {{ t('notifications.title') }}
     </h3>
-    <p class="text-xs text-slate-500">{{ t('notifications.settingsHint') }}</p>
+    <p class="text-xs text-ink-4">{{ t('notifications.settingsHint') }}</p>
 
     <!-- Supporto notifiche non disponibile -->
-    <p v-if="!notifications.isSupported" class="text-xs text-amber-700">
+    <p v-if="!notifications.isSupported" class="text-xs text-caution">
       <i class="fa-solid fa-triangle-exclamation mr-1"></i>
       {{ t('notifications.unsupported') }}
     </p>
 
     <!-- Avviso iOS installazione su Home Screen -->
-    <p v-if="notifications.iosInstallRequired" class="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
-      <i class="fa-solid fa-circle-info mr-1 text-amber-600"></i>
+    <p v-if="notifications.iosInstallRequired" class="rounded-lg bg-caution-soft p-2.5 text-xs text-caution-strong">
+      <i class="fa-solid fa-circle-info mr-1 text-caution-icon"></i>
       {{ t('notifications.iosInstallRequired') }}
     </p>
 
     <!-- Permessi bloccati nel browser -->
-    <p v-if="notifications.permission === 'denied'" class="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
-      <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600"></i>
+    <p v-if="notifications.permission === 'denied'" class="rounded-lg bg-negative-soft p-2.5 text-xs text-negative-strong">
+      <i class="fa-solid fa-triangle-exclamation mr-1 text-negative"></i>
       {{ t('notifications.permissionDenied') }}
     </p>
 
     <!-- Stato attivo -->
     <div v-if="notifications.enabled" class="space-y-3">
       <template v-if="notifications.isPushActive">
-        <p class="text-xs font-medium text-emerald-700">
+        <p class="text-xs font-medium text-accent">
           <i class="fa-solid fa-check mr-1"></i>
           {{ t('notifications.modePush') }}
         </p>
-        <p class="text-xs text-slate-600">{{ t('notifications.horizonHint') }}</p>
-        <p v-if="notifications.scheduleProblem" class="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+        <p class="text-xs text-ink-3">{{ t('notifications.horizonHint') }}</p>
+        <p v-if="notifications.scheduleProblem" class="rounded-lg bg-caution-soft p-2.5 text-xs text-caution-strong">
           <i class="fa-solid fa-triangle-exclamation mr-1"></i>
           {{ t(notifications.scheduleProblem === 'tooMany' ? 'notifications.scheduleTooMany' : 'notifications.scheduleFailed') }}
         </p>
       </template>
-      <p v-else class="text-xs text-slate-600">
-        <i class="fa-solid fa-circle-info mr-1 text-indigo-600"></i>
+      <p v-else class="text-xs text-ink-3">
+        <i class="fa-solid fa-circle-info mr-1 text-recurring"></i>
         {{ t('notifications.modeLocalOnly') }}
       </p>
 
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
-          class="min-h-10 min-w-40 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
           :disabled="notifications.testSending"
           @click="handleSendTest"
         >
@@ -107,7 +107,7 @@ function applyDefaults(mode: 'missing' | 'all') {
         </button>
         <button
           type="button"
-          class="min-h-10 min-w-40 flex-1 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+          class="min-h-10 min-w-40 flex-1 rounded-lg border border-negative-line bg-negative-soft px-4 py-2 text-sm font-medium text-negative-strong hover:bg-negative-soft-2"
           @click="handleDisable"
         >
           {{ t('notifications.disableDevice') }}
@@ -128,11 +128,11 @@ function applyDefaults(mode: 'missing' | 'all') {
     </div>
 
     <!-- Sezione regole predefinite per nuove ricorrenze -->
-    <div class="space-y-2 border-t border-slate-100 pt-3">
-      <h4 class="text-xs font-semibold text-slate-700">
+    <div class="space-y-2 border-t border-line-soft pt-3">
+      <h4 class="text-xs font-semibold text-ink-2">
         {{ t('notifications.defaultRulesTitle') }}
       </h4>
-      <p class="text-xs text-slate-500">{{ t('notifications.defaultRulesHint') }}</p>
+      <p class="text-xs text-ink-4">{{ t('notifications.defaultRulesHint') }}</p>
 
       <NotificationRulesEditor
         :model-value="notifications.defaultRules"
@@ -142,7 +142,7 @@ function applyDefaults(mode: 'missing' | 'all') {
       <div class="flex flex-wrap gap-2 pt-2">
         <button
           type="button"
-          class="min-h-9 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          class="min-h-9 flex-1 rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
           :disabled="!finance.data.recurringExpenses.length"
           @click="applyDefaults('missing')"
         >
@@ -150,7 +150,7 @@ function applyDefaults(mode: 'missing' | 'all') {
         </button>
         <button
           type="button"
-          class="min-h-9 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          class="min-h-9 flex-1 rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
           :disabled="!finance.data.recurringExpenses.length"
           @click="applyDefaults('all')"
         >

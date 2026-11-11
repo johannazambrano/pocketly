@@ -9,15 +9,15 @@ const { t } = useI18n()
 
 <template>
   <BaseModal :open="!!ui.confirmRequest" :title="ui.confirmRequest?.title ?? ''" @close="ui.answerConfirm(false)">
-    <p class="text-sm text-slate-600">{{ ui.confirmRequest?.message }}</p>
+    <p class="text-sm text-ink-3">{{ ui.confirmRequest?.message }}</p>
     <div class="mt-5 flex gap-2">
-      <button type="button" class="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-medium" @click="ui.answerConfirm(false)">
+      <button type="button" class="flex-1 rounded-xl border border-line-strong py-2.5 text-sm font-medium" @click="ui.answerConfirm(false)">
         {{ ui.confirmRequest?.cancelLabel ?? t('common.cancel') }}
       </button>
       <button
         type="button"
-        class="flex-1 rounded-xl py-2.5 text-sm font-bold text-white"
-        :class="ui.confirmRequest?.danger ? 'bg-rose-600' : 'bg-emerald-700'"
+        class="flex-1 rounded-xl py-2.5 text-sm font-bold text-on-color"
+        :class="ui.confirmRequest?.danger ? 'bg-negative' : 'bg-accent'"
         @click="ui.answerConfirm(true)"
       >
         {{ ui.confirmRequest?.confirmLabel }}

@@ -341,8 +341,8 @@ const expensesSplit = computed(() => {
   }
 
   return [
-    { key: 'recurring', label: t('dashboard.splitRecurring'), value: recurring, dot: 'bg-indigo-500', note: recurringNote },
-    { key: 'variable', label: t('dashboard.splitVariable'), value: variable, dot: 'bg-orange-500', note: variableNote },
+    { key: 'recurring', label: t('dashboard.splitRecurring'), value: recurring, dot: 'bg-recurring-dot', note: recurringNote },
+    { key: 'variable', label: t('dashboard.splitVariable'), value: variable, dot: 'bg-variable', note: variableNote },
   ]
 })
 
@@ -459,10 +459,10 @@ const showUpcoming = computed(
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
           <div class="flex items-baseline justify-between gap-3">
-            <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-slate-700 focus:outline-none">
-              <i class="fa-solid fa-clock mr-1 text-indigo-600" aria-hidden="true"></i> {{ upcomingTitle }}
+            <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-ink-2 focus:outline-none">
+              <i class="fa-solid fa-clock mr-1 text-recurring" aria-hidden="true"></i> {{ upcomingTitle }}
             </h3>
-            <span v-if="showUpcomingTotal" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
+            <span v-if="showUpcomingTotal" class="shrink-0 text-sm font-semibold text-ink-2">{{ money(upcomingTotal) }}</span>
           </div>
           <!--
             Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
@@ -477,42 +477,42 @@ const showUpcoming = computed(
             <li
               v-for="(c, i) in upcoming"
               :key="c.key"
-              class="border-b border-slate-100 last:border-b-0"
+              class="border-b border-line-soft last:border-b-0"
               :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
             >
               <button
                 type="button"
                 :data-charge-key="c.key"
                 :aria-label="chargeLabel(c)"
-                class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-slate-50"
+                class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2"
                 @click="editCharge(c)"
               >
                 <span class="min-w-0">
                   <span class="block truncate text-sm font-medium">{{ c.name }}</span>
                   <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
-                  <span class="block text-xs text-slate-500">
+                  <span class="block text-xs text-ink-4">
                     {{ date(c.date) }} ·
-                    <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
+                    <span :class="{ 'font-medium text-caution': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
                     <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
                   </span>
                 </span>
-                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-700">
+                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-ink-2">
                   {{ money(c.amount) }}
-                  <i class="fa-solid fa-pen text-xs text-slate-400" aria-hidden="true"></i>
+                  <i class="fa-solid fa-pen text-xs text-ink-5" aria-hidden="true"></i>
                 </span>
               </button>
             </li>
           </ul>
-          <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>
+          <p v-else class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
         </div>
 
         <div class="card space-y-3">
-          <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byCategory') }}</h3>
+          <h3 class="text-sm font-semibold text-ink-2">{{ t('dashboard.byCategory') }}</h3>
           <BreakdownList kind="categories" linked :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
 
         <div class="card space-y-3">
-          <h3 class="text-sm font-semibold text-slate-700">{{ t('dashboard.byPayment') }}</h3>
+          <h3 class="text-sm font-semibold text-ink-2">{{ t('dashboard.byPayment') }}</h3>
           <BreakdownList kind="paymentMethods" linked :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
       </div>

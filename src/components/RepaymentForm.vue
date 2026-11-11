@@ -62,8 +62,8 @@ function submit() {
           <input v-model="form.date" type="date" required class="field" />
         </label>
       </div>
-      <p v-if="exceeds" class="text-xs text-amber-700">{{ t('loans.exceedsRemaining', { amount: money(remaining) }) }}</p>
-      <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
+      <p v-if="exceeds" class="text-xs text-caution">{{ t('loans.exceedsRemaining', { amount: money(remaining) }) }}</p>
+      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>

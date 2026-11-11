@@ -175,10 +175,10 @@ function removeRule(index: number) {
 <template>
   <div class="space-y-2">
     <div v-if="showToggle" class="flex items-center justify-between">
-      <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+      <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-2">
         <input
           type="checkbox"
-          class="h-4 w-4 rounded accent-emerald-600"
+          class="h-4 w-4 rounded accent-accent-icon"
           :checked="isEnabled"
           :disabled="disabled"
           @change="toggleEnabled(($event.target as HTMLInputElement).checked)"
@@ -188,14 +188,14 @@ function removeRule(index: number) {
     </div>
 
     <div v-if="!showToggle || isEnabled" class="space-y-2">
-      <div v-if="localRules.length === 0" class="text-xs italic text-slate-400">
+      <div v-if="localRules.length === 0" class="text-xs italic text-ink-5">
         {{ t('notifications.none') }}
       </div>
 
       <div
         v-for="(rule, index) in localRules"
         :key="rule.uid"
-        class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"
+        class="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-2 p-2 text-xs"
       >
         <!-- Preavviso -->
         <div class="flex flex-1 min-w-[140px] items-center gap-1.5">
@@ -221,13 +221,13 @@ function removeRule(index: number) {
               :aria-label="t('notifications.daysBeforeInput')"
               @input="onDaysChange(rule, $event)"
             />
-            <span class="whitespace-nowrap text-slate-500">{{ t('notifications.daysBeforeInput') }}</span>
+            <span class="whitespace-nowrap text-ink-4">{{ t('notifications.daysBeforeInput') }}</span>
           </div>
         </div>
 
         <!-- Orario -->
         <div class="flex items-center gap-1.5">
-          <span class="text-slate-500">{{ t('notifications.atTime') }}</span>
+          <span class="text-ink-4">{{ t('notifications.atTime') }}</span>
           <input
             type="time"
             :value="rule.time"
@@ -243,7 +243,7 @@ function removeRule(index: number) {
         <button
           type="button"
           :disabled="disabled"
-          class="rounded p-1.5 text-slate-400 hover:text-rose-600 disabled:opacity-50"
+          class="rounded p-1.5 text-ink-5 hover:text-negative disabled:opacity-50"
           :aria-label="t('notifications.removeRule')"
           @click="removeRule(index)"
         >
@@ -255,7 +255,7 @@ function removeRule(index: number) {
         <button
           type="button"
           :disabled="disabled"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-icon hover:text-accent disabled:opacity-50"
           @click="addRule"
         >
           <i class="fa-solid fa-plus text-[10px]"></i>

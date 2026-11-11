@@ -38,7 +38,7 @@ function open(item: Income | null) {
         :key="e.id"
         :name="e.name"
         :amount="money(e.amount)"
-        amount-class="text-emerald-600"
+        amount-class="text-accent-icon"
         @edit="open(e)"
         @delete="confirmDelete(e.name, () => finance.deleteIncome(e.id))"
       >

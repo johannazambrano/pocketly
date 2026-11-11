@@ -70,7 +70,7 @@ const nextLabel = computed(() => {
 })
 
 const arrow =
-  'inline-flex h-10 w-10 shrink-0 items-center justify-center text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white'
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-strong disabled:cursor-not-allowed disabled:text-ink-6 disabled:hover:bg-surface'
 </script>
 
 <template>
@@ -81,7 +81,7 @@ const arrow =
     -->
     <button
       type="button"
-      class="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-xs md:px-3 font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+      class="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-xs md:px-3 font-semibold text-accent transition-colors hover:bg-accent-soft-2"
       :class="{ 'invisible max-md:hidden': onCurrentMonth }"
       :aria-hidden="onCurrentMonth || undefined"
       :tabindex="onCurrentMonth ? -1 : undefined"
@@ -95,10 +95,10 @@ const arrow =
 
     <!-- Frecce e menu formano un solo controllo: ‹ mese › -->
     <!-- Niente overflow-hidden: taglierebbe il contorno del focus. Gli angoli li arrotondano le frecce. -->
-    <div class="flex min-w-0 items-center rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="flex min-w-0 items-center rounded-lg border border-line bg-surface shadow-sm">
       <button
         type="button"
-        :class="[arrow, 'rounded-l-lg border-r border-slate-200']"
+        :class="[arrow, 'rounded-l-lg border-r border-line']"
         :disabled="!previous"
         :aria-label="previousLabel"
         :title="previousLabel"
@@ -109,7 +109,7 @@ const arrow =
       <select
         ref="select"
         v-model="finance.selectedMonth"
-        class="h-10 min-w-0 bg-white px-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        class="h-10 min-w-0 bg-surface px-2.5 text-sm font-medium text-ink-2 hover:bg-surface-2"
         :aria-label="t('dashboard.filterMonth')"
       >
         <option value="all">{{ t('dashboard.allMonths') }}</option>
@@ -119,7 +119,7 @@ const arrow =
       </select>
       <button
         type="button"
-        :class="[arrow, 'rounded-r-lg border-l border-slate-200']"
+        :class="[arrow, 'rounded-r-lg border-l border-line']"
         :disabled="!next"
         :aria-label="nextLabel"
         :title="nextLabel"

@@ -95,23 +95,23 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
 
 <template>
   <div v-if="sync.available !== null" class="card space-y-3">
-    <h3 class="text-sm font-semibold text-slate-700">
-      <i class="fa-solid fa-cloud mr-1 text-sky-600"></i> {{ t('sync.title') }}
+    <h3 class="text-sm font-semibold text-ink-2">
+      <i class="fa-solid fa-cloud mr-1 text-sync"></i> {{ t('sync.title') }}
     </h3>
 
-    <p v-if="!sync.available" class="text-xs text-slate-500">{{ t('sync.unavailable') }}</p>
-    <p v-else-if="!sync.cryptoAvailable" class="text-xs text-amber-700">{{ t('sync.needsHttps') }}</p>
+    <p v-if="!sync.available" class="text-xs text-ink-4">{{ t('sync.unavailable') }}</p>
+    <p v-else-if="!sync.cryptoAvailable" class="text-xs text-caution">{{ t('sync.needsHttps') }}</p>
 
     <template v-else>
-      <p class="text-xs text-slate-500">{{ t('sync.hint') }}</p>
+      <p class="text-xs text-ink-4">{{ t('sync.hint') }}</p>
 
       <div v-if="sync.enabled && !showForm" class="space-y-3">
-        <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs" role="status">
-          <p class="font-medium" :class="sync.status === 'error' ? 'text-rose-700' : sync.status === 'offline' ? 'text-amber-700' : 'text-slate-700'">
+        <div class="rounded-lg bg-surface-2 px-3 py-2 text-xs" role="status">
+          <p class="font-medium" :class="sync.status === 'error' ? 'text-negative-strong' : sync.status === 'offline' ? 'text-caution' : 'text-ink-2'">
             {{ t(`sync.status.${sync.status}`) }}
           </p>
-          <p v-if="sync.problem && sync.problem !== 'offline'" class="text-rose-700">{{ t(`sync.problem.${sync.problem}`) }}</p>
-          <p v-if="lastSyncText" class="text-slate-500">{{ lastSyncText }}</p>
+          <p v-if="sync.problem && sync.problem !== 'offline'" class="text-negative-strong">{{ t(`sync.problem.${sync.problem}`) }}</p>
+          <p v-if="lastSyncText" class="text-ink-4">{{ lastSyncText }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button
@@ -127,7 +127,7 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
           </button>
           <button
             type="button"
-            class="min-h-10 min-w-40 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
             @click="disconnect"
           >
             {{ t('sync.disconnect') }}
@@ -146,7 +146,7 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
           :placeholder="t('sync.serverKey')"
           :aria-label="t('sync.serverKey')"
         />
-        <p class="text-xs text-slate-500">{{ t('sync.serverKeyHint') }}</p>
+        <p class="text-xs text-ink-4">{{ t('sync.serverKeyHint') }}</p>
         <input
           v-model="password"
           type="password"
@@ -163,13 +163,13 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
           :placeholder="t('sync.passwordRepeat')"
           :aria-label="t('sync.passwordRepeat')"
         />
-        <p v-if="passwordRepeat && passwordProblem" class="text-xs text-rose-600">{{ passwordProblem }}</p>
-        <p class="text-xs text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('sync.passwordHint') }}</p>
-        <p v-if="formProblem" class="text-xs text-rose-600" role="alert">{{ formProblem }}</p>
+        <p v-if="passwordRepeat && passwordProblem" class="text-xs text-negative">{{ passwordProblem }}</p>
+        <p class="text-xs text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('sync.passwordHint') }}</p>
+        <p v-if="formProblem" class="text-xs text-negative" role="alert">{{ formProblem }}</p>
         <div class="flex gap-2">
           <button
             type="button"
-            class="min-h-10 flex-1 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2"
             @click="showForm = false"
           >
             {{ t('common.cancel') }}
@@ -183,37 +183,37 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
 
     <BaseModal :open="!!sync.pendingChoice" :title="t('sync.chooseTitle')" @close="busy || sync.cancelChoice()">
       <div v-if="sync.pendingChoice" class="space-y-3 text-sm">
-        <p class="text-slate-600">{{ t('sync.chooseText') }}</p>
-        <p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+        <p class="text-ink-3">{{ t('sync.chooseText') }}</p>
+        <p class="rounded-lg border border-caution-line bg-caution-soft px-3 py-2 text-xs font-medium text-caution-strong">
           <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('sync.chooseWarning') }}
         </p>
         <button
           type="button"
-          class="w-full rounded-lg border border-slate-300 px-4 py-3 text-left hover:bg-slate-50 disabled:opacity-50"
+          class="w-full rounded-lg border border-line-strong px-4 py-3 text-left hover:bg-surface-2 disabled:opacity-50"
           :disabled="busy"
           @click="choose('server')"
         >
-          <span class="block font-semibold text-slate-800">{{ t('sync.useServer') }}</span>
-          <span class="block text-xs text-slate-500">
+          <span class="block font-semibold text-ink">{{ t('sync.useServer') }}</span>
+          <span class="block text-xs text-ink-4">
             {{ t('sync.sourceServer') }}: {{ t('sync.chooseCounts', { entries: entries(sync.pendingChoice.result.remote) }) }}
           </span>
-          <span class="block text-xs text-rose-700">{{ t('sync.useServerHint') }}</span>
+          <span class="block text-xs text-negative-strong">{{ t('sync.useServerHint') }}</span>
         </button>
         <button
           type="button"
-          class="w-full rounded-lg border border-slate-300 px-4 py-3 text-left hover:bg-slate-50 disabled:opacity-50"
+          class="w-full rounded-lg border border-line-strong px-4 py-3 text-left hover:bg-surface-2 disabled:opacity-50"
           :disabled="busy"
           @click="choose('device')"
         >
-          <span class="block font-semibold text-slate-800">{{ t('sync.useDevice') }}</span>
-          <span class="block text-xs text-slate-500">
+          <span class="block font-semibold text-ink">{{ t('sync.useDevice') }}</span>
+          <span class="block text-xs text-ink-4">
             {{ t('sync.sourceDevice') }}: {{ t('sync.chooseCounts', { entries: entries(finance.data) }) }}
           </span>
-          <span class="block text-xs text-rose-700">{{ t('sync.useDeviceHint') }}</span>
+          <span class="block text-xs text-negative-strong">{{ t('sync.useDeviceHint') }}</span>
         </button>
         <button
           type="button"
-          class="min-h-10 w-full rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          class="min-h-10 w-full rounded-lg px-4 text-sm font-medium text-ink-3 hover:bg-surface-2"
           :disabled="busy"
           @click="sync.cancelChoice()"
         >

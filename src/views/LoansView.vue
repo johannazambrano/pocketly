@@ -48,30 +48,30 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
       <div v-for="loan in finance.loans" :key="loan.id" class="card space-y-2 text-xs">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <div class="truncate text-sm font-bold text-slate-800">{{ loan.name }}</div>
-            <div class="text-xs text-slate-400">{{ date(loan.date) }}<template v-if="loan.notes"> · {{ loan.notes }}</template></div>
+            <div class="truncate text-sm font-bold text-ink">{{ loan.name }}</div>
+            <div class="text-xs text-ink-5">{{ date(loan.date) }}<template v-if="loan.notes"> · {{ loan.notes }}</template></div>
           </div>
           <span
             class="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium"
-            :class="loan.type === 'given' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'"
+            :class="loan.type === 'given' ? 'bg-positive-soft text-positive-strong' : 'bg-caution-soft-2 text-caution'"
           >
             {{ loan.type === 'given' ? t('loans.givenShort') : t('loans.receivedShort') }}
           </span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5 text-center">
+        <div class="grid grid-cols-3 gap-2 rounded-lg bg-surface-2 p-2.5 text-center">
           <div>
-            <p class="text-xs text-slate-500">{{ t('common.total') }}</p>
-            <p class="font-bold text-slate-800">{{ money(loan.amount) }}</p>
+            <p class="text-xs text-ink-4">{{ t('common.total') }}</p>
+            <p class="font-bold text-ink">{{ money(loan.amount) }}</p>
           </div>
           <div>
-            <p class="text-xs text-slate-500">{{ t('loans.repaid') }}</p>
-            <p class="font-bold text-emerald-600">{{ money(loanStatus(loan).repaid) }}</p>
+            <p class="text-xs text-ink-4">{{ t('loans.repaid') }}</p>
+            <p class="font-bold text-accent-icon">{{ money(loanStatus(loan).repaid) }}</p>
           </div>
           <div>
-            <p class="text-xs text-slate-500">{{ t('loans.remaining') }}</p>
-            <p v-if="loanStatus(loan).remaining > 0" class="font-bold text-rose-600">{{ money(loanStatus(loan).remaining) }}</p>
-            <p v-else class="font-bold text-slate-400"><i class="fa-solid fa-check mr-1"></i>{{ t('loans.settled') }}</p>
+            <p class="text-xs text-ink-4">{{ t('loans.remaining') }}</p>
+            <p v-if="loanStatus(loan).remaining > 0" class="font-bold text-negative">{{ money(loanStatus(loan).remaining) }}</p>
+            <p v-else class="font-bold text-ink-5"><i class="fa-solid fa-check mr-1"></i>{{ t('loans.settled') }}</p>
           </div>
         </div>
 
@@ -79,31 +79,31 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
           <div
             v-for="r in loan.repayments"
             :key="r.id"
-            class="my-1 flex items-center justify-between border-l-2 border-emerald-400 pl-2 text-xs text-slate-500"
+            class="my-1 flex items-center justify-between border-l-2 border-accent-light pl-2 text-xs text-ink-4"
           >
             <span>{{ t('loans.repaymentOn', { date: date(r.date) }) }}</span>
             <span class="flex items-center gap-1">
-              <span class="font-semibold text-emerald-600">+{{ money(r.amount) }}</span>
-              <button type="button" class="icon-btn text-slate-400 hover:text-rose-500" :aria-label="t('common.delete')" @click="removeRepayment(loan, r.id)">
+              <span class="font-semibold text-accent-icon">+{{ money(r.amount) }}</span>
+              <button type="button" class="icon-btn text-ink-5 hover:text-negative-light" :aria-label="t('common.delete')" @click="removeRepayment(loan, r.id)">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </span>
           </div>
         </div>
 
-        <div class="flex items-center justify-between border-t border-slate-200 pt-1">
+        <div class="flex items-center justify-between border-t border-line pt-1">
           <button
             type="button"
-            class="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 text-sm font-medium whitespace-nowrap text-emerald-700 hover:bg-emerald-100"
+            class="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent-soft px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-accent-soft-2"
             @click="openRepayment(loan)"
           >
             <i class="fa-solid fa-plus"></i> {{ t('loans.addRepayment') }}
           </button>
           <div class="flex">
-            <button type="button" class="icon-btn text-indigo-600" :aria-label="t('common.edit')" @click="open(loan)">
+            <button type="button" class="icon-btn text-recurring" :aria-label="t('common.edit')" @click="open(loan)">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button type="button" class="icon-btn text-rose-500" :aria-label="t('common.delete')" @click="confirmDelete(loan.name, () => finance.deleteLoan(loan.id))">
+            <button type="button" class="icon-btn text-negative-light" :aria-label="t('common.delete')" @click="confirmDelete(loan.name, () => finance.deleteLoan(loan.id))">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
@@ -112,7 +112,7 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
 
     </div>
 
-    <p v-if="!finance.loans.length" class="py-6 text-center text-xs text-slate-400">{{ t('loans.empty') }}</p>
+    <p v-if="!finance.loans.length" class="py-6 text-center text-xs text-ink-5">{{ t('loans.empty') }}</p>
 
     <LoanForm :open="formOpen" :item="editing" @close="formOpen = false" />
     <RepaymentForm :open="repaymentOpen" :loan="repayingLoan" @close="repaymentOpen = false" />

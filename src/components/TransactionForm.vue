@@ -78,7 +78,7 @@ function submit() {
 
 <template>
   <BaseModal :open="open" :dirty="dirty" :title="title" @close="emit('close')">
-    <p v-if="!hasTags" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">{{ t('common.noTags') }}</p>
+    <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
     <form v-else class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
@@ -107,7 +107,7 @@ function submit() {
         <input v-model="form.notes" maxlength="200" class="field" />
       </label>
       <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
-      <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
+      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>

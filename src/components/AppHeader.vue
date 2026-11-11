@@ -11,16 +11,16 @@ const ui = useUiStore()
 </script>
 
 <template>
-  <header class="pt-safe px-safe sticky top-0 z-40 bg-slate-900 text-white shadow-md">
+  <header class="pt-safe px-safe sticky top-0 z-40 bg-chrome text-on-color shadow-md">
     <div class="mx-auto flex max-w-xl items-center justify-between gap-3 px-4 py-3 md:max-w-6xl md:px-6">
       <div class="flex min-w-0 items-center gap-2">
         <h1 class="flex items-center gap-2 text-lg font-bold tracking-wide">
-          <i class="fa-solid fa-wallet text-emerald-400"></i> {{ t('app.name') }}
+          <i class="fa-solid fa-wallet text-accent-light"></i> {{ t('app.name') }}
         </h1>
         <select
           v-model.number="finance.selectedYear"
           :aria-label="t('app.year')"
-          class="h-10 rounded-lg border border-slate-700 bg-slate-800 px-2 text-sm font-bold text-emerald-400"
+          class="h-10 rounded-lg border border-chrome-line bg-chrome-2 px-2 text-sm font-bold text-accent-light"
         >
           <option v-for="y in finance.years" :key="y" :value="y">{{ y }}</option>
         </select>
@@ -28,17 +28,17 @@ const ui = useUiStore()
       <RouterLink
         v-if="sync.enabled"
         to="/impostazioni"
-        class="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base hover:bg-slate-800"
+        class="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base hover:bg-chrome-2"
         :aria-label="`${t('sync.headerLabel')}: ${t(`sync.status.${sync.status}`)}`"
         :title="t(`sync.status.${sync.status}`)"
       >
-        <i v-if="sync.status === 'syncing'" class="fa-solid fa-arrows-rotate fa-spin text-sky-300"></i>
-        <i v-else-if="sync.status === 'error'" class="fa-solid fa-triangle-exclamation text-amber-400"></i>
-        <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sky-300' : 'text-slate-500'"></i>
+        <i v-if="sync.status === 'syncing'" class="fa-solid fa-arrows-rotate fa-spin text-sync-light"></i>
+        <i v-else-if="sync.status === 'error'" class="fa-solid fa-triangle-exclamation text-caution-light"></i>
+        <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sync-light' : 'text-ink-4'"></i>
       </RouterLink>
       <button
         type="button"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base shadow transition hover:bg-emerald-500"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-icon text-base shadow transition hover:bg-accent-bright"
         :aria-label="t('onetime.new')"
         @click="ui.quickAddOpen = true"
       >

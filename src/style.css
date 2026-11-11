@@ -14,34 +14,58 @@
   --color-surface: var(--pk-surface);
   --color-surface-2: var(--pk-surface-2);
   --color-surface-3: var(--pk-surface-3);
+  --color-surface-4: var(--pk-surface-4);
   --color-line-soft: var(--pk-line-soft);
   --color-line: var(--pk-line);
   --color-line-strong: var(--pk-line-strong);
+  --color-ink-strong: var(--pk-ink-strong);
   --color-ink: var(--pk-ink);
   --color-ink-2: var(--pk-ink-2);
   --color-ink-3: var(--pk-ink-3);
   --color-ink-4: var(--pk-ink-4);
   --color-ink-5: var(--pk-ink-5);
+  --color-ink-6: var(--pk-ink-6);
+  --color-on-color: var(--pk-on-color);
   --color-accent: var(--pk-accent);
-  --color-accent-strong: var(--pk-accent-strong);
+  --color-accent-bright: var(--pk-accent-bright);
   --color-accent-icon: var(--pk-accent-icon);
+  --color-accent-light: var(--pk-accent-light);
+  --color-accent-line: var(--pk-accent-line);
   --color-accent-soft: var(--pk-accent-soft);
   --color-accent-soft-2: var(--pk-accent-soft-2);
-  --color-on-accent: var(--pk-on-accent);
+  --color-accent-strong: var(--pk-accent-strong);
+  --color-accent-stronger: var(--pk-accent-stronger);
+  --color-accent-strongest: var(--pk-accent-strongest);
   --color-positive: var(--pk-positive);
+  --color-positive-soft: var(--pk-positive-soft);
+  --color-positive-strong: var(--pk-positive-strong);
   --color-negative: var(--pk-negative);
-  --color-negative-strong: var(--pk-negative-strong);
+  --color-negative-light: var(--pk-negative-light);
+  --color-negative-line: var(--pk-negative-line);
   --color-negative-soft: var(--pk-negative-soft);
+  --color-negative-soft-2: var(--pk-negative-soft-2);
+  --color-negative-strong: var(--pk-negative-strong);
   --color-caution: var(--pk-caution);
-  --color-caution-strong: var(--pk-caution-strong);
-  --color-caution-soft: var(--pk-caution-soft);
+  --color-caution-bright: var(--pk-caution-bright);
+  --color-caution-icon: var(--pk-caution-icon);
+  --color-caution-light: var(--pk-caution-light);
   --color-caution-line: var(--pk-caution-line);
+  --color-caution-line-strong: var(--pk-caution-line-strong);
+  --color-caution-soft: var(--pk-caution-soft);
+  --color-caution-soft-2: var(--pk-caution-soft-2);
+  --color-caution-strong: var(--pk-caution-strong);
+  --color-caution-stronger: var(--pk-caution-stronger);
   --color-recurring: var(--pk-recurring);
+  --color-recurring-dot: var(--pk-recurring-dot);
+  --color-recurring-soft: var(--pk-recurring-soft);
+  --color-recurring-strong: var(--pk-recurring-strong);
   --color-variable: var(--pk-variable);
+  --color-sync: var(--pk-sync);
+  --color-sync-light: var(--pk-sync-light);
   --color-chrome: var(--pk-chrome);
   --color-chrome-2: var(--pk-chrome-2);
-  --color-on-chrome: var(--pk-on-chrome);
-  --color-on-chrome-accent: var(--pk-on-chrome-accent);
+  --color-chrome-3: var(--pk-chrome-3);
+  --color-chrome-line: var(--pk-chrome-line);
 }
 
 :root {
@@ -49,34 +73,58 @@
   --pk-surface: var(--color-white);
   --pk-surface-2: var(--color-slate-50);
   --pk-surface-3: var(--color-slate-100);
+  --pk-surface-4: var(--color-slate-200);
   --pk-line-soft: var(--color-slate-100);
   --pk-line: var(--color-slate-200);
   --pk-line-strong: var(--color-slate-300);
+  --pk-ink-strong: var(--color-slate-900);
   --pk-ink: var(--color-slate-800);
   --pk-ink-2: var(--color-slate-700);
   --pk-ink-3: var(--color-slate-600);
   --pk-ink-4: var(--color-slate-500);
   --pk-ink-5: var(--color-slate-400);
+  --pk-ink-6: var(--color-slate-300);
+  --pk-on-color: var(--color-white);
   --pk-accent: var(--color-emerald-700);
-  --pk-accent-strong: var(--color-emerald-800);
+  --pk-accent-bright: var(--color-emerald-500);
   --pk-accent-icon: var(--color-emerald-600);
+  --pk-accent-light: var(--color-emerald-400);
+  --pk-accent-line: var(--color-emerald-200);
   --pk-accent-soft: var(--color-emerald-50);
   --pk-accent-soft-2: var(--color-emerald-100);
-  --pk-on-accent: var(--color-white);
+  --pk-accent-strong: var(--color-emerald-800);
+  --pk-accent-stronger: var(--color-emerald-900);
+  --pk-accent-strongest: var(--color-emerald-950);
   --pk-positive: var(--color-blue-600);
+  --pk-positive-soft: var(--color-blue-100);
+  --pk-positive-strong: var(--color-blue-700);
   --pk-negative: var(--color-rose-600);
-  --pk-negative-strong: var(--color-rose-700);
+  --pk-negative-light: var(--color-rose-500);
+  --pk-negative-line: var(--color-rose-200);
   --pk-negative-soft: var(--color-rose-50);
+  --pk-negative-soft-2: var(--color-rose-100);
+  --pk-negative-strong: var(--color-rose-700);
   --pk-caution: var(--color-amber-700);
-  --pk-caution-strong: var(--color-amber-800);
-  --pk-caution-soft: var(--color-amber-50);
+  --pk-caution-bright: var(--color-amber-500);
+  --pk-caution-icon: var(--color-amber-600);
+  --pk-caution-light: var(--color-amber-400);
   --pk-caution-line: var(--color-amber-200);
+  --pk-caution-line-strong: var(--color-amber-300);
+  --pk-caution-soft: var(--color-amber-50);
+  --pk-caution-soft-2: var(--color-amber-100);
+  --pk-caution-strong: var(--color-amber-800);
+  --pk-caution-stronger: var(--color-amber-900);
   --pk-recurring: var(--color-indigo-600);
+  --pk-recurring-dot: var(--color-indigo-500);
+  --pk-recurring-soft: var(--color-indigo-50);
+  --pk-recurring-strong: var(--color-indigo-700);
   --pk-variable: var(--color-orange-500);
+  --pk-sync: var(--color-sky-600);
+  --pk-sync-light: var(--color-sky-300);
   --pk-chrome: var(--color-slate-900);
   --pk-chrome-2: var(--color-slate-800);
-  --pk-on-chrome: var(--color-white);
-  --pk-on-chrome-accent: var(--color-emerald-400);
+  --pk-chrome-3: var(--color-slate-700);
+  --pk-chrome-line: var(--color-slate-700);
 }
 
 @layer base {
@@ -141,16 +189,16 @@
 }
 
 @utility field {
-  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20;
+  @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent-bright focus:ring-2 focus:ring-accent-bright/20;
   min-height: 2.5rem;
 }
 
 @utility field-label {
-  @apply mb-1 block text-xs font-medium text-slate-700;
+  @apply mb-1 block text-xs font-medium text-ink-2;
 }
 
 @utility card {
-  @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  @apply rounded-xl border border-line bg-surface p-4 shadow-sm;
 }
 
 /*
@@ -158,12 +206,12 @@
  * pressione si scuriscono invece di schiarirsi, perché sui telefoni lo stato hover resta attaccato dopo il tocco.
  */
 @utility btn-primary {
-  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-color shadow-sm transition hover:bg-accent-strong active:bg-accent-stronger disabled:opacity-50;
 }
 
 /* Bersaglio di tocco di almeno 40 px: con le dita 32 px sono troppo piccoli. */
 @utility icon-btn {
-  @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-30;
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-surface-3 disabled:pointer-events-none disabled:opacity-30;
 }
 
 /* Spazio per la barra di sistema dei telefoni con notch / home indicator (anche in orizzontale). */

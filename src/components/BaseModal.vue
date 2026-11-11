@@ -140,13 +140,13 @@ onBeforeUnmount(onClose)
           role="dialog"
           aria-modal="true"
           :aria-labelledby="titleId"
-          class="pb-safe max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-xl"
+          class="pb-safe max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-surface shadow-xl sm:max-w-lg sm:rounded-xl"
         >
           <div class="p-5">
-            <div class="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
-              <h3 :id="titleId" ref="heading" tabindex="-1" class="text-base font-bold text-slate-800 focus:outline-none">{{ title }}</h3>
+            <div class="mb-3 flex items-center justify-between border-b border-line pb-2">
+              <h3 :id="titleId" ref="heading" tabindex="-1" class="text-base font-bold text-ink focus:outline-none">{{ title }}</h3>
               <!-- Slate 500: un'icona che serve a qualcosa deve stare almeno a 3:1 sul bianco (slate 400 era 2,6:1). -->
-              <button type="button" class="icon-btn text-slate-500 hover:text-slate-700" :aria-label="t('common.close')" @click="requestClose">
+              <button type="button" class="icon-btn text-ink-4 hover:text-ink-2" :aria-label="t('common.close')" @click="requestClose">
                 <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
               </button>
             </div>

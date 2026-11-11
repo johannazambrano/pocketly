@@ -13,15 +13,15 @@ const incomeOpen = ref(false)
 const recurringOpen = ref(false)
 
 const secondary =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100'
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent-soft px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-soft-2'
 </script>
 
 <template>
   <section class="card space-y-4 p-5 md:p-6" aria-labelledby="welcome-title">
     <div class="space-y-2">
-      <h3 id="welcome-title" class="text-lg font-bold text-slate-800">{{ t('welcome.title') }}</h3>
-      <p class="max-w-prose text-sm text-slate-600">{{ t('welcome.intro') }}</p>
-      <p class="max-w-prose text-sm text-slate-600">{{ t('welcome.start') }}</p>
+      <h3 id="welcome-title" class="text-lg font-bold text-ink">{{ t('welcome.title') }}</h3>
+      <p class="max-w-prose text-sm text-ink-3">{{ t('welcome.intro') }}</p>
+      <p class="max-w-prose text-sm text-ink-3">{{ t('welcome.start') }}</p>
     </div>
 
     <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -36,7 +36,7 @@ const secondary =
       </RouterLink>
     </div>
 
-    <p class="text-xs text-slate-500">{{ t('welcome.dailyHint') }}</p>
+    <p class="text-xs text-ink-4">{{ t('welcome.dailyHint') }}</p>
   </section>
 
   <TransactionForm :open="incomeOpen" kind="income" @close="incomeOpen = false" />

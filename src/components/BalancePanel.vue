@@ -73,9 +73,9 @@ const width = (value: number) => {
  * negativo). Le uscite normali, le scadenze vicine e gli zeri restano in colori neutri, così il rosso quando compare
  * si nota davvero.
  */
-const signColor = (v: number) => (v >= 0 ? 'text-blue-600' : 'text-rose-600')
+const signColor = (v: number) => (v >= 0 ? 'text-positive' : 'text-negative')
 /** Le entrate sono verdi solo quando c'è qualcosa: uno zero non è una buona notizia. */
-const incomeColor = computed(() => (props.income.value > 0 ? 'text-emerald-700' : 'text-slate-800'))
+const incomeColor = computed(() => (props.income.value > 0 ? 'text-accent' : 'text-ink'))
 
 /**
  * La cifra grande cresce di una misura sugli schermi più larghi. Le cifre non vanno mai a capo, quindi quelle molto
@@ -87,32 +87,32 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" :aria-label="main.label">
+  <section class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm" :aria-label="main.label">
     <!--
       Sui telefoni tutto in colonna. Da schermo largo la cifra grande e la coppia entrate/uscite stanno affiancate:
       una cifra sola in un riquadro largo lasciava mezza riga vuota.
     -->
     <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div class="px-4 pt-4 pb-3 md:py-5 lg:border-r lg:border-slate-100">
-        <h3 class="text-xs font-medium text-balance text-slate-500">{{ main.label }}</h3>
-        <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), main.neutral ? 'text-slate-800' : signColor(main.value)]">
+      <div class="px-4 pt-4 pb-3 md:py-5 lg:border-r lg:border-line-soft">
+        <h3 class="text-xs font-medium text-balance text-ink-4">{{ main.label }}</h3>
+        <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), main.neutral ? 'text-ink' : signColor(main.value)]">
           {{ money(main.value) }}
         </p>
         <!-- Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
-        <p v-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-slate-700">
-          <i class="fa-solid fa-circle-info mt-1 text-xs text-slate-500" aria-hidden="true"></i>{{ main.estimate }}
+        <p v-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-ink-2">
+          <i class="fa-solid fa-circle-info mt-1 text-xs text-ink-4" aria-hidden="true"></i>{{ main.estimate }}
         </p>
-        <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-slate-700">
+        <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-ink-2">
           {{ main.today.label }}
-          <b class="font-bold whitespace-nowrap text-slate-800">{{ money(main.today.value) }}</b>
+          <b class="font-bold whitespace-nowrap text-ink">{{ money(main.today.value) }}</b>
         </p>
-        <p v-if="main.note" class="mt-1.5 text-sm font-medium text-slate-700">{{ main.note }}</p>
-        <p v-if="main.hint" class="mt-1 text-xs text-slate-500">{{ main.hint }}</p>
+        <p v-if="main.note" class="mt-1.5 text-sm font-medium text-ink-2">{{ main.note }}</p>
+        <p v-if="main.hint" class="mt-1 text-xs text-ink-4">{{ main.hint }}</p>
 
         <template v-if="explain">
           <button
             type="button"
-            class="-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-emerald-700 hover:text-emerald-800"
+            class="-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-accent hover:text-accent-strong"
             :aria-expanded="explainOpen"
             :aria-controls="explainId"
             @click="explainOpen = !explainOpen"
@@ -120,23 +120,23 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
             <span aria-hidden="true"><i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': explainOpen }"></i></span>
             {{ t('dashboard.explainToggle') }}
           </button>
-          <div v-show="explainOpen" :id="explainId" class="mt-1 rounded-lg bg-slate-50 px-3 py-2">
+          <div v-show="explainOpen" :id="explainId" class="mt-1 rounded-lg bg-surface-2 px-3 py-2">
             <dl>
               <div v-for="row in explain.rows" :key="row.key" class="flex items-baseline justify-between gap-3 py-1">
-                <dt class="min-w-0 text-sm text-slate-700">
+                <dt class="min-w-0 text-sm text-ink-2">
                   {{ row.label }}
-                  <span v-if="row.note" class="block text-xs text-slate-600">{{ row.note }}</span>
+                  <span v-if="row.note" class="block text-xs text-ink-3">{{ row.note }}</span>
                 </dt>
-                <dd class="shrink-0 text-sm font-semibold whitespace-nowrap text-slate-800">{{ signed(row.value) }}</dd>
+                <dd class="shrink-0 text-sm font-semibold whitespace-nowrap text-ink">{{ signed(row.value) }}</dd>
               </div>
-              <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-slate-200 pt-2">
-                <dt class="text-sm font-semibold text-slate-800">{{ explain.total.label }}</dt>
-                <dd class="shrink-0 text-sm font-bold whitespace-nowrap" :class="explain.total.neutral ? 'text-slate-800' : signColor(explain.total.value)">{{ money(explain.total.value) }}</dd>
+              <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-2">
+                <dt class="text-sm font-semibold text-ink">{{ explain.total.label }}</dt>
+                <dd class="shrink-0 text-sm font-bold whitespace-nowrap" :class="explain.total.neutral ? 'text-ink' : signColor(explain.total.value)">{{ money(explain.total.value) }}</dd>
               </div>
             </dl>
-            <p v-if="explain.estimate" class="mt-2 text-xs leading-snug text-slate-600">
+            <p v-if="explain.estimate" class="mt-2 text-xs leading-snug text-ink-3">
               {{ explain.estimate }}
-              <RouterLink to="/previsioni" class="font-medium text-emerald-700 underline hover:text-emerald-800">{{ t('dashboard.explainChange') }}</RouterLink>
+              <RouterLink to="/previsioni" class="font-medium text-accent underline hover:text-accent-strong">{{ t('dashboard.explainChange') }}</RouterLink>
             </p>
           </div>
         </template>
@@ -144,25 +144,25 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
       <div
-        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] content-start border-t border-slate-100 lg:border-t-0"
+        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] content-start border-t border-line-soft lg:border-t-0"
       >
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
-          <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>
+          <p class="text-xs font-medium text-balance text-ink-4">{{ income.label }}</p>
           <p class="font-bold whitespace-nowrap" :class="[pairSize(income.value), incomeColor]">{{ money(income.value) }}</p>
-          <p v-if="income.hint" class="text-xs leading-snug text-slate-500">{{ income.hint }}</p>
+          <p v-if="income.hint" class="text-xs leading-snug text-ink-4">{{ income.hint }}</p>
         </div>
-        <div class="row-span-3 grid grid-rows-subgrid gap-y-1 border-l border-slate-100 px-4 py-3 md:py-5">
-          <p class="text-xs font-medium text-balance text-slate-500">{{ expenses.label }}</p>
-          <p class="font-bold whitespace-nowrap text-slate-800" :class="pairSize(expenses.value)">{{ money(expenses.value) }}</p>
-          <p v-if="expenses.hint" class="text-xs leading-snug text-slate-500">{{ expenses.hint }}</p>
+        <div class="row-span-3 grid grid-rows-subgrid gap-y-1 border-l border-line-soft px-4 py-3 md:py-5">
+          <p class="text-xs font-medium text-balance text-ink-4">{{ expenses.label }}</p>
+          <p class="font-bold whitespace-nowrap text-ink" :class="pairSize(expenses.value)">{{ money(expenses.value) }}</p>
+          <p v-if="expenses.hint" class="text-xs leading-snug text-ink-4">{{ expenses.hint }}</p>
         </div>
       </div>
     </div>
 
     <!-- Di cui: le uscite mostrate sopra, divise tra ricorrenti e variabili. Le due parti sommano sempre il totale. -->
-    <div v-if="split?.length" class="border-t border-slate-100 px-4 py-3">
-      <p class="text-xs font-medium text-slate-500">{{ t('dashboard.splitTitle') }}</p>
-      <div class="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+    <div v-if="split?.length" class="border-t border-line-soft px-4 py-3">
+      <p class="text-xs font-medium text-ink-4">{{ t('dashboard.splitTitle') }}</p>
+      <div class="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
         <div v-for="part in split" :key="part.key" class="h-full first:rounded-l-full last:rounded-r-full" :class="part.dot" :style="{ width: width(part.value) }"></div>
       </div>
       <!--
@@ -171,12 +171,12 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
       -->
       <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
         <div v-for="part in split" :key="part.key" class="min-w-0 last:text-right">
-          <dt class="flex items-center gap-1.5 text-xs text-slate-600 [div:last-child>&]:justify-end">
+          <dt class="flex items-center gap-1.5 text-xs text-ink-3 [div:last-child>&]:justify-end">
             <span class="h-2 w-2 shrink-0 rounded-full" :class="part.dot" aria-hidden="true"></span>{{ part.label }}
           </dt>
-          <dd class="text-sm font-semibold whitespace-nowrap text-slate-800">{{ money(part.value) }}</dd>
+          <dd class="text-sm font-semibold whitespace-nowrap text-ink">{{ money(part.value) }}</dd>
           <!-- Il confronto con la media, sempre visibile: è la risposta a "come sto andando" su questa parte. -->
-          <dd v-if="part.note" class="text-xs leading-snug text-slate-500">
+          <dd v-if="part.note" class="text-xs leading-snug text-ink-4">
             {{ part.note }}
           </dd>
         </div>

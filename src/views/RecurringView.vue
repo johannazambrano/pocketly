@@ -55,10 +55,10 @@ function period(r: RecurringExpense) {
           <TagBadge kind="paymentMethods" :id="r.paymentMethodId" />
           <span
             v-if="r.notifications?.length"
-            class="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+            class="inline-flex items-center gap-1 rounded bg-surface-3 px-1.5 py-0.5 text-[11px] text-ink-3"
             :title="formatRulesSummary(r.notifications, t)"
           >
-            <i class="fa-solid fa-bell text-[10px] text-emerald-600"></i>
+            <i class="fa-solid fa-bell text-[10px] text-accent-icon"></i>
             <span>{{ formatRulesSummary(r.notifications, t) }}</span>
           </span>
         </template>

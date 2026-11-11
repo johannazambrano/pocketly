@@ -113,20 +113,20 @@ function back(e: MouseEvent) {
       v-if="tag"
       href="/"
       @click="back"
-      class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-emerald-700 hover:text-emerald-800"
+      class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-accent hover:text-accent-strong"
     >
       <i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i>{{ t('detail.back') }}
     </a>
 
     <!-- Una categoria eliminata, o un indirizzo vecchio: si dice cosa è successo e dove andare. -->
     <div v-if="!tag" class="card space-y-3">
-      <h2 ref="heading" tabindex="-1" class="text-lg font-bold text-slate-800 focus:outline-none">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethodTitle' : 'detail.notFoundTitle') }}</h2>
-      <p class="text-sm text-slate-600">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethod' : 'detail.notFound') }}</p>
+      <h2 ref="heading" tabindex="-1" class="text-lg font-bold text-ink focus:outline-none">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethodTitle' : 'detail.notFoundTitle') }}</h2>
+      <p class="text-sm text-ink-3">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethod' : 'detail.notFound') }}</p>
       <div class="flex flex-wrap gap-2">
         <a href="/" class="btn-primary" @click="back">{{ t('detail.back') }}</a>
         <RouterLink
           to="/impostazioni"
-          class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          class="inline-flex min-h-10 items-center justify-center rounded-lg border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
         >
           {{ t('detail.manageTags') }}
         </RouterLink>
@@ -137,8 +137,8 @@ function back(e: MouseEvent) {
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div class="min-w-0">
           <!-- Sta sullo sfondo grigio della pagina, non su un riquadro bianco: serve il grigio più scuro per 4,5:1. -->
-          <p class="text-xs font-medium text-slate-600">{{ kindLabel }}</p>
-          <h2 ref="heading" tabindex="-1" class="flex items-center gap-2 text-lg font-bold text-slate-800 focus:outline-none">
+          <p class="text-xs font-medium text-ink-3">{{ kindLabel }}</p>
+          <h2 ref="heading" tabindex="-1" class="flex items-center gap-2 text-lg font-bold text-ink focus:outline-none">
             <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: tag.color }" aria-hidden="true"></span>
             <span class="truncate">{{ tag.name }}</span>
           </h2>
@@ -146,35 +146,35 @@ function back(e: MouseEvent) {
         <MonthSelector />
       </div>
 
-      <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-baseline justify-between gap-3 border-b border-slate-100 px-4 py-3">
-          <p class="text-xs font-medium text-slate-500">{{ periodLabel }}</p>
-          <p class="text-lg font-bold whitespace-nowrap text-slate-800">{{ money(total) }}</p>
+      <div class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+        <div class="flex items-baseline justify-between gap-3 border-b border-line-soft px-4 py-3">
+          <p class="text-xs font-medium text-ink-4">{{ periodLabel }}</p>
+          <p class="text-lg font-bold whitespace-nowrap text-ink">{{ money(total) }}</p>
         </div>
-        <ul v-if="items.length" class="divide-y divide-slate-100">
+        <ul v-if="items.length" class="divide-y divide-line-soft">
           <li v-for="item in items" :key="item.key">
             <button
               type="button"
               :data-item-key="item.key"
               :aria-label="t('detail.editRow', { name: item.name, date: date(item.date), type: t(item.source === 'recurring' ? 'detail.recurring' : 'detail.variable').toLocaleLowerCase(), amount: money(item.amount) })"
-              class="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
+              class="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
               @click="edit(item)"
             >
               <span class="min-w-0">
-                <span class="block truncate text-sm font-medium text-slate-800">{{ item.name }}</span>
-                <span class="block text-xs text-slate-500">
+                <span class="block truncate text-sm font-medium text-ink">{{ item.name }}</span>
+                <span class="block text-xs text-ink-4">
                   {{ date(item.date) }} ·
                   {{ t(item.source === 'recurring' ? 'detail.recurring' : 'detail.variable') }}
                 </span>
               </span>
-              <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-700">
+              <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-ink-2">
                 {{ money(item.amount) }}
-                <i class="fa-solid fa-pen text-xs text-slate-400" aria-hidden="true"></i>
+                <i class="fa-solid fa-pen text-xs text-ink-5" aria-hidden="true"></i>
               </span>
             </button>
           </li>
         </ul>
-        <p v-else class="px-4 py-6 text-center text-sm text-slate-500">{{ t('detail.empty') }}</p>
+        <p v-else class="px-4 py-6 text-center text-sm text-ink-4">{{ t('detail.empty') }}</p>
       </div>
     </template>
 

@@ -117,8 +117,8 @@ function open(item: OneTimeExpense | null) {
             class="shrink-0 rounded-full px-3 py-1 font-medium transition-colors"
             :class="
               selectedTagId === null
-                ? 'bg-slate-800 text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                ? 'bg-chrome-2 text-on-color shadow-xs'
+                : 'bg-surface border border-line text-ink-3 hover:bg-surface-2'
             "
             @click="toggleTagFilter(null)"
           >
@@ -131,8 +131,8 @@ function open(item: OneTimeExpense | null) {
             class="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-all"
             :class="
               selectedTagId === item.id
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                ? 'bg-accent text-on-color shadow-xs'
+                : 'bg-surface border border-line text-ink-2 hover:bg-surface-2'
             "
             @click="toggleTagFilter(item.id)"
           >
@@ -143,7 +143,7 @@ function open(item: OneTimeExpense | null) {
             <span>#{{ item.name }}</span>
             <span
               class="text-[10px] opacity-75 font-normal"
-              :class="selectedTagId === item.id ? 'text-white' : 'text-slate-400'"
+              :class="selectedTagId === item.id ? 'text-on-color' : 'text-ink-5'"
             >
               ({{ item.countInMonth }})
             </span>
@@ -154,8 +154,8 @@ function open(item: OneTimeExpense | null) {
         <button
           v-if="tagBreakdown.length > 0"
           type="button"
-          class="shrink-0 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 transition-colors"
-          :class="{ 'border-emerald-500 text-emerald-700 bg-emerald-50': showBreakdown }"
+          class="shrink-0 inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-3 shadow-2xs hover:bg-surface-2 transition-colors"
+          :class="{ 'border-accent-bright text-accent bg-accent-soft': showBreakdown }"
           :title="t('onetime.tagSummary')"
           @click="showBreakdown = !showBreakdown"
         >
@@ -167,30 +167,30 @@ function open(item: OneTimeExpense | null) {
       <!-- Card Riepilogo Raggruppato per Tag (comprimibile) -->
       <div v-if="showBreakdown && tagBreakdown.length > 0" class="card space-y-3">
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-700">
+          <h3 class="text-sm font-semibold text-ink-2">
             {{ t('onetime.tagSummary') }}
           </h3>
-          <span class="text-xs text-slate-400">{{ tagBreakdown.length }} tag</span>
+          <span class="text-xs text-ink-5">{{ tagBreakdown.length }} tag</span>
         </div>
         <div class="space-y-2">
           <div
             v-for="row in tagBreakdown"
             :key="row.id"
-            class="cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-slate-50"
+            class="cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-surface-2"
             @click="toggleTagFilter(row.id)"
           >
             <div class="mb-1 flex justify-between gap-2 text-xs">
-              <span class="truncate font-medium text-slate-700 flex items-center gap-1.5">
+              <span class="truncate font-medium text-ink-2 flex items-center gap-1.5">
                 <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8' }"></span>
                 <span>#{{ finance.tag('tags', row.id)?.name ?? t('common.unknown') }}</span>
-                <span class="text-[10px] text-slate-400">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
+                <span class="text-[10px] text-ink-5">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
               </span>
-              <span class="shrink-0 font-semibold text-slate-700">
+              <span class="shrink-0 font-semibold text-ink-2">
                 {{ money(row.total) }}
-                <span class="font-normal text-slate-400">({{ percent(row.total / grandTotalForBreakdown) }})</span>
+                <span class="font-normal text-ink-5">({{ percent(row.total / grandTotalForBreakdown) }})</span>
               </span>
             </div>
-            <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
               <div
                 class="h-full rounded-full transition-all"
                 :style="{
@@ -206,18 +206,18 @@ function open(item: OneTimeExpense | null) {
       <!-- Banner Informativo Tag Attivo (con totale anno / vacanza completa tra mesi) -->
       <div
         v-if="selectedTag"
-        class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-950 shadow-2xs"
+        class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent-line bg-accent-soft/80 p-3 text-xs text-accent-strongest shadow-2xs"
       >
         <div class="flex items-center gap-2 min-w-0">
           <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="{ backgroundColor: selectedTag.color }"></span>
           <div class="min-w-0">
             <div class="font-bold truncate">
               #{{ selectedTag.name }}
-              <span class="font-normal text-emerald-700 ml-1">
+              <span class="font-normal text-accent ml-1">
                 ({{ t('onetime.expensesCount', { n: displayedExpenses.length }, displayedExpenses.length) }})
               </span>
             </div>
-            <div v-if="finance.selectedMonth !== 'all' && yearCountForSelectedTag > displayedExpenses.length" class="text-[11px] text-emerald-700 mt-0.5">
+            <div v-if="finance.selectedMonth !== 'all' && yearCountForSelectedTag > displayedExpenses.length" class="text-[11px] text-accent mt-0.5">
               {{ t('onetime.yearTagTotal', { tag: selectedTag.name, amount: money(yearTotalForSelectedTag) }) }}
             </div>
           </div>
@@ -226,14 +226,14 @@ function open(item: OneTimeExpense | null) {
           <button
             v-if="finance.selectedMonth !== 'all' && yearCountForSelectedTag > displayedExpenses.length"
             type="button"
-            class="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 shadow-2xs hover:bg-emerald-100 transition-colors"
+            class="rounded-md bg-surface px-2 py-1 text-[11px] font-semibold text-accent-strong shadow-2xs hover:bg-accent-soft-2 transition-colors"
             @click="finance.selectedMonth = 'all'"
           >
             {{ t('onetime.viewAllYear') }}
           </button>
           <button
             type="button"
-            class="rounded-md bg-emerald-200/60 px-2 py-1 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-200 transition-colors"
+            class="rounded-md bg-accent-line/60 px-2 py-1 text-[11px] font-semibold text-accent-stronger hover:bg-accent-line transition-colors"
             @click="toggleTagFilter(null)"
           >
             {{ t('onetime.clearFilter') }}

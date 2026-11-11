@@ -7,12 +7,12 @@ const props = defineProps<{ limit: number; spent: number; scheduled: number; sta
 /** La barra non esce mai dal suo riquadro: oltre il limite resta piena e cambia colore. */
 const spentPct = computed(() => Math.min(100, (props.spent / props.limit) * 100))
 const scheduledPct = computed(() => Math.min(100 - spentPct.value, (props.scheduled / props.limit) * 100))
-const color = computed(() => ({ ok: 'bg-emerald-500', warning: 'bg-amber-500', over: 'bg-rose-500' })[props.status])
+const color = computed(() => ({ ok: 'bg-accent-bright', warning: 'bg-caution-bright', over: 'bg-negative-light' })[props.status])
 </script>
 
 <template>
   <div
-    class="flex h-2.5 overflow-hidden rounded-full bg-slate-100"
+    class="flex h-2.5 overflow-hidden rounded-full bg-surface-3"
     role="progressbar"
     :aria-label="label"
     aria-valuemin="0"

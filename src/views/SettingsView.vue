@@ -179,32 +179,32 @@ function changeLocale(code: LocaleCode) {
 
 <template>
   <section class="space-y-4">
-    <h2 class="text-lg font-bold text-slate-800">{{ t('settings.title') }}</h2>
+    <h2 class="text-lg font-bold text-ink">{{ t('settings.title') }}</h2>
 
     <div class="lg:columns-2 lg:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
       <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700">
-          <i class="fa-solid fa-cloud-arrow-down mr-1 text-emerald-600"></i> {{ t('settings.backupTitle') }}
+        <h3 class="text-sm font-semibold text-ink-2">
+          <i class="fa-solid fa-cloud-arrow-down mr-1 text-accent-icon"></i> {{ t('settings.backupTitle') }}
         </h3>
-        <p class="text-xs text-slate-500">{{ t('settings.backupHint') }}</p>
+        <p class="text-xs text-ink-4">{{ t('settings.backupHint') }}</p>
 
-        <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs">
+        <div class="rounded-lg bg-surface-2 px-3 py-2 text-xs">
           <template v-if="backup.lastBackupAt">
-            <p class="font-medium text-slate-700">{{ lastBackupText }}</p>
-            <p v-if="backup.unsaved" class="text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.unsavedChanges') }}</p>
-            <p v-else class="text-emerald-700"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.allSaved') }}</p>
+            <p class="font-medium text-ink-2">{{ lastBackupText }}</p>
+            <p v-if="backup.unsaved" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.unsavedChanges') }}</p>
+            <p v-else class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.allSaved') }}</p>
           </template>
-          <p v-else class="text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.neverBackedUp') }}</p>
+          <p v-else class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.neverBackedUp') }}</p>
         </div>
 
         <div class="space-y-2">
-          <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-slate-700" :class="cryptoAvailable ? '' : 'opacity-50'">
-            <input v-model="protect" type="checkbox" class="h-4 w-4 accent-emerald-600" :disabled="!cryptoAvailable" />
+          <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-ink-2" :class="cryptoAvailable ? '' : 'opacity-50'">
+            <input v-model="protect" type="checkbox" class="h-4 w-4 accent-accent-icon" :disabled="!cryptoAvailable" />
             {{ t('settings.protect') }}
           </label>
-          <p v-if="!cryptoAvailable" class="text-xs text-amber-700">{{ t('settings.cryptoUnavailable') }}</p>
+          <p v-if="!cryptoAvailable" class="text-xs text-caution">{{ t('settings.cryptoUnavailable') }}</p>
           <div v-if="protect" class="space-y-2">
-            <p class="text-xs text-slate-500">{{ t('settings.protectHint') }}</p>
+            <p class="text-xs text-ink-4">{{ t('settings.protectHint') }}</p>
             <input
               v-model="password"
               type="password"
@@ -221,8 +221,8 @@ function changeLocale(code: LocaleCode) {
               :placeholder="t('settings.passwordRepeat')"
               :aria-label="t('settings.passwordRepeat')"
             />
-            <p v-if="showPasswordProblem" class="text-xs text-rose-600" role="alert">{{ passwordProblem }}</p>
-            <p class="text-xs text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.passwordWarning') }}</p>
+            <p v-if="showPasswordProblem" class="text-xs text-negative" role="alert">{{ passwordProblem }}</p>
+            <p class="text-xs text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.passwordWarning') }}</p>
           </div>
         </div>
 
@@ -233,7 +233,7 @@ function changeLocale(code: LocaleCode) {
           <button
             v-if="shareable"
             type="button"
-            class="min-h-10 min-w-40 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
             :disabled="busy || !!passwordProblem"
             @click="doExport('download')"
           >
@@ -241,7 +241,7 @@ function changeLocale(code: LocaleCode) {
           </button>
         </div>
 
-        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg bg-slate-800 px-4 py-2 text-center text-sm font-medium text-white focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 hover:bg-slate-700" :class="busy ? 'pointer-events-none opacity-50' : ''">
+        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg bg-chrome-2 px-4 py-2 text-center text-sm font-medium text-on-color focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-chrome-3" :class="busy ? 'pointer-events-none opacity-50' : ''">
           {{ t('settings.import') }}
           <input type="file" accept=".json,application/json" class="hidden" :disabled="busy" @change="importBackup" />
         </label>
@@ -251,11 +251,11 @@ function changeLocale(code: LocaleCode) {
       <NotificationSettings />
 
       <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700">
-          <i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i> {{ t('excelImport.title') }}
+        <h3 class="text-sm font-semibold text-ink-2">
+          <i class="fa-solid fa-file-excel mr-1 text-accent-icon"></i> {{ t('excelImport.title') }}
         </h3>
-        <p class="text-xs text-slate-500">{{ t('excelImport.hint') }}</p>
-        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 hover:bg-slate-50" :class="busy ? 'pointer-events-none opacity-50' : ''">
+        <p class="text-xs text-ink-4">{{ t('excelImport.hint') }}</p>
+        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-center text-sm font-medium text-ink-2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-surface-2" :class="busy ? 'pointer-events-none opacity-50' : ''">
           {{ t('excelImport.choose') }}
           <input
             type="file"
@@ -272,14 +272,14 @@ function changeLocale(code: LocaleCode) {
       <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
 
       <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-language mr-1 text-indigo-600"></i> {{ t('settings.language') }}</h3>
+        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-language mr-1 text-recurring"></i> {{ t('settings.language') }}</h3>
         <div class="flex gap-2">
           <button
             v-for="l in LOCALES"
             :key="l.code"
             type="button"
             class="min-h-10 flex-1 rounded-lg border px-3 text-sm font-medium"
-            :class="locale === l.code ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-600'"
+            :class="locale === l.code ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
             @click="changeLocale(l.code)"
           >
             {{ l.label }}
@@ -288,35 +288,35 @@ function changeLocale(code: LocaleCode) {
       </div>
 
       <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-palette mr-1 text-indigo-600"></i> {{ t('settings.appearance') }}</h3>
+        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring"></i> {{ t('settings.appearance') }}</h3>
         <div class="space-y-1">
-          <p id="appearance-platform" class="text-xs font-medium text-slate-600">{{ t('settings.platform') }}</p>
+          <p id="appearance-platform" class="text-xs font-medium text-ink-3">{{ t('settings.platform') }}</p>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-labelledby="appearance-platform">
             <button
               v-for="c in PLATFORM_CHOICES"
               :key="c"
               type="button"
               class="min-h-10 rounded-lg border px-3 text-sm font-medium"
-              :class="appearance.platformChoice === c ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-600'"
+              :class="appearance.platformChoice === c ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
               :aria-pressed="appearance.platformChoice === c"
               @click="appearance.setPlatform(c)"
             >
               {{ t(`settings.platforms.${c}`) }}
             </button>
           </div>
-          <p v-if="appearance.platformChoice === 'auto'" class="text-xs text-slate-500">
+          <p v-if="appearance.platformChoice === 'auto'" class="text-xs text-ink-4">
             {{ t('settings.platformDetected', { platform: t(`settings.platforms.${appearance.detected}`) }) }}
           </p>
         </div>
         <div class="space-y-1">
-          <p id="appearance-theme" class="text-xs font-medium text-slate-600">{{ t('settings.theme') }}</p>
+          <p id="appearance-theme" class="text-xs font-medium text-ink-3">{{ t('settings.theme') }}</p>
           <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="appearance-theme">
             <button
               v-for="c in THEME_CHOICES"
               :key="c"
               type="button"
               class="min-h-10 rounded-lg border px-3 text-sm font-medium"
-              :class="appearance.themeChoice === c ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-600'"
+              :class="appearance.themeChoice === c ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
               :aria-pressed="appearance.themeChoice === c"
               @click="appearance.setTheme(c)"
             >
@@ -326,18 +326,18 @@ function changeLocale(code: LocaleCode) {
         </div>
       </div>
 
-      <div class="card space-y-2 text-xs text-slate-500">
-        <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-shield-halved mr-1 text-slate-600"></i> {{ t('settings.privacyTitle') }}</h3>
+      <div class="card space-y-2 text-xs text-ink-4">
+        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-shield-halved mr-1 text-ink-3"></i> {{ t('settings.privacyTitle') }}</h3>
         <p>{{ t('settings.privacyText') }}</p>
-        <p v-if="persistent === true" class="text-emerald-700"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
-        <p v-else-if="persistent === false" class="text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
-        <p class="pt-2 text-[11px] text-slate-400">{{ t('settings.version', { version }) }}</p>
+        <p v-if="persistent === true" class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
+        <p v-else-if="persistent === false" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
+        <p class="pt-2 text-[11px] text-ink-5">{{ t('settings.version', { version }) }}</p>
       </div>
     </div>
 
     <BaseModal :open="!!unlock" :title="t('settings.unlockTitle')" @close="answerUnlock(null)">
       <form class="space-y-3" @submit.prevent="answerUnlock(unlockPassword)">
-        <p class="text-sm text-slate-600">{{ t('settings.unlockText') }}</p>
+        <p class="text-sm text-ink-3">{{ t('settings.unlockText') }}</p>
         <input
           v-model="unlockPassword"
           type="password"
@@ -345,9 +345,9 @@ function changeLocale(code: LocaleCode) {
           class="field"
           :aria-label="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
         />
-        <p v-if="unlock?.retry" class="text-xs text-rose-600" role="alert">{{ t('settings.unlockWrong') }}</p>
+        <p v-if="unlock?.retry" class="text-xs text-negative" role="alert">{{ t('settings.unlockWrong') }}</p>
         <div class="flex gap-2">
-          <button type="button" class="min-h-10 flex-1 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50" @click="answerUnlock(null)">
+          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="answerUnlock(null)">
             {{ t('common.cancel') }}
           </button>
           <button type="submit" class="btn-primary flex-1" :disabled="!unlockPassword">{{ t('settings.unlockButton') }}</button>
@@ -357,13 +357,13 @@ function changeLocale(code: LocaleCode) {
 
     <BaseModal :open="!!excelPreview" :title="t('excelImport.previewTitle')" @close="excelPreview = null">
       <div v-if="excelPreview" class="space-y-3">
-        <dl class="divide-y divide-slate-100 rounded-lg bg-slate-50 px-3 text-sm">
+        <dl class="divide-y divide-line-soft rounded-lg bg-surface-2 px-3 text-sm">
           <div v-for="key in COUNT_KEYS" :key="key" class="flex justify-between py-1.5">
-            <dt class="text-slate-600">{{ t(`excelImport.counts.${key}`) }}</dt>
-            <dd class="font-semibold text-slate-800 tabular-nums">{{ excelPreview.stats[key] }}</dd>
+            <dt class="text-ink-3">{{ t(`excelImport.counts.${key}`) }}</dt>
+            <dd class="font-semibold text-ink tabular-nums">{{ excelPreview.stats[key] }}</dd>
           </div>
         </dl>
-        <details v-if="excelPreview.warnings.length" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <details v-if="excelPreview.warnings.length" class="rounded-lg border border-caution-line bg-caution-soft px-3 py-2 text-xs text-caution-strong">
           <summary class="cursor-pointer font-medium">
             <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('excelImport.warningsTitle', { count: excelPreview.warnings.length }) }}
           </summary>
@@ -371,9 +371,9 @@ function changeLocale(code: LocaleCode) {
             <li v-for="(w, i) in excelPreview.warnings" :key="i">{{ warningText(w) }}</li>
           </ul>
         </details>
-        <p class="text-xs text-slate-600">{{ t('excelImport.replaceWarning') }}</p>
+        <p class="text-xs text-ink-3">{{ t('excelImport.replaceWarning') }}</p>
         <div class="flex gap-2">
-          <button type="button" class="min-h-10 flex-1 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50" @click="excelPreview = null">
+          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="excelPreview = null">
             {{ t('common.cancel') }}
           </button>
           <button type="button" class="btn-primary flex-1" :disabled="busy" @click="confirmExcelImport">{{ t('excelImport.confirm') }}</button>

@@ -84,19 +84,19 @@ function handleAddNew() {
         v-for="tag in unselectedTags"
         :key="tag.id"
         type="button"
-        class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-100"
+        class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2 py-0.5 text-xs text-ink-3 transition-colors hover:border-line-strong hover:bg-surface-3"
         @click="selectTag(tag.id)"
       >
         <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: tag.color }"></span>
         <span>#{{ tag.name }}</span>
-        <i class="fa-solid fa-plus text-[9px] text-slate-400"></i>
+        <i class="fa-solid fa-plus text-[9px] text-ink-5"></i>
       </button>
     </div>
 
     <!-- Campo per creare un nuovo tag al volo -->
     <div class="flex gap-1.5">
       <div class="relative flex-1">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-xs text-slate-400">#</span>
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-xs text-ink-5">#</span>
         <input
           v-model="newTagName"
           type="text"
@@ -108,7 +108,7 @@ function handleAddNew() {
       </div>
       <button
         type="button"
-        class="h-9 min-h-9 shrink-0 rounded-lg border border-slate-300 bg-slate-100 px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+        class="h-9 min-h-9 shrink-0 rounded-lg border border-line-strong bg-surface-3 px-3 text-xs font-semibold text-ink-2 transition-colors hover:bg-surface-4 disabled:opacity-50"
         :disabled="!newTagName.trim()"
         @click="handleAddNew"
       >

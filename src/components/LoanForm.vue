@@ -83,7 +83,7 @@ function submit() {
         <span class="field-label">{{ t('common.notes') }}</span>
         <input v-model="form.notes" maxlength="200" class="field" :placeholder="t('loans.notesPlaceholder')" />
       </label>
-      <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
+      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>

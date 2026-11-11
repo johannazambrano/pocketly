@@ -61,24 +61,24 @@ function confirmDelete() {
 
 <template>
   <div class="card space-y-3">
-    <h3 class="text-sm font-semibold text-slate-700">{{ title }}</h3>
+    <h3 class="text-sm font-semibold text-ink-2">{{ title }}</h3>
     <form class="flex gap-2" @submit.prevent="add">
       <input v-model="newName" maxlength="40" :placeholder="placeholder" class="field flex-grow" />
-      <button type="submit" class="min-h-10 rounded-lg bg-slate-800 px-4 text-sm whitespace-nowrap text-white hover:bg-slate-700">{{ t('app.add') }}</button>
+      <button type="submit" class="min-h-10 rounded-lg bg-chrome-2 px-4 text-sm whitespace-nowrap text-on-color hover:bg-chrome-3">{{ t('app.add') }}</button>
     </form>
-    <ul class="divide-y divide-slate-100 text-xs">
+    <ul class="divide-y divide-line-soft text-xs">
       <li v-for="tag in tags" :key="tag.id" class="flex items-center justify-between gap-2 px-1 py-2">
         <div class="flex min-w-0 flex-1 items-center gap-2">
           <input
             type="color"
             :value="tag.color"
             :aria-label="t('settings.pickColor')"
-            class="h-8 w-8 shrink-0 cursor-pointer rounded border border-slate-300 bg-transparent p-0"
+            class="h-8 w-8 shrink-0 cursor-pointer rounded border border-line-strong bg-transparent p-0"
             @change="finance.setTagColor(kind, tag.id, ($event.target as HTMLInputElement).value)"
           />
           <button
             type="button"
-            class="icon-btn shrink-0 text-slate-500 hover:text-emerald-600"
+            class="icon-btn shrink-0 text-ink-4 hover:text-accent-icon"
             :title="t('settings.randomColor')"
             :aria-label="t('settings.randomColor')"
             @click="finance.randomizeTagColor(kind, tag.id)"
@@ -98,10 +98,10 @@ function confirmDelete() {
           <span v-else class="truncate font-medium">{{ tag.name }}</span>
         </div>
         <div class="flex shrink-0 items-center">
-          <button type="button" class="icon-btn text-xs text-indigo-600" :aria-label="t('settings.rename')" @click="startRename(tag)">
+          <button type="button" class="icon-btn text-xs text-recurring" :aria-label="t('settings.rename')" @click="startRename(tag)">
             <i class="fa-solid fa-pen"></i>
           </button>
-          <button type="button" class="icon-btn text-xs text-rose-500" :aria-label="t('common.delete')" @click="askDelete(tag)">
+          <button type="button" class="icon-btn text-xs text-negative-light" :aria-label="t('common.delete')" @click="askDelete(tag)">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
@@ -113,7 +113,7 @@ function confirmDelete() {
       :title="t('settings.deleteTagTitle', { name: deleting?.name ?? '' })"
       @close="deleting = null"
     >
-      <div class="space-y-3 text-sm text-slate-600">
+      <div class="space-y-3 text-sm text-ink-3">
         <p v-if="!deletingUsage">{{ t('settings.deleteTagUnused') }}</p>
         <template v-else-if="kind === 'tags'">
           <p>{{ t('settings.deleteTagUntagOrReassign', { count: deletingUsage }) }}</p>
@@ -131,12 +131,12 @@ function confirmDelete() {
         </template>
       </div>
       <div class="mt-5 flex gap-2">
-        <button type="button" class="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-medium" @click="deleting = null">
+        <button type="button" class="flex-1 rounded-xl border border-line-strong py-2.5 text-sm font-medium" @click="deleting = null">
           {{ t('common.cancel') }}
         </button>
         <button
           type="button"
-          class="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          class="flex-1 rounded-xl bg-negative py-2.5 text-sm font-bold text-on-color disabled:opacity-40"
           :disabled="kind !== 'tags' && deletingUsage > 0 && !alternatives.length"
           @click="confirmDelete"
         >

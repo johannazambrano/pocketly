@@ -21,7 +21,7 @@ const isCurrent = computed(() => b.value.daysLeft !== null)
 const hasLimits = computed(() => b.value.lines.length > 0)
 const categories = computed(() => [...finance.data.categories].sort((a, c) => a.name.localeCompare(c.name)))
 
-const TEXT: Record<BudgetStatus, string> = { ok: 'text-emerald-600', warning: 'text-amber-600', over: 'text-rose-600' }
+const TEXT: Record<BudgetStatus, string> = { ok: 'text-accent-icon', warning: 'text-caution-icon', over: 'text-negative' }
 
 /** Il risultato del mese in una riga: quanto resta, o di quanto si è sforato. */
 function remainingText(remaining: number): string {
@@ -61,12 +61,12 @@ function suggest() {
 <template>
   <section class="space-y-4">
     <div class="flex items-center justify-between gap-2">
-      <h2 class="text-lg font-bold text-slate-800">{{ t('budget.title') }}</h2>
+      <h2 class="text-lg font-bold text-ink">{{ t('budget.title') }}</h2>
       <div class="flex items-center gap-1">
         <button type="button" class="icon-btn" :aria-label="t('budget.prevMonth')" :disabled="monthIndex === 0" @click="monthIndex--">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
-        <span class="min-w-32 text-center text-sm font-semibold text-slate-700" aria-live="polite">{{ monthLabel }}</span>
+        <span class="min-w-32 text-center text-sm font-semibold text-ink-2" aria-live="polite">{{ monthLabel }}</span>
         <button type="button" class="icon-btn" :aria-label="t('budget.nextMonth')" :disabled="monthIndex === 11" @click="monthIndex++">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
@@ -75,16 +75,16 @@ function suggest() {
 
     <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
       <div class="space-y-4">
-        <div v-if="!hasLimits" class="card space-y-1 text-sm text-slate-500">
-          <p class="font-semibold text-slate-700">{{ t('budget.emptyTitle') }}</p>
+        <div v-if="!hasLimits" class="card space-y-1 text-sm text-ink-4">
+          <p class="font-semibold text-ink-2">{{ t('budget.emptyTitle') }}</p>
           <p>{{ t('budget.emptyHint') }}</p>
         </div>
 
         <template v-else>
           <div class="card space-y-3">
             <div class="flex items-baseline justify-between gap-2">
-              <p class="text-xs font-medium text-slate-500">{{ t('budget.summary') }}</p>
-              <p v-if="b.status === 'warning'" class="text-xs font-semibold text-amber-600">{{ t('budget.nearLimit') }}</p>
+              <p class="text-xs font-medium text-ink-4">{{ t('budget.summary') }}</p>
+              <p v-if="b.status === 'warning'" class="text-xs font-semibold text-caution-icon">{{ t('budget.nearLimit') }}</p>
             </div>
             <p class="text-2xl font-bold" :class="TEXT[b.status]">{{ remainingText(b.totalRemaining) }}</p>
             <BudgetBar
@@ -94,24 +94,24 @@ function suggest() {
               :status="b.status"
               :label="t('budget.summary')"
             />
-            <p class="text-xs text-slate-500">
+            <p class="text-xs text-ink-4">
               {{ t('budget.spentOf', { spent: money(b.totalSpent + b.totalScheduled), limit: money(b.totalLimit) }) }}
-              <span v-if="b.totalScheduled > 0" class="block text-slate-400">
+              <span v-if="b.totalScheduled > 0" class="block text-ink-5">
                 {{ t('budget.scheduled', { amount: money(b.totalScheduled) }) }}
               </span>
             </p>
 
-            <div v-if="isCurrent" class="space-y-1.5 border-t border-slate-100 pt-3 text-sm">
-              <p v-if="b.dailyAvailable !== null" class="text-slate-700">
-                <span class="font-bold text-indigo-600">{{ money(b.dailyAvailable) }}</span>
+            <div v-if="isCurrent" class="space-y-1.5 border-t border-line-soft pt-3 text-sm">
+              <p v-if="b.dailyAvailable !== null" class="text-ink-2">
+                <span class="font-bold text-recurring">{{ money(b.dailyAvailable) }}</span>
                 {{ t('budget.daily') }}
-                <span class="text-xs text-slate-400">{{ t('budget.dailyDays', { n: b.daysLeft }, b.daysLeft ?? 0) }}</span>
+                <span class="text-xs text-ink-5">{{ t('budget.dailyDays', { n: b.daysLeft }, b.daysLeft ?? 0) }}</span>
               </p>
-              <p v-else class="font-medium text-rose-600">{{ t('budget.exhausted') }}</p>
+              <p v-else class="font-medium text-negative">{{ t('budget.exhausted') }}</p>
 
-              <p v-if="b.projected !== null" class="text-slate-700">
+              <p v-if="b.projected !== null" class="text-ink-2">
                 {{ t('budget.pace', { amount: money(b.projected) }) }}
-                <span :class="b.projected > b.totalLimit ? 'font-semibold text-rose-600' : 'text-emerald-600'">
+                <span :class="b.projected > b.totalLimit ? 'font-semibold text-negative' : 'text-accent-icon'">
                   {{
                     b.projected > b.totalLimit
                       ? t('budget.paceOver', { amount: money(b.projected - b.totalLimit) })
@@ -119,18 +119,18 @@ function suggest() {
                   }}
                 </span>
               </p>
-              <p v-else class="text-xs text-slate-400">{{ t('budget.paceLater', { day: MIN_PACE_DAYS }) }}</p>
+              <p v-else class="text-xs text-ink-5">{{ t('budget.paceLater', { day: MIN_PACE_DAYS }) }}</p>
             </div>
           </div>
 
-          <div class="card divide-y divide-slate-100">
+          <div class="card divide-y divide-line-soft">
             <div v-for="l in b.lines" :key="l.categoryId" class="space-y-1.5 py-3 first:pt-0 last:pb-0">
               <div class="flex items-center justify-between gap-2 text-sm">
-                <span class="flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                <span class="flex min-w-0 items-center gap-2 font-medium text-ink-2">
                   <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: finance.tag('categories', l.categoryId)?.color }"></span>
                   <span class="truncate">{{ finance.tag('categories', l.categoryId)?.name ?? t('common.unknown') }}</span>
                 </span>
-                <span class="shrink-0 text-xs text-slate-500">
+                <span class="shrink-0 text-xs text-ink-4">
                   {{ money(l.spent + l.scheduled) }} / {{ money(l.limit) }}
                   <span class="font-semibold" :class="TEXT[l.status]">{{ percent((l.spent + l.scheduled) / l.limit) }}</span>
                 </span>
@@ -148,7 +148,7 @@ function suggest() {
                 </span>
                 <span
                   v-if="l.projected !== null"
-                  :class="l.projected > l.limit ? 'font-medium text-amber-600' : 'text-slate-400'"
+                  :class="l.projected > l.limit ? 'font-medium text-caution-icon' : 'text-ink-5'"
                 >
                   {{ t('budget.projectedShort', { amount: money(l.projected) }) }}
                 </span>
@@ -156,24 +156,24 @@ function suggest() {
             </div>
           </div>
 
-          <p v-if="b.unbudgeted > 0" class="px-1 text-xs text-slate-500">
-            <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ t('budget.unbudgeted', { amount: money(b.unbudgeted) }) }}
+          <p v-if="b.unbudgeted > 0" class="px-1 text-xs text-ink-4">
+            <i class="fa-solid fa-circle-info mr-1 text-ink-5"></i>{{ t('budget.unbudgeted', { amount: money(b.unbudgeted) }) }}
           </p>
         </template>
       </div>
 
       <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-slate-700">
-          <i class="fa-solid fa-sliders mr-1 text-emerald-600"></i> {{ t('budget.limitsTitle') }}
+        <h3 class="text-sm font-semibold text-ink-2">
+          <i class="fa-solid fa-sliders mr-1 text-accent-icon"></i> {{ t('budget.limitsTitle') }}
         </h3>
-        <p class="text-xs text-slate-500">{{ t('budget.limitsHint') }}</p>
+        <p class="text-xs text-ink-4">{{ t('budget.limitsHint') }}</p>
         <div class="space-y-1.5">
           <label v-for="c in categories" :key="c.id" class="flex items-center justify-between gap-3 text-sm">
-            <span class="flex min-w-0 items-center gap-2 text-slate-700">
+            <span class="flex min-w-0 items-center gap-2 text-ink-2">
               <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: c.color }"></span>
               <span class="truncate">{{ c.name }}</span>
             </span>
-            <span class="flex shrink-0 items-center gap-1.5 text-slate-500">
+            <span class="flex shrink-0 items-center gap-1.5 text-ink-4">
               <input
                 :value="limitText(c.id)"
                 inputmode="decimal"
@@ -185,13 +185,13 @@ function suggest() {
               €
             </span>
           </label>
-          <p v-if="!categories.length" class="text-xs text-slate-400 italic">{{ t('budget.noCategories') }}</p>
+          <p v-if="!categories.length" class="text-xs text-ink-5 italic">{{ t('budget.noCategories') }}</p>
         </div>
-        <div class="space-y-1.5 border-t border-slate-100 pt-3">
+        <div class="space-y-1.5 border-t border-line-soft pt-3">
           <button type="button" class="btn-primary w-full" @click="suggest">
             <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>{{ t('budget.suggest') }}
           </button>
-          <p class="text-xs text-slate-500">{{ t('budget.suggestHint') }}</p>
+          <p class="text-xs text-ink-4">{{ t('budget.suggestHint') }}</p>
         </div>
       </div>
     </div>
