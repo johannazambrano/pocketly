@@ -2,7 +2,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -139,8 +139,8 @@ function checkMarkdownLinks() {
 // --------------------------------------------------------------------------
 async function checkI18n() {
   try {
-    const itModule = await import(path.join(ROOT, 'src', 'i18n', 'it.ts'))
-    const enModule = await import(path.join(ROOT, 'src', 'i18n', 'en.ts'))
+    const itModule = await import(pathToFileURL(path.join(ROOT, 'src', 'i18n', 'it.ts')).href)
+    const enModule = await import(pathToFileURL(path.join(ROOT, 'src', 'i18n', 'en.ts')).href)
 
     function getKeys(obj, prefix = '') {
       let keys = []
