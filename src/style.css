@@ -407,6 +407,19 @@
   @apply rounded-xl border border-line bg-surface p-4 shadow-sm;
 }
 
+/* Righe che scorrono di lato (chip, filtri) senza mostrare la barra di scorrimento. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Un riquadro senza spaziatura interna, per contenuti a righe (il riquadro della dashboard, le voci del dettaglio). */
+@utility panel {
+  @apply overflow-hidden rounded-xl border border-line bg-surface shadow-sm;
+}
+
 /*
  * Il testo bianco piccolo deve restare sopra 4,5:1 in ogni stato: emerald 700 a riposo (su 600 era 3,7:1), e hover e
  * pressione si scuriscono invece di schiarirsi, perché sui telefoni lo stato hover resta attaccato dopo il tocco.
@@ -430,4 +443,26 @@
 @utility px-safe {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/*
+ * La forma dei riquadri per piattaforma. Fuori dai layer di proposito, così vale sopra le utility `card` e `panel`.
+ * iPhone: celle raggruppate senza bordo né ombra, angoli da 14 px, sul fondo grigio di sistema.
+ * Android: schede piene di Material, senza bordo né ombra, angoli da 16 px.
+ * PC: il riquadro con bordo sottile e ombra leggera di sempre.
+ */
+:root[data-platform='ios'] :is(.card, .panel) {
+  border-color: transparent;
+  box-shadow: none;
+  border-radius: 14px;
+}
+:root[data-platform='android'] :is(.card, .panel) {
+  border-color: transparent;
+  box-shadow: none;
+  border-radius: 16px;
+}
+/* Il segmento scelto di iOS: pillola bianca di giorno, grigio chiaro di notte (sul binario scuro il bianco del
+   riquadro non si distinguerebbe). */
+:root[data-platform='ios'][data-theme='dark'] .seg-on {
+  background-color: #636366;
 }

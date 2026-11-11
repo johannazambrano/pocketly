@@ -146,7 +146,7 @@ function back(e: MouseEvent) {
         <MonthSelector />
       </div>
 
-      <div class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+      <div class="panel">
         <div class="flex items-baseline justify-between gap-3 border-b border-line-soft px-4 py-3">
           <p class="text-xs font-medium text-ink-4">{{ periodLabel }}</p>
           <p class="text-lg font-bold whitespace-nowrap text-ink">{{ money(total) }}</p>

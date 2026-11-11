@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, useId } from 'vue'
+import { useAppearanceStore } from '@/stores/appearance'
 import { RouterLink } from 'vue-router'
 import { useFormat } from '@/i18n'
 
@@ -56,6 +57,21 @@ const props = defineProps<{
 
 const { t, money } = useFormat()
 
+const appearance = useAppearanceStore()
+/**
+ * Il pulsante "Come si arriva a questa cifra" per piattaforma: su iPhone una riga della cella con la freccia, su
+ * Android un pulsante tonale (a pillola), sul PC un collegamento con la freccia in giù.
+ */
+const explainButton = computed(() => {
+  switch (appearance.platform) {
+    case 'ios':
+      return '-mx-4 mt-2 flex min-h-11 w-[calc(100%+2rem)] items-center justify-between border-t border-line-soft px-4 text-[15px] text-accent'
+    case 'android':
+      return 'mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-medium text-ink'
+    default:
+      return '-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-accent hover:text-accent-strong'
+  }
+})
 /** "Come si arriva a questa cifra": chiuso di serie, perché serve a chi vuole capire, non al colpo d'occhio. */
 const explainOpen = ref(false)
 const explainId = useId()
@@ -87,7 +103,7 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm" :aria-label="main.label">
+  <section class="panel" :aria-label="main.label">
     <!--
       Sui telefoni tutto in colonna. Da schermo largo la cifra grande e la coppia entrate/uscite stanno affiancate:
       una cifra sola in un riquadro largo lasciava mezza riga vuota.
@@ -110,15 +126,10 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         <p v-if="main.hint" class="mt-1 text-xs text-ink-4">{{ main.hint }}</p>
 
         <template v-if="explain">
-          <button
-            type="button"
-            class="-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-accent hover:text-accent-strong"
-            :aria-expanded="explainOpen"
-            :aria-controls="explainId"
-            @click="explainOpen = !explainOpen"
-          >
-            <span aria-hidden="true"><i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': explainOpen }"></i></span>
+          <button type="button" :class="explainButton" :aria-expanded="explainOpen" :aria-controls="explainId" @click="explainOpen = !explainOpen">
+            <span v-if="appearance.platform !== 'ios'" aria-hidden="true"><i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': explainOpen }"></i></span>
             {{ t('dashboard.explainToggle') }}
+            <span v-if="appearance.platform === 'ios'" aria-hidden="true"><i class="fa-solid fa-chevron-right text-xs text-ink-5 transition-transform" :class="{ 'rotate-90': explainOpen }"></i></span>
           </button>
           <div v-show="explainOpen" :id="explainId" class="mt-1 rounded-lg bg-surface-2 px-3 py-2">
             <dl>

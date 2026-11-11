@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
+import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
 import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
 import { addDays, lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
@@ -15,6 +16,7 @@ import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
+const appearance = useAppearanceStore()
 const router = useRouter()
 const { t, money, month, date, locale } = useFormat()
 
@@ -52,6 +54,24 @@ const selectedMonthName = computed(() => {
   return locale.value === 'it' ? name.toLocaleLowerCase('it') : name
 })
 const monthArgs = computed(() => ({ month: selectedMonthName.value }))
+
+/** Il titolo del periodo: il mese ("Novembre", con l'anno sul PC) o l'anno intero ("Anno 2026"). */
+const periodTitle = computed(() => {
+  const year = finance.selectedYear
+  if (finance.selectedMonth === 'all') return t('dashboard.yearTitle', { year })
+  const name = month(finance.selectedMonth)
+  return appearance.platform === 'ios' && year === currentYear.value ? name : `${name} ${year}`
+})
+const periodTitleClass = computed(() => {
+  switch (appearance.platform) {
+    case 'ios':
+      return 'text-[34px] leading-tight font-bold tracking-tight text-ink'
+    case 'android':
+      return 'sr-only'
+    default:
+      return 'text-2xl font-bold tracking-tight text-ink'
+  }
+})
 
 /**
  * Il riquadro principale ha una sola cifra grande, la risposta a "dove arriverò": il previsto a fine periodo per
@@ -433,14 +453,19 @@ const showUpcoming = computed(
 <template>
   <section class="space-y-4">
     <!--
-      La dashboard è la pagina iniziale e la voce attiva del menu dice già dove si è: il titolo resta solo per i lettori
-      di schermo, e il filtro del mese prende la riga intera.
+      Il titolo della dashboard è il periodo che si sta guardando: grande su iPhone ("Novembre"), sul PC accanto al
+      selettore ("Novembre 2026"); su Android il nome della pagina sta già nella barra in alto e il titolo resta per i
+      lettori di schermo. Senza dati il titolo è semplicemente "Dashboard".
     -->
-    <h2 class="sr-only">{{ t('dashboard.title') }}</h2>
+    <h2 v-if="isEmpty" class="sr-only">{{ t('dashboard.title') }}</h2>
     <WelcomePanel v-if="isEmpty" />
 
     <template v-else>
-      <div class="flex items-center justify-end">
+      <div
+        class="flex gap-3"
+        :class="appearance.platform === 'desktop' ? 'flex-wrap items-center justify-between' : 'flex-col'"
+      >
+        <h2 :class="periodTitleClass">{{ periodTitle }}</h2>
         <MonthSelector />
       </div>
 
@@ -487,7 +512,15 @@ const showUpcoming = computed(
                 class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2"
                 @click="editCharge(c)"
               >
-                <span class="min-w-0">
+                <!-- Android: l'iniziale in un cerchio, come le liste di Material. -->
+                <span
+                  v-if="appearance.platform === 'android'"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft-2 text-sm font-medium text-accent-strongest"
+                  aria-hidden="true"
+                >
+                  {{ c.name.charAt(0).toLocaleUpperCase() }}
+                </span>
+                <span class="min-w-0 flex-1">
                   <span class="block truncate text-sm font-medium">{{ c.name }}</span>
                   <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
                   <span class="block text-xs text-ink-4">
@@ -498,7 +531,12 @@ const showUpcoming = computed(
                 </span>
                 <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-ink-2">
                   {{ money(c.amount) }}
-                  <i class="fa-solid fa-pen text-xs text-ink-5" aria-hidden="true"></i>
+                  <!-- iPhone: la freccia di una riga che si apre; altrove la matita della modifica. -->
+                  <i
+                    class="fa-solid text-xs text-ink-5"
+                    :class="appearance.platform === 'ios' ? 'fa-chevron-right' : 'fa-pen'"
+                    aria-hidden="true"
+                  ></i>
                 </span>
               </button>
             </li>
