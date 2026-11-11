@@ -11,10 +11,14 @@ source-files:
   - src/stores/ui.ts
   - src/composables/useMonthStep.ts
   - src/composables/useConfirmDelete.ts
+  - src/composables/useDirty.ts
   - src/components/BalancePanel.vue
+  - src/components/BaseModal.vue
   - src/components/BottomNav.vue
   - src/components/MonthSelector.vue
+  - src/components/SubmitButton.vue
   - src/views/BreakdownDetailView.vue
+  - src/views/DashboardView.vue
   - src/i18n/index.ts
   - vite.config.ts
 verified: 2026-11-11
@@ -50,7 +54,8 @@ graph TD
    Moduli riutilizzabili per form (`TransactionForm`, `LoanForm`, `RecurringForm`), modali (`BaseModal`), badge di tag (`TagBadge`), grafici a barre (`BudgetBar`), selettori mese (`MonthSelector`), gestione notifiche e toast.
 3. **Composables (`src/composables/`):**
    Funzioni di logica reattiva condivisa:
-   - `useMonthStep.ts`: navigazione mensile avanti/indietro con cambio automatico di anno, condivisa tra le frecce del selettore, i listener globali da tastiera in `MonthSelector.vue` e le gesture di swipe touch su `BalancePanel.vue`. Include la gestione intelligente della transizione da "Tutti i mesi" (`'all'`): nell'anno in corso porta al mese odierno, mentre in un altro anno la freccia indietro conduce a dicembre e quella avanti a gennaio.
+   - `useMonthStep.ts`: il mese prima o dopo quello scelto, con passaggio all'anno vicino solo se compare nel menu dell'anno. È condiviso tra le frecce ‹ › e i tasti ←/→ di `MonthSelector.vue` e lo swipe sul riquadro principale, gestito in `DashboardView.vue`. Da "Tutti i mesi" (`'all'`) le frecce entrano nei mesi: nell'anno in corso ‹ porta al mese prima di oggi e › a quello dopo (se quel mese cade in un anno assente dal menu, al mese di oggi); in un altro anno ‹ porta a dicembre e › a gennaio. Al mese di oggi porta il pulsante "Questo mese" di `MonthSelector`.
+   - `useDirty.ts`: dice se i campi di un modulo sono cambiati dall'apertura (`dirty`, azzerato da `reset()` dopo aver riempito i campi). Lo usano i quattro moduli per passare `dirty` a `BaseModal`.
    - `useConfirmDelete.ts`: incapsula la richiesta di conferma prima di azioni distruttive tramite dialogo modale (`ui.confirm`).
 4. **Stores (`src/stores/`):**
    Gestiscono lo stato reattivo globale tramite Pinia:
@@ -58,7 +63,7 @@ graph TD
    - `sync`: stato del collegamento con il server di sincronizzazione, credenziali e polling.
    - `notifications`: sottoscrizioni Web Push locali e remote, pianificazione promemoria.
    - `backup`: monitoraggio dell'età dell'ultimo backup esportato e promemoria periodico.
-   - `ui`: messaggi toast temporanei e dialoghi di conferma.
+   - `ui`: messaggi toast temporanei, apertura rapida del modulo "nuova spesa" (`quickAddOpen`) e dialoghi di conferma (`confirm`, con `cancelLabel` facoltativo; di serie "Annulla").
 5. **Dominio (`src/domain/`):**
    Funzioni TypeScript pure senza dipendenze dalla reattività di Vue o dal DOM. Totalmente coperte da test unitari veloci.
 6. **Servizi (`src/services/`):**
@@ -102,7 +107,8 @@ L'internazionalizzazione è gestita tramite `vue-i18n` in [`src/i18n/`](../../sr
 - Il composable `useFormat()` ([`src/i18n/index.ts`](../../src/i18n/index.ts)) fornisce helper uniformi per:
   - `t(key, params)` per traduzioni con interpolazione.
   - `money(cents)` per formattazione valuta secondo la convenzione locale (€ con separatori appropriati).
-  - `date(iso)` e `month(index)` per la localizzazione delle date di calendario.
+  - `amountInput(cents)` per precompilare un campo importo con il separatore decimale della lingua ("13,00", non "13.00").
+  - `date(iso)` e `month(index, style?)` per la localizzazione delle date di calendario.
   - `percent(val)` per formattazione percentuale.
 - **Invariante:** le chiavi in `it.ts` e `en.ts` devono sempre coincidere. Lo script di verifica `npm run docs:check` verifica automaticamente l'assenza di chiavi orfane.
 
@@ -134,18 +140,20 @@ Lo stile globale in [`src/style.css`](../../src/style.css) è integrato con Tail
 Nel design visivo di Pocketly, il colore rosso (`text-rose-600`) adotta un principio di massima parsimonia: **ha un unico significato ed è riservato esclusivamente a valori contabili negativi / sotto zero** (deficit contabile effettivo o previsto).
 - **Neutralità per spese ordinarie e zeri:** Le uscite contabili ([`BalancePanel.vue`](../../src/components/BalancePanel.vue), [`BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue)) e gli importi pari a zero sono visualizzati in colore neutro (`text-slate-800`), evitando falsi allarmismi per le normali spese contabili.
 - **Entrate condizionate:** Le entrate compaiono in verde (`text-emerald-700`) solo quando l'importo è strettamente positivo (`> 0`); se l'importo è nullo, rimane in colore neutro (`text-slate-800`).
-- **Deficit transitorio con proiezione positiva:** In [`BalancePanel.vue`](../../src/components/BalancePanel.vue), se il saldo attuale è sotto zero (`balance.value < 0`) ma la proiezione a fine periodo è positiva o pari a zero (`projection.value >= 0`), l'importo del saldo viene mostrato in grigio scuro neutro (`text-slate-800`) anziché in rosso. Un disavanzo temporaneo destinato a rientrare a fine periodo è una transizione fisiologica, non un'insolvenza: il segno meno basta a segnalare la cifra e una frase ponte (`bridge`) ne illustra il recupero. Il rosso scatta unicamente quando la previsione stessa a fine periodo è negativa (`projection.value < 0`) o per periodi passati conclusi in passivo.
+- **Cifra grande del riquadro principale:** In [`BalancePanel.vue`](../../src/components/BalancePanel.vue) la cifra grande (il previsto a fine periodo, o il risultato finale per un periodo passato) usa `signColor`: blu (`text-blue-600`) se `>= 0`, rosso se `< 0`. Fa eccezione la cifra positiva solo grazie alle entrate stimate (`estimateDecisive` in [`DashboardView.vue`](../../src/views/DashboardView.vue), passato come `main.neutral`): resta neutra (`text-slate-800`), perché il blu non deve promettere "va bene" su soldi non ancora arrivati. Il risultato fino a oggi, sotto la cifra, è sempre neutro. Per un mese passato, oltre al colore, una frase confronta il risultato con la media dei mesi precedenti dell'anno (`averageBalanceBefore`, `compareToAverage`).
 - **Scadenze ravvicinate in ambra:** Nei prossimi addebiti ([`DashboardView.vue`](../../src/views/DashboardView.vue)), le scadenze imminenti (`daysLeft <= 3`) mantengono l'importo in grigio neutro (`text-slate-700`) e spostano l'evidenziazione visiva sull'elemento temporale ("quando"), evidenziato in ambra caldo (`text-amber-700 font-medium`). In questo modo, l'eventuale comparsa del colore rosso cattura immediatamente l'attenzione perché indica un reale disavanzo senza copertura.
 
 ### Accessibilità e Navigazione da Tastiera
 
 - **Focus programmatico e annunci contestuali:**
   Nella vista di approfondimento [`BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue), il caricamento aggiorna dinamicamente `document.title` (`"{name} · Pocketly"`) e trasferisce programmaticamente il focus al titolo `h2` (`tabindex="-1"`, con contorno visivo pulito `focus:outline-none`). In questo modo chi utilizza screen reader o naviga via tastiera recepisce all'istante il cambio di contesto senza dover riattraversare la barra superiore o i controlli globali. Al disallestimento (`onBeforeUnmount`), il titolo precedente viene ripristinato.
-- **Navigazione di ritorno intelligente:**
-  Il pulsante "Torna alla dashboard" in `BreakdownDetailView.vue` valuta `router.options.history.state.back === '/'`: se l'utente proviene dalla dashboard invoca `router.back()`, permettendo a `scrollBehavior` di riposizionare la vista esattamente dove si trovava; aprendo invece il link direttamente (es. da bookmark o ricaricamento), naviga normalmente verso `/`.
+- **Ritorno dal dettaglio:**
+  "Torna alla dashboard" in `BreakdownDetailView.vue` è un `<a href="/">` normale, non un `RouterLink` (che navigherebbe da solo prima del gestore `back`). Con Ctrl/Cmd/Maiusc/Alt o il tasto centrale il clic resta al browser (es. nuova scheda). Altrimenti, se `router.options.history.state.back === '/'` invoca `router.back()`, così `scrollBehavior` ripristina la posizione di scorrimento; aprendo la pagina direttamente (bookmark, ricaricamento) usa `router.push('/')`. Tornata indietro, `DashboardView.vue` legge in `onMounted` `router.options.history.state.forward` e rimette il focus sulla riga della ripartizione da cui si era entrati.
 - **Navigazione mese globale e compatibilità con tasti modificatori:**
-  I listener per i tasti `ArrowLeft` e `ArrowRight` sono centralizzati in [`MonthSelector.vue`](../../src/components/MonthSelector.vue) a livello di documento, consentendo lo scorrimento dei mesi da tastiera in qualsiasi schermata che includa il componente (dashboard, dettaglio analitico, spese una tantum). L'ascoltatore ignora difensivamente gli eventi se il focus è su controlli di testo (`input`, `select`, `textarea`, `contenteditable`) o all'interno di modali aperti (`[aria-modal="true"]`). Inoltre, se l'utente preme combinazioni con modificatori (`Alt`, `Ctrl`, `Meta`, `Shift`), l'evento non viene intercettato: ciò garantisce la piena operatività delle scorciatoie native del browser come `Alt+ArrowLeft` (ritorno cronologico indietro) ed evita interferenze con le funzioni di sistema operativo o accessibilità.
+  I listener per i tasti `ArrowLeft` e `ArrowRight` sono centralizzati in [`MonthSelector.vue`](../../src/components/MonthSelector.vue) a livello di documento, consentendo lo scorrimento dei mesi da tastiera in qualsiasi schermata che includa il componente (dashboard, dettaglio analitico, spese una tantum). L'ascoltatore ignora difensivamente gli eventi se il focus è su controlli di testo (`input`, `select`, `textarea`, `contenteditable`) o quando è aperta una finestra modale (`[aria-modal="true"]` nel documento). Inoltre, se l'utente preme combinazioni con modificatori (`Alt`, `Ctrl`, `Meta`, `Shift`), l'evento non viene intercettato: ciò garantisce la piena operatività delle scorciatoie native del browser come `Alt+ArrowLeft` (ritorno cronologico indietro) ed evita interferenze con le funzioni di sistema operativo o accessibilità.
 - **Preservazione del focus e feedback ARIA nel selettore mese:**
   In [`MonthSelector.vue`](../../src/components/MonthSelector.vue), il pulsante rapido "Questo mese" trasferisce programmaticamente il focus al menu a tendina `<select>` (`select.value?.focus()`) prima di nascondersi, evitando che il focus rimanga orfano nel DOM. Similmente, quando l'avanzamento o il retrocesso tramite le frecce passo-passo (‹ e ›) disabilita il pulsante per aver raggiunto il limite cronologico degli anni censiti, il focus passa automaticamente al `<select>`. Inoltre, le frecce adattano dinamicamente `aria-label` e `title` ("Vai a {month}" quando si proviene da "Tutti i mesi", "Mese precedente/successivo: {month}" all'interno dei mesi).
 - **Supporto touch, chiusura dialoghi e aree minime:**
-  I pulsanti interattivi e le righe cliccabili (come le ripartizioni [`BreakdownList.vue`](../../src/components/BreakdownList.vue) con prop `linked`) mantengono un'area minima di tocco di 40px/44px. Gli annunci vocali (`aria-live="polite"`) informano tempestivamente gli utenti di lettori di schermo sui cambi di periodo e sui saldi. I dialoghi modali ([`BaseModal.vue`](../../src/components/BaseModal.vue)) e il menu compatto ([`BottomNav.vue`](../../src/components/BottomNav.vue)) gestiscono la chiusura immediata con il tasto `Escape`.
+  I pulsanti interattivi e le righe cliccabili (come le ripartizioni [`BreakdownList.vue`](../../src/components/BreakdownList.vue) con prop `linked`) mantengono un'area minima di tocco di 40px/44px. Gli annunci vocali (`aria-live="polite"`) informano gli utenti di lettori di schermo sui cambi di periodo. Il menu compatto ([`BottomNav.vue`](../../src/components/BottomNav.vue)) si chiude con il tasto `Escape`.
+- **Finestre modali ([`BaseModal.vue`](../../src/components/BaseModal.vue)):**
+  All'apertura il focus va sul titolo della finestra (il lettore di schermo annuncia dove si è e sul telefono non si apre la tastiera); alla chiusura torna sull'elemento che l'ha aperta, se esiste ancora. Finché una finestra è aperta `#app` è `inert` (le finestre sono in `Teleport` sul `body`). Le finestre aperte formano una pila a livello di modulo: ognuna riceve uno `z-index` crescente (una conferma sta sopra il modulo) e solo quella in cima risponde a `Escape` e al Tab, che gira dentro la finestra. Con la prop `dirty` (da `useDirty`), chiudere con `Escape`, ✕ o clic sullo sfondo chiede prima "Scartare le modifiche?" via `ui.confirm` (con `cancelLabel` "Continua a modificare"); il pulsante "Annulla" del modulo (`SubmitButton` con `cancelLabel`) chiude subito.

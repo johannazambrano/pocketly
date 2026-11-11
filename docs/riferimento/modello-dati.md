@@ -5,7 +5,10 @@ source-files:
   - src/domain/defaults.ts
   - src/utils/dates.ts
   - src/utils/money.ts
-verified: 2026-11-10
+  - src/utils/id.ts
+  - src/domain/recurrence.ts
+  - src/services/storage.ts
+verified: 2026-11-11
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -24,7 +27,7 @@ export type Frequency = 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 ```
 
 ### `Id` (Identificatore Univoco)
-- Stringa univoca alfanumerica generata casualmente tramite `newId()` ([`src/utils/id.ts`](../../src/utils/id.ts)) basato su `crypto.randomUUID()` o generatore fallback con nanoid alphabet.
+- UUID v4 generato casualmente tramite `newId()` ([`src/utils/id.ts`](../../src/utils/id.ts)): usa `crypto.randomUUID()` dove disponibile (contesti sicuri: HTTPS o localhost), altrimenti costruisce a mano un UUID v4 da `crypto.getRandomValues`.
 - Tutte le entità secondarie (transazioni, rate, promemoria) fanno riferimento alle anagrafiche (categorie, metodi di pagamento, tag) **esclusivamente per `Id`**.
 
 ### `IsoDate` (Data di Calendario)
@@ -36,7 +39,8 @@ export type Frequency = 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 ### `Cents` (Importo Monetario)
 - Numero intero che esprime l'importo in centesimi di euro (es. `1050` corrisponde a € 10,50).
 - **Invariante:** gli importi memorizzati nel database non devono mai contenere decimali o virgole mobili.
-- La conversione da stringa utente avviene con `toCents(str)` e la formattazione con `money(cents)` o `formatCents(cents, locale)`.
+- La conversione da stringa utente avviene con `toCents(value)`, che accetta sia la virgola sia il punto come separatore decimale ("12,50" o "12.5"); la formattazione con `formatCents(cents, locale)`, esposta ai componenti come `useFormat().money`.
+- Per precompilare un campo da modificare si usa `centsToInput(cents, locale?)`, che scrive l'importo con il separatore decimale della lingua ("13,00" in italiano, "13.00" in inglese); i moduli lo usano tramite `useFormat().amountInput`.
 - *Nota su valori derivati:* `monthlyEquivalent` in `src/domain/recurrence.ts` calcola `amount / FREQUENCY_MONTHS[frequency]`, che per frequenze trimestrali o annuali può risultare frazionario. Tale valore è un derivato temporaneo di calcolo e non viene mai salvato nel modello.
 
 ### `Frequency` (Cadenza Ricorrente)
@@ -87,12 +91,14 @@ export interface RecurringExpense {
   amount: Cents
   frequency: Frequency
   startDate: IsoDate          // Data del primo addebito
-  endDate: IsoDate | null     // Data di termine (inclusa), oppure null se a tempo indeterminato
+  endDate: IsoDate | null     // Ultimo giorno attivo (incluso), oppure null se a tempo indeterminato
   categoryId: Id
   paymentMethodId: Id
   notifications?: NotificationRule[] // Regole di promemoria stile Google Calendar
 }
 ```
+
+`endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data.
 
 ### `Income` (Entrata)
 ```ts
@@ -183,11 +189,18 @@ export const CURRENT_SCHEMA_VERSION = 2
 Il modulo `migration.ts` garantisce che Pocketly possa leggere e importare qualsiasi backup, compresi quelli provenienti dal vecchio prototipo HTML (schema v1) o file generati da versioni precedenti:
 
 - **Riconoscimento automatico schema v1:**
-  Nello schema v1 le spese erano suddivise per anno (`data[year].oneTime`), gli importi erano numeri decimali in euro e le categorie erano stringhe letterali anziché ID. La funzione `migrateV1toV2` normalizza gli importi moltiplicandoli per 100 ed estrae le entità `Tag` con ID univoci.
+  Nello schema v1 le spese erano suddivise per anno (`years[anno].oneTimeExpenses`, ecc.), gli importi erano numeri decimali in euro e le categorie erano stringhe letterali anziché ID. La funzione `migrateV1` converte gli importi in centesimi ed estrae le entità `Tag` con ID univoci. `parseBackup` riconosce anche il prototipo mono-anno più vecchio (array `oneTimeExpenses` alla radice) e lo migra come anno 2026.
 - **Validazione difensiva `parseBackup(raw)`:**
   Non assume mai che il file importato sia valido. Convalida la presenza di ciascun array, ripulisce valori `null` o `undefined`, converte tipi non conformi e garantisce il ripristino di una struttura `FinanceData` semanticamente corretta.
 - **Protezione versioni più recenti (`NewerFormatError`):**
   Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 2`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
 - **Valori predefiniti (`src/domain/defaults.ts`):**
-  - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite.
-  - `createDefaultData()`: genera un dataset iniziale di benvenuto con categorie essenziali preconfigurate (Casa, Spesa, Trasporti, Svago, ecc.) con colori distinti.
+  - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite (stima delle entrate attiva, nessun limite di budget).
+  - `createDefaultData(locale)`: genera un dataset iniziale con categorie e metodi di pagamento predefiniti nella lingua indicata (inglese se non supportata), con colori della palette. Categorie in italiano: Cibo e bevande, Trasporti, Altro, Salute e benessere, Finanza, Digitale, Auto, Vacanze, Stipendio. Metodi: Bonifico, Contanti, Carta di debito, Carta di credito, PayPal.
+
+---
+
+## 5. Dove sono salvati i dati
+
+- `FinanceData` è salvato in IndexedDB (libreria `idb-keyval`) sotto la chiave `'finance-data'` (`DATA_KEY` in [`src/services/storage.ts`](../../src/services/storage.ts)). Se la chiave è vuota, `deviceDataStore.load` prova a recuperare i dati del prototipo da `localStorage` (`finances_tracker_multiyr`, `finances_tracker_2026`).
+- Le impostazioni del singolo dispositivo restano fuori da `FinanceData` e non si sincronizzano; stanno in IndexedDB: `'sync-config'` (store `sync`), `'notification-config'` e `'notifications-shown'` (store `notifications`), `'backup-meta'` (store `backup`, un `BackupMeta`). La lingua scelta è in `localStorage` sotto `'locale'`.

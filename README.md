@@ -7,7 +7,7 @@ Pocketly è un'applicazione web progressiva (**PWA**) per la gestione e il contr
 ## Funzionalità Principali
 
 - **8 Schermate Complete + Dettaglio Analitico:**
-  1. **Dashboard:** panoramica immediata del saldo attuale, entrate, uscite, navigazione rapida mensile (frecce tastiera e swipe touch), uscite in arrivo fino a fine mese e ripartizioni collegate per categoria e metodo.
+  1. **Dashboard:** la cifra principale è il «Risultato previsto per …» (mese o anno scelto), con il risultato a oggi riportato in una frase; entrate, uscite, navigazione rapida mensile (frecce, tasti ← → e swipe touch), elenco «Prossimi addebiti» e ripartizioni collegate per categoria e metodo.
   2. **Spese Una Tantum:** registrazione spese puntuali con filtro mensile, tag multipli, note, categorie e metodi di pagamento.
   3. **Spese Ricorrenti:** gestione uscite periodiche (mensili, trimestrali, semestrali, annuali), costo equivalente mensile e promemoria multi-regola personalizzati.
   4. **Entrate:** registrazione flussi di reddito per data, categoria e metodo di accredito.
@@ -27,7 +27,7 @@ Pocketly è un'applicazione web progressiva (**PWA**) per la gestione e il contr
 
 ## Quick Start (Sviluppo Locale)
 
-Requisiti: [Node.js](https://nodejs.org) (v20+ raccomandata) e facoltativamente Python 3 per il server di sincronizzazione.
+Requisiti: [Node.js](https://nodejs.org) (v20+ raccomandata) e facoltativamente Python 3.9 o successivo per il server di sincronizzazione.
 
 ```bash
 # 1. Installazione dipendenze frontend
@@ -48,12 +48,18 @@ npm run build
 
 Per testare il server Python di sync e push:
 ```bash
-# Esecuzione test unitari server
+# Esecuzione test unitari server (funziona su Windows, macOS e Linux)
 npm run test:server
 
-# Avvio server in locale (porta 8787, allineata al proxy Vite)
-python3 -m server.main --port 8787 --data-dir ./data
+# Avvio server in locale: nessun argomento da riga di comando, solo variabili d'ambiente.
+# POCKETLY_SYNC_KEY è obbligatoria (almeno 32 caratteri; se manca il server esce con codice 2),
+# POCKETLY_PORT vale 8787 di default (la porta del proxy Vite),
+# POCKETLY_DATA_DIR vale /var/lib/pocketly di default: in locale conviene una cartella del progetto.
+export POCKETLY_SYNC_KEY="una-chiave-lunga-almeno-32-caratteri-qui"
+export POCKETLY_DATA_DIR=./data
+python3 -m server.main      # su Windows: py -3 -m server.main
 ```
+Su Windows (PowerShell) le variabili si impostano con `$env:POCKETLY_SYNC_KEY = "..."` e `$env:POCKETLY_DATA_DIR = "./data"`.
 
 ---
 

@@ -4,6 +4,8 @@ source-files:
   - src/components/BottomNav.vue
   - src/i18n/it.ts
   - src/i18n/en.ts
+  - src/views/BreakdownDetailView.vue
+  - src/views/DashboardView.vue
 verified: 2026-11-11
 ---
 
@@ -69,16 +71,17 @@ const { t } = useFormat()
 3. **Routing gerarchico con `meta.navParent` e convenzioni per viste di dettaglio:**
    Se la nuova schermata è un approfondimento analitico o una vista figlia (come `BreakdownDetailView.vue`), non deve essere inclusa nell'array `TABS`. Tuttavia, per fornire all'utente un punto di riferimento visivo chiaro:
    - Registra nei metadati la proprietà `meta: { navParent: '<tabName>' }`, dove `<tabName>` è il nome della vista padre definito in `TABS` (es. `'dashboard'`). In questo modo [`BottomNav.vue`](../../src/components/BottomNav.vue) riconosce la gerarchia e mantiene visivamente attiva la tab padre sia su dispositivi mobili sia nella sidebar desktop.
-   - **Ritorno intelligente con cronologia:** adotta la funzione di ritorno che sfrutta `router.options.history.state.back`:
+   - **Ritorno intelligente con cronologia:** usa un link normale (`<a href="/" @click="back">`) con la funzione di ritorno di `BreakdownDetailView.vue`:
      ```ts
      function back(e: MouseEvent) {
-       if (router.options.history.state.back === '/') {
-         e.preventDefault()
-         router.back()
-       }
+       if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+       e.preventDefault()
+       if (router.options.history.state.back === '/') router.back()
+       else router.push('/')
      }
      ```
-     In combinazione con la politica di `scrollBehavior` configurata in `src/router/index.ts` (`savedPosition ?? { top: 0 }`), questo consente a chi torna indietro dalla schermata figlia di ritrovare esattamente il punto e la posizione di scorrimento della pagina padre in cui si trovava.
+     Ctrl/Cmd/Maiusc/Alt+clic e il tasto centrale restano al browser (per esempio per aprire la pagina padre in un'altra scheda). Se si arriva dalla pagina padre si torna indietro nella cronologia: con la politica di `scrollBehavior` configurata in `src/router/index.ts` (`savedPosition ?? { top: 0 }`) la pagina padre riappare nella posizione di scorrimento in cui la si era lasciata. Aprendo la pagina direttamente si va alla pagina padre con `router.push('/')`.
+     Non usare un `RouterLink`: naviga da solo prima del gestore, e quel `push('/')` in più fa montare la pagina padre come una visita nuova. La dashboard, per esempio, in `onMounted` legge `router.options.history.state.forward` per rimettere il focus sulla riga da cui si era entrati, e con il `RouterLink` non lo saprebbe.
    - **Accessibilità e focus del titolo:** implementa l'autofocus programmatico sul titolo `h2` (`ref="heading"`, `tabindex="-1"`, `focus:outline-none`) e aggiorna dinamicamente `document.title` al montaggio (ripristinando il titolo precedente in `onBeforeUnmount`) per consentire a screen reader e utenti da tastiera di recepire subito il nuovo contesto.
 
 ---

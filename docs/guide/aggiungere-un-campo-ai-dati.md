@@ -6,7 +6,7 @@ source-files:
   - src/services/migration.test.ts
   - src/domain/merge.ts
   - src/domain/merge.test.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Guida: Aggiungere un Campo ai Dati
@@ -43,15 +43,16 @@ export interface OneTimeExpense {
 
 Se il nuovo campo appartiene alla radice di `FinanceData` o a una configurazione globale (`ForecastSettings`, `BudgetSettings`), aggiorna le funzioni costruttrici:
 - `createEmptyData()`
-- `createDefaultData()`
+- `createDefaultData(locale)`
+- `defaultForecastSettings()` / `defaultBudgetSettings()` per i campi delle impostazioni
 
 ---
 
 ## 3. Gestire la Normalizzazione in `src/services/migration.ts`
 
-Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da file JSON o dal server.
+Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da IndexedDB, da file JSON o dal server: `parseBackup` instrada verso `normalizeV2` (schema v2) o `migrateV1` (prototipi). `normalizeV2` ricostruisce ogni voce campo per campo, quindi **un campo non elencato lì viene scartato** al primo caricamento.
 
-1. Se il campo è aggiunto a una transazione o entità, aggiorna la funzione di parsing difensivo corrispondente (es. `normalizeOneTimeExpense` o `normalizeForecast`).
+1. Se il campo è aggiunto a una transazione o entità, aggiungilo nella mappatura corrispondente dentro `normalizeV2` (per le spese una tantum è la callback passata a `valid<OneTimeExpense>` per `oneTimeExpenses`); per le impostazioni globali usa `normalizeForecast` o `normalizeBudget`, per categorie, metodi e tag `normalizeTags`. Se il campo ha senso anche per i dati dei prototipi, valuta `migrateV1`.
 2. Assicurati che se il campo è assente nel JSON (es. backup vecchio dell'utente), venga assegnato un fallback sicuro (es. `receiptUrl: typeof raw.receiptUrl === 'string' ? raw.receiptUrl : undefined`).
 3. **Scrivi un test unitario** in `src/services/migration.test.ts` che verifichi:
    - Che un vecchio backup privo del campo venga importato con successo senza errori.
@@ -61,9 +62,10 @@ Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da fil
 
 ## 4. Verificare l'Impatto sul Merge a 3 Vie (`src/domain/merge.ts`)
 
-L'algoritmo `mergeFinanceData`:
-- Per liste di entità con ID (`oneTimeExpenses`, `recurringExpenses`, `incomes`, `loans`, `categories`, `paymentMethods`, `tags`): utilizza `mergeIdList`, che unisce le entità per intero. Se il nuovo campo è dentro un'entità con ID, il merge funziona automaticamente.
-- Se invece aggiungi una **nuova collezione di entità** o una **nuova proprietà alla radice di `FinanceData`**, devi registrarla esplicitamente in `mergeFinanceData` in `src/domain/merge.ts` e aggiungere un test dedicato in `src/domain/merge.test.ts`.
+L'algoritmo `mergeFinanceData` è generico (`mergeValue`): non elenca i campi di `FinanceData`.
+- Qualsiasi elenco di voci con `id` viene unito voce per voce con `mergeIdList`, che tratta ogni voce come un'unità. Se il nuovo campo è dentro un'entità con ID, il merge funziona automaticamente.
+- Anche una **nuova collezione di entità** o una **nuova proprietà alla radice** viene unita senza registrarla: gli oggetti si uniscono chiave per chiave, gli elenchi di stringhe come insiemi (`mergeStringSet`), gli altri valori con `conflict` (vince questo dispositivo).
+- Va toccato `merge.ts` solo se il campo punta a una categoria o a un metodo di pagamento con un nome diverso da `categoryId`/`paymentMethodId` (`TAG_REFS`) o se è un'impostazione che va ripulita in `repairReferences`. In quel caso aggiungi un test in `src/domain/merge.test.ts`.
 
 ---
 

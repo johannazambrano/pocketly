@@ -8,7 +8,7 @@ source-files:
   - deploy/proxmox/pocketly-sync.service
   - deploy/proxmox/nginx/pocketly.conf
   - vite.config.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Architettura di Deploy e Infrastruttura
@@ -29,17 +29,18 @@ flowchart LR
 ```
 
 ### Configurazione Nginx (`deploy/proxmox/nginx/pocketly.conf`)
-- Terminazione TLS con certificato valido (Let's Encrypt o certificato interno CA creato con `make-cert.sh`).
+- Porta 80: serve solo `/ca.crt` (il certificato pubblico della CA locale, da installare sui dispositivi) e reindirizza tutto il resto in HTTPS.
+- Terminazione TLS (TLS 1.2/1.3) con il certificato emesso dalla CA locale creata con `make-cert.sh`.
 - Caching aggressivo per gli asset con hash (`/assets/*`: `Cache-Control: public, max-age=31536000, immutable`).
-- Nessun caching per il file del Service Worker e del manifest (`/sw.js`, `/manifest.webmanifest`: `Cache-Control: no-cache, no-store, must-revalidate`).
-- Blocco `/api/`: inoltro a `http://127.0.0.1:8787` con header `X-Forwarded-For` e `Host` preservati.
-- Limite dimensione body HTTP: `client_max_body_size 10M`.
+- Nessun caching per `index.html`, `/sw.js` e `/push-worker.js` (`Cache-Control: no-cache, no-store, must-revalidate`); `/manifest.webmanifest` è servito come `application/manifest+json` con `Cache-Control: no-cache`.
+- Blocco `/api/`: inoltro a `http://127.0.0.1:8787` con header `Host` e `X-Real-IP` (è l'indirizzo che il server usa per il rate limiting, `client_ip`) e `Cache-Control: no-store`.
+- Limite dimensione body HTTP su `/api/`: `client_max_body_size 6m` (il server rifiuta comunque corpi oltre 5 MB, `MAX_BODY_BYTES`).
 
 ---
 
 ## 2. Servizio Systemd (`pocketly-sync.service`)
 
-Il backend Python viene eseguito come servizio di sistema non-root (`pocketly`):
+Il backend Python viene eseguito come servizio di sistema non-root (`pocketly`). Estratto della unit (`install-sync.sh` sostituisce il segnaposto `@REPO@` con la cartella del repository, di solito `/opt/pocketly`; il file completo ha altre direttive di isolamento):
 
 ```ini
 [Unit]
@@ -54,7 +55,7 @@ EnvironmentFile=/etc/pocketly/sync.env
 Environment=POCKETLY_HOST=127.0.0.1
 Environment=POCKETLY_PORT=8787
 Environment=POCKETLY_DATA_DIR=/var/lib/pocketly
-ExecStart=/usr/bin/python3 /opt/pocketly/server/main.py
+ExecStart=/usr/bin/python3 @REPO@/server/main.py
 Restart=on-failure
 RestartSec=5
 
@@ -92,9 +93,9 @@ Questo consente al frontend di effettuare chiamate a `/api/sync` e `/api/push/*`
 ## 4. Script di Installazione e Aggiornamento Proxmox
 
 Nella cartella [`deploy/proxmox/`](../../deploy/proxmox/) sono presenti script pronti all'uso:
-- `install-sync.sh`: installa Nginx, crea l'utente di sistema `pocketly`, configura directory con permessi restrittivi (`chmod 700 /var/lib/pocketly`), imposta il contatto VAPID (tramite la variabile `POCKETLY_VAPID_SUBJECT=mailto:...`) in `/etc/pocketly/sync.env`, installa la systemd unit e attiva Nginx.
-- `publish.sh`: compila il frontend (`npm run build`), sincronizza i file in `/var/www/pocketly` e copia i moduli Python in `/opt/pocketly`.
-- `update.sh`: automatizza il pull Git, la ricompilazione e il riavvio del servizio systemd sul server.
-- `make-cert.sh`: genera un certificato TLS autofirmato o una CA locale per ambienti domestici sprovvisti di dominio pubblico.
+- `install-sync.sh` (da root, nel container): installa `python3` se manca, crea l'utente di sistema `pocketly`, genera la chiave `POCKETLY_SYNC_KEY` in `/etc/pocketly/sync.env` solo la prima volta e la mostra, vi scrive il contatto VAPID se è impostata `POCKETLY_VAPID_SUBJECT=mailto:...`, installa e avvia la systemd unit e aggiorna la configurazione di Nginx (la precedente resta come `.bak`). La cartella dati `/var/lib/pocketly` (permessi `0700`) la crea systemd con `StateDirectory`.
+- `publish.sh` (dal PC): compila il frontend (`npm run build`) e carica `dist/` via SSH nella cartella del sito (default `/var/www/pocketly`) con uno scambio di cartelle; non tocca il server Python.
+- `update.sh` (nel container, dentro la copia del repository): `git pull --ff-only`, `npm ci`, `npm run build`, sostituzione del sito e, se installato, riavvio di `pocketly-sync`.
+- `make-cert.sh`: crea una piccola CA locale (riusata se esiste già) e un certificato per l'IP del container, per reti domestiche senza dominio pubblico.
 
 La guida passo passo completa per Proxmox LXC è disponibile in [deploy/proxmox/README.md](../../deploy/proxmox/README.md).

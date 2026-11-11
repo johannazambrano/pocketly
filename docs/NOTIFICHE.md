@@ -8,7 +8,7 @@ source-files:
   - src/components/NotificationRulesEditor.vue
   - server/webpush.py
   - server/main.py
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Sistema di Notifiche e Promemoria per le Spese Ricorrenti
@@ -77,7 +77,7 @@ Attiva automaticamente non appena colleghi una chiave di sincronizzazione in *Im
   1. Il client calcola lo scadenzario dei promemoria futuri per i successivi 60 giorni.
   2. Per ogni dispositivo registrato, il client **cifra il payload** contenente titolo, testo, tag e URL con la chiave pubblica del dispositivo (`p256dh` e `auth`) usando `aes128gcm` via Web Crypto API.
   3. Lo scadenzario con i blob cifrati e la data/ora di invio (`fireAt`) viene inviato al server tramite `PUT /api/push/schedule`.
-  4. Il server Python mantiene un thread dispatcher in background: al minuto esatto, invia la richiesta Web Push al push service di Google FCM, Apple APNs o Mozilla.
+  4. Il server Python mantiene un thread dispatcher in background che controlla il calendario ogni 30 secondi (`DISPATCH_INTERVAL_SECONDS`): appena passato `fireAt`, invia la richiesta Web Push al push service di Google FCM, Apple APNs o Mozilla.
   5. Il server firma la richiesta usando **VAPID (RFC 8292)** con una coppia di chiavi asimmetriche su curva ellittica NIST P-256 (ES256), implementata in puro standard library Python senza dipendenze `pip`.
   6. Il sistema operativo riceve il pacchetto, risveglia il Service Worker ([`public/push-worker.js`](../public/push-worker.js)), che decifra nativamente il messaggio e mostra la notifica con l'icona badge dedicata per la barra di stato Android ([`public/badge-96x96.png`](../public/badge-96x96.png)).
 - **Caratteristiche**: La notifica viene recapitata **anche ad app completamente chiusa e a telefono in standby**. Il server non possiede la chiave privata del dispositivo e vede unicamente dati cifrati indecifrabili.
@@ -98,18 +98,18 @@ Attiva automaticamente non appena colleghi una chiave di sincronizzazione in *Im
 ### Configurare le regole su una Spesa Ricorrente
 1. Vai nella sezione **Spese Ricorrenti**.
 2. Tocca una spesa per modificarla (o tocca il pulsante `+` per crearne una nuova).
-3. Troverai la sezione **Notifiche promemoria**:
-   - Clicca sull'interruttore **"Notifiche promemoria"** per attivarle.
-   - Scegli un preset (es. *1 giorno prima*, *Stesso giorno*, ecc.) oppure inserisci i giorni personalizzati.
+3. In fondo al modulo trovi la casella **"Notifiche spese ricorrenti"**:
+   - Spuntala per attivare i promemoria della spesa.
+   - Scegli un preset (es. *1 giorno prima*, *Il giorno dell’addebito*, ecc.) oppure *Personalizzato…* per inserire i giorni.
    - Seleziona l'orario di avviso desiderato (es. `09:00`).
-   - Puoi cliccare **"+ Aggiungi un'altra notifica"** per impostare promemoria multipli per la stessa spesa.
+   - Puoi cliccare **"Aggiungi notifica"** per impostare promemoria multipli per la stessa spesa.
 4. Salva la spesa: nella lista delle spese ricorrenti apparirà l'icona con il campanellino 🔔 che riassume il prossimo avviso programmato.
 
 ### Regole Predefinite e Applicazione Massiva
 In **Impostazioni → Notifiche promemoria**:
-- **Regole predefinite per nuove spese**: puoi impostare quali regole assegnare automaticamente alle spese create in futuro.
-- **Applica a spese senza notifiche**: assegna le regole predefinite a tutte le spese ricorrenti esistenti che attualmente hanno le notifiche disattivate.
-- **Sovrascrivi tutte le spese**: ripristina le regole predefinite su tutte le spese ricorrenti indistintamente.
+- **Promemoria predefiniti per le nuove spese ricorrenti**: puoi impostare quali regole proporre automaticamente alle spese create in futuro.
+- **Applica alle ricorrenze senza promemoria**: assegna le regole predefinite a tutte le spese ricorrenti esistenti che non hanno promemoria.
+- **Applica a tutte le ricorrenze esistenti**: sostituisce con le regole predefinite quelle di tutte le spese ricorrenti, indistintamente.
 
 ---
 
@@ -157,7 +157,7 @@ Apple supporta le Web Push su iOS a partire da **iOS 16.4**, con due requisiti t
 
 | File | Responsabilità |
 |---|---|
-| [`server/webpush.py`](../server/webpush.py) | Crittografia VAPID RFC 8292 ES256: generazione chiavi NIST P-256, firma token JWT, invio HTTP/2 a push gateway in puro Python standard library. |
+| [`server/webpush.py`](../server/webpush.py) | Crittografia VAPID RFC 8292 ES256: generazione chiavi NIST P-256, firma token JWT, invio HTTPS (`urllib`) al push gateway in puro Python standard library. |
 | [`server/main.py`](../server/main.py) | API HTTP del server Pocketly: gestione sottoscrizioni push, memorizzazione atomica dello schedulario cifrato, dispatcher in background. |
 | [`server/test_main.py`](../server/test_main.py) | Suite di test unitari automatizzati per il backend push. |
 
@@ -174,8 +174,12 @@ Apple supporta le Web Push su iOS a partire da **iOS 16.4**, con due requisiti t
 
 ### Avvio in sviluppo
 ```bash
-# Terminale 1: Server backend Python (necessario per testare Web Push remota)
-python3 server/main.py
+# Terminale 1: Server backend Python (necessario per testare Web Push remota).
+# Senza POCKETLY_SYNC_KEY il server non parte (esce con codice 2); il default di
+# POCKETLY_DATA_DIR è /var/lib/pocketly, in locale conviene una cartella del progetto.
+export POCKETLY_SYNC_KEY="una-chiave-lunga-almeno-32-caratteri-qui"
+export POCKETLY_DATA_DIR=./data
+python3 server/main.py      # su Windows: py -3 server/main.py
 
 # Terminale 2: Frontend Vite
 npm run dev
@@ -183,18 +187,21 @@ npm run dev
 
 ### Esecuzione dei test automatici
 ```bash
-# Test frontend (logica di dominio, merge, crittografia, store, edge cases): 178 test
+# Test frontend (logica di dominio, merge, crittografia, store, edge cases): 187 test
 npm test
 
 # Test backend Python (API push, VAPID, rate-limit, dispatcher, corruzione file): 27 test
+# Funziona su Windows, macOS e Linux (scripts/python.mjs trova python3, python o py -3)
 npm run test:server
 ```
 
 ### Configurazione Server (Variabili d'Ambiente)
-- `POCKETLY_SYNC_KEY`: chiave segreta per la sincronizzazione (min. 32 caratteri).
+Il server non accetta argomenti da riga di comando: si configura solo così (su Windows PowerShell: `$env:NOME = "valore"`).
+- `POCKETLY_SYNC_KEY`: chiave segreta per la sincronizzazione (obbligatoria, min. 32 caratteri).
 - `POCKETLY_VAPID_SUBJECT`: indirizzo di contatto per il subject VAPID (default: `mailto:support@pocketly.local`). Su iOS / Apple APNs deve obbligatoriamente contenere un dominio pubblico valido (es. `mailto:tuo@dominio-reale.it` o `https://tuo-dominio.it`), altrimenti le notifiche vengono rifiutate con errore 403.
 - `POCKETLY_DATA_DIR`: directory di persistenza dei dati (default `/var/lib/pocketly`).
 - `POCKETLY_PORT`: porta di ascolto (default `8787`).
+- `POCKETLY_HOST`: indirizzo di ascolto (default `127.0.0.1`).
 
 ### Verifica compilazione e build PWA
 ```bash

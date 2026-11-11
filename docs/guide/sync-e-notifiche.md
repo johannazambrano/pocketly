@@ -6,7 +6,7 @@ source-files:
   - src/stores/notifications.ts
   - src/services/notifications/api.ts
   - src/services/sync/api.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Guida: Configurazione e Collaudo di Sync e Notifiche
@@ -20,13 +20,16 @@ Questa guida fornisce istruzioni operative per configurare, testare ed effettuar
 Per collaudare sync e push in locale, sono necessari due processi concorrenti:
 
 ### Terminale 1: Server Python Backend
+Il server non accetta argomenti da riga di comando: si configura solo con variabili d'ambiente.
 ```bash
-# Avvio del server sulla porta predefinita 8787 con directory dati locale
-python3 -m server.main --port 8787 --data-dir ./test-data
+# Chiave di accesso: obbligatoria, almeno 32 caratteri (se manca il server esce con codice 2)
+export POCKETLY_SYNC_KEY="MIA_CHIAVE_LUNGA_ALMENO_32_CARATTERI_12345"
+# Cartella dati locale (il default è /var/lib/pocketly)
+export POCKETLY_DATA_DIR=./test-data
+# Porta: il default 8787 è già quella del proxy Vite (POCKETLY_PORT per cambiarla)
+python3 -m server.main      # su Windows: py -3 -m server.main
 ```
-Al primo avvio, il server genererà automaticamente:
-- Una chiave di accesso casuale stampata nel terminale se non specificata (puoi specificarne una fissa con `--key MIA_CHIAVE_LUNGA_ALMENO_32_CARATTERI_12345`).
-- Il file `push.json` con la coppia di chiavi crittografiche VAPID (P-256) per le notifiche.
+Su Windows (PowerShell) le variabili si impostano con `$env:NOME = "valore"`. Il server non genera né stampa chiavi: la chiave è quella che hai impostato. All'avvio, se manca, crea il file `push.json` con la coppia di chiavi crittografiche VAPID (P-256).
 
 ### Terminale 2: Frontend Vite Dev Server
 ```bash
@@ -40,14 +43,14 @@ Vite instraderà automaticamente le richieste `/api/*` verso `http://127.0.0.1:8
 
 1. Apri il browser all'indirizzo `http://localhost:5173`.
 2. Vai su **Impostazioni** (`/impostazioni`) nella sezione **Sincronizzazione**.
-3. Incolla la chiave di accesso del server (la stessa configurata nel backend).
-4. Clicca su **Collega dispositivo**:
-   - Se il server è vuoto, il client caricherà i propri dati locali cifrati con la chiave derivata via PBKDF2/AES-GCM.
+3. Incolla la chiave di accesso del server (il valore di `POCKETLY_SYNC_KEY`) e scegli la password dei dati (almeno 8 caratteri, la stessa su tutti i dispositivi).
+4. Clicca su **Collega questo dispositivo**:
+   - Se il server è vuoto, il client caricherà i propri dati locali cifrati con la chiave derivata dalla password via PBKDF2/AES-GCM.
    - Se il server contiene già dei dati e il client locale è vuoto, il client scaricherà e decifrerà i dati remoti.
    - Se entrambi hanno dati preesistenti, l'interfaccia chiederà all'utente se intende conservare i dati locali o quelli del server per iniziare la base comune.
 5. Per verificare la sincronizzazione:
    - Apri una finestra anonima del browser su `http://localhost:5173`.
-   - Collega la stessa chiave di sincronizzazione.
+   - Collegala con la stessa chiave del server e la stessa password.
    - Aggiungi una spesa nella prima finestra: la modifica apparirà automaticamente nella seconda finestra dopo la sincronizzazione.
 
 ---
@@ -66,7 +69,7 @@ Pocketly supporta due modalità di notifica:
 2. Clicca sul pulsante **Invia notifica di prova**:
    - Il client invia una notifica test a `/api/push/test`.
    - Il server invia il push al gateway del browser.
-   - Se il browser supporta le notifiche in background, apparirà la notifica di sistema "Test notifica riuscito".
+   - Se il browser supporta le notifiche in background, apparirà la notifica di sistema "Pocketly – Notifica di prova".
 
 ---
 
@@ -74,8 +77,8 @@ Pocketly supporta due modalità di notifica:
 
 | Sintomo | Causa Probabile | Soluzione |
 |---|---|---|
-| `SyncAuthError (401)` | La chiave inserita non corrisponde a quella del server | Verifica la chiave generata all'avvio di `server/main.py` o reimposta una chiave con `--key` |
-| `SyncBlockedError (429)` | Più di 10 tentativi falliti con chiave errata | Attendi 15 minuti affinché il rate limiter resetti il blocco per il tuo indirizzo IP |
+| `SyncAuthError (401)` | La chiave inserita non corrisponde a quella del server | Verifica il valore di `POCKETLY_SYNC_KEY` con cui è partito il server (in produzione è in `/etc/pocketly/sync.env`) |
+| `SyncBlockedError (429)` | 10 tentativi falliti con chiave errata negli ultimi 15 minuti | Attendi che i tentativi falliti escano dalla finestra di 15 minuti (`FAILURE_WINDOW_SECONDS`) |
 | Errore registrazione Web Push | Il browser richiede HTTPS per il PushManager | Su localhost HTTP è consentito; se accedi da IP locale Wi-Fi (es. `192.168.1.X`), è obbligatorio usare HTTPS con certificato valido (usa `deploy/proxmox/make-cert.sh`) |
 | Gateway Push risponde `410 Gone` | La sottoscrizione del browser è scaduta o revocata | Disabilita e riabilita le notifiche dalle impostazioni dell'app per generare un nuovo token |
 | Nessun addebito programmato | Data di scadenza oltre i 60 giorni | L'orizzonte di pianificazione push è di 60 giorni (`calculateUpcomingReminders`); le scadenze successive vengono pianificate man mano che si avvicinano |

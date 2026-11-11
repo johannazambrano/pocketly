@@ -1,11 +1,12 @@
 ---
 source-files:
   - package.json
-  - vitest.config.ts
+  - vite.config.ts
   - tsconfig.json
   - server/test_main.py
+  - scripts/python.mjs
   - scripts/docs-check.mjs
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Guida: Test, Build e Release
@@ -22,7 +23,7 @@ Pocketly dispone di una suite di test rigorosa che copre calcoli finanziari, cri
 ```bash
 npm run test
 ```
-Esegue i 178 test unitari in `src/` (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
+Esegue i 187 test unitari in `src/` (la configurazione di Vitest è nella sezione `test` di `vite.config.ts`) (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
 
 ### Controllo Statico dei Tipi (TypeScript)
 ```bash
@@ -33,14 +34,16 @@ Esegue `vue-tsc -b` su tutti i file `.vue` e `.ts`. Non devono esserci errori di
 ### Esecuzione Test Server Backend (Python unittest)
 ```bash
 npm run test:server
-# oppure: python3 -m unittest server.test_main
+# oppure a mano: python3 -m unittest server.test_main   (su Windows: py -3 -m unittest server.test_main)
 ```
-Esegue la suite di 27 test sul server `server/main.py` e `server/webpush.py`, verificando:
-- Autenticazione Bearer e protezione da timing attack.
-- Rate limiting antibruteforce (blocco 429 dopo 10 tentativi falliti).
-- Concorrenza e lock ottimistico basato su ETag / `If-Match`.
-- Persistenza atomica dei file (`write_atomic`).
-- Validazione pacchetti Web Push `aes128gcm` e gestione risposte 410 dei gateway.
+`npm run test:server` lancia `node scripts/python.mjs -m unittest server.test_main`: il lanciatore prova `python3`, poi `python`, poi `py -3`, quindi funziona su Windows, macOS e Linux.
+
+Esegue la suite di 27 test sul server `server/main.py` e `server/webpush.py`, verificando tra l'altro:
+- Autenticazione Bearer, rifiuto delle chiavi troppo corte e blocco 429 dopo 10 tentativi falliti.
+- Salvataggio con versione e `409` se `baseVersion` non è l'ultima; conservazione delle versioni precedenti.
+- Rifiuto dei dati non cifrati e dei calendari push non `aes128gcm`.
+- Firma VAPID ES256, invio dei promemoria scaduti senza duplicati e pulizia dei dispositivi su `410`.
+- `push.json` rovinato: le notifiche si fermano, la sincronizzazione continua.
 
 ### Validazione della Documentazione e i18n
 ```bash

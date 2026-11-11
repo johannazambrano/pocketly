@@ -8,7 +8,7 @@ source-files:
   - src/services/sync/engine.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -36,8 +36,8 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):
 - L'interfaccia `DataStore` espone `load()` e `save(data: FinanceData)`.
-- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'pocketly_data'` tramite la libreria `idb-keyval`.
-- Gli store per preferenze locali del dispositivo (`stores/sync.ts`, `stores/notifications.ts`, `stores/backup.ts`) utilizzano chiavi separate su `idb-keyval` (es. `pocketly_sync_config`, `pocketly_push_config`, `pocketly_last_backup_exported_at`). In questo modo la configurazione del dispositivo non si confonde con i dati finanziari condivisi.
+- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`).
+- Gli store per preferenze locali del dispositivo utilizzano chiavi separate su `idb-keyval`: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). In questo modo la configurazione del dispositivo non si confonde con i dati finanziari condivisi.
 
 ---
 
@@ -46,7 +46,7 @@ La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/s
 La sincronizzazione di Pocketly è **Zero-Knowledge**: il server non ha modo di conoscere il contenuto del database finanziario.
 
 1. **Derivazione della chiave:**
-   A partire dalla chiave segreta immessa dall'utente (minimo 32 caratteri esadecimali / alfanumerici), il client deriva una chiave crittografica simmetrica usando PBKDF2 (600.000 iterazioni SHA-256) oppure direttamente come Web Crypto `CryptoKey` (`src/services/backupCrypto.ts`).
+   A partire dalla password di cifratura immessa dall'utente (almeno 8 caratteri, `MIN_PASSWORD_LENGTH`), il client deriva con PBKDF2-SHA-256 (600.000 iterazioni) una `CryptoKey` AES-GCM non estraibile (`deriveBackupKey` in `src/services/backupCrypto.ts`); la password non viene salvata. La chiave di accesso al server (almeno 32 caratteri) è un'altra cosa: serve solo come `Authorization: Bearer` e non cifra nulla.
 2. **Cifratura del payload:**
    Ogni pacchetto inviato al server ha la struttura `EncryptedBackup` definita in `src/services/backupCrypto.ts`:
    ```ts

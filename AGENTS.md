@@ -39,7 +39,7 @@ npm run build           # vue-tsc -b && vite build
 npm run test            # vitest run
 
 # Test server Python
-npm run test:server     # python3 -m unittest server.test_main
+npm run test:server     # node scripts/python.mjs -m unittest server.test_main (Windows, macOS e Linux)
 
 # Validazione integrità documentazione e i18n
 npm run docs:check      # node scripts/docs-check.mjs
@@ -72,11 +72,11 @@ Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul
    Categorie, metodi di pagamento e tag sono entità `Tag { id: Id, name: string, color: string }`. Le transazioni memorizzano riferimenti `categoryId: Id` e `paymentMethodId: Id`. La ridenominazione di una categoria o metodo non richiede la modifica delle transazioni.
 
 4. **Logica di business e calcoli confinati in `src/domain/`:**
-   I componenti Vue e le viste non contengono logiche di calcolo contabile o formule finanziarie complesse. La logica di calcolo risiede in moduli puri e completamente testabili in `src/domain/` (`calculations.ts`, `recurrence.ts`, `budget.ts`, `merge.ts`, `notifications.ts`, `backupReminder.ts`). Lo store Pinia (`src/stores/finance.ts`) espone proprietà computate delegando a tali funzioni.
+   Le formule contabili e i calcoli riutilizzabili risiedono in moduli puri e testati in `src/domain/` (`calculations.ts`, `recurrence.ts`, `budget.ts`, `merge.ts`, `notifications.ts`, `backupReminder.ts`), ad esempio `compareToAverage`, `averageBalanceBefore`, `splitRecurring`. Lo store Pinia (`src/stores/finance.ts`) espone proprietà computate delegando a tali funzioni. Le viste possono comporre cifre di presentazione a partire dai dati dello store (es. `DashboardView.vue` costruisce le cifre del pannello del saldo), ma una formula nuova o riusata in più punti va messa in `src/domain/` con i suoi test.
 
 5. **Persistenza dati separata:**
-   - I dati finanziari dell'utente (`FinanceData`) passano sempre e solo dall'interfaccia `DataStore` in `src/services/storage.ts` (salvati nella chiave `'pocketly_data'`).
-   - Le configurazioni di dispositivo / preferenze locali (impostazioni di sync, configurazione notifiche Web Push, timestamp promemoria backup) usano direttamente `idb-keyval` nei rispettivi store (`stores/sync.ts`, `stores/notifications.ts`, `stores/backup.ts`).
+   - I dati finanziari dell'utente (`FinanceData`) passano sempre e solo dall'interfaccia `DataStore` in `src/services/storage.ts` (salvati in IndexedDB nella chiave `'finance-data'`, costante `DATA_KEY`).
+   - Le configurazioni di dispositivo / preferenze locali usano direttamente `idb-keyval` nei rispettivi store: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). Non vengono sincronizzate.
 
 6. **Sincronizzazione cifrata Zero-Knowledge e Merge a 3 Vie:**
    - Il server `server/main.py` non possiede la chiave di cifratura e memorizza esclusivamente payload cifrati `EncryptedBackup` con numero di versione crescente.
@@ -91,8 +91,8 @@ Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul
 
 Quando esegui una modifica nel repository, attieniti scrupolosamente a questo ciclo di vita:
 
-1. **Aggiornamento documentazione contestuale:**
-   Se modifichi il comportamento di un file presente nella mappa del codice, aggiorna la pagina di documentazione collegata nello stesso commit.
+1. **Aggiornamento documentazione contestuale (obbligatorio):**
+   Ogni modifica al codice aggiorna, nello stesso commit, le pagine di documentazione collegate ai file toccati (vedi la mappa del codice). `npm run docs:check` deve passare prima del commit.
 2. **Aggiornamento della Mappa del Codice:**
    Se aggiungi, sposti o elimini un file in `src/`, `server/` o `scripts/`, aggiorna tempestivamente [docs/riferimento/mappa-codice.md](docs/riferimento/mappa-codice.md).
 3. **Cita simboli, non numeri di riga:**
@@ -106,4 +106,5 @@ Quando esegui una modifica nel repository, attieniti scrupolosamente a questo ci
    - `npm run test` (test Vitest verdi)
    - `npm run typecheck` (zero errori TypeScript)
    - `npm run test:server` (test Python server verdi)
-   - `npm run docs:check` (nessun link rotto, mappa codice aggiornata, i18n allineato)
+   - `npm run build` (build di produzione riuscita)
+   - `npm run docs:check` (obbligatorio: nessun link rotto, mappa codice aggiornata, i18n allineato)

@@ -10,6 +10,9 @@ source-files:
   - src/views/ForecastView.vue
   - src/views/SettingsView.vue
   - src/composables/useMonthStep.ts
+  - src/composables/useDirty.ts
+  - src/stores/ui.ts
+  - src/domain/backupReminder.ts
   - src/components/AppHeader.vue
   - src/components/BottomNav.vue
   - src/components/PageHeader.vue
@@ -50,21 +53,30 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `DashboardView.vue` (`/`)
 - **Ruolo:** Hub visivo principale dell'applicazione. All'avvio si posiziona automaticamente sul mese corrente (`finance.selectedMonth`).
-- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Mostra il saldo iniziale, le entrate, le spese una tantum e le spese ricorrenti.
+- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Le cifre e le ripartizioni contano ciò che è già avvenuto (fino a oggi nel periodo in corso, tutto per un periodo passato, il programmato per un mese futuro); la cifra grande dice dove si arriverà. Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue).
+- **Riquadro principale (`mainFigure`, passato a [`BalancePanel`](../../src/components/BalancePanel.vue)):**
+  - Cifra grande: "Risultato previsto per {mese}" / "Risultato previsto per il {anno}" per il periodo in corso e i mesi futuri; "Risultato di {mese}" / "Risultato dell'anno" per i periodi passati (o "… a oggi" quando previsto e risultato coincidono).
+  - Quando il previsto conta su entrate stimate, sotto la cifra compare sempre "Contando X di entrate stimate, non ancora registrate" (`dashboard.countingEstimate`).
+  - Nel periodo in corso, sotto la cifra, il risultato fino a oggi: "Risultato da inizio {mese} a oggi:" / "Risultato da inizio anno a oggi:".
+  - Se la cifra è positiva solo grazie alla stima (`estimateDecisive`), resta in colore neutro (`main.neutral`) invece del blu.
+  - "Come si arriva a questa cifra" (`explain`): il conto dietro il previsto (risultato a oggi, entrate registrate e stimate in arrivo, uscite in arrivo), mostrato solo quando la cifra grande è un previsto.
+  - Per un mese passato, il risultato è confrontato con la media dei mesi precedenti dell'anno (`averageBalanceBefore`, `compareToAverage`).
+  - Ripartizione ricorrenti/variabili (`expensesSplit`) con verdetti sempre visibili rispetto alla media: le ricorrenti rispetto al costo mensile medio, le variabili rispetto alla media dei mesi precedenti (`finance.variableOfSelectedMonth`, sull'anno `finance.variableThisMonth`); nel mese in corso il confronto usa la media riportata al giorno di oggi (`paceSoFar`).
+- **Prossimi addebiti:** uscite programmate (ricorrenti e variabili con data futura) da `upcomingCharges`. Si mostrano solo sull'anno in corso o sul mese in corso (`showUpcoming`). Titolo "Prossimi addebiti di {mese}" (fino a fine mese) sul mese in corso, "Prossimi addebiti, nei prossimi 30 giorni" sull'anno; il totale compare solo nella vista annuale (`showUpcomingTotal`). Su schermi larghi l'elenco va su due colonne riempite per colonna. Ogni riga è un pulsante (`editCharge`) che apre [`TransactionForm`](../../src/components/TransactionForm.vue) o [`RecurringForm`](../../src/components/RecurringForm.vue) (con la data dell'addebito come `occurrence`, da `editingOccurrence`); alla chiusura (`closeChargeForm`) il focus torna sulla riga, o sul titolo dell'elenco se la riga non c'è più. Le scadenze vicine (`daysLeft <= 3`) evidenziano in ambra (`text-amber-700 font-medium`) il "quando", non l'importo, che resta neutro (`text-slate-700`).
 - **Interattività e Accessibilità:**
-  - Navigazione mese da tastiera: delegata centralmente ai listener globali di [`MonthSelector`](../../src/components/MonthSelector.vue) (tasti ← e →), mentre lo swipe orizzontale touch sul riquadro del saldo in [`BalancePanel`](../../src/components/BalancePanel.vue) è gestito con `useMonthStep`.
+  - Navigazione mese: tasti ← e → gestiti da [`MonthSelector`](../../src/components/MonthSelector.vue); swipe orizzontale (almeno 60px, prevalentemente orizzontale) sul riquadro principale gestito qui (`onTouchStart`/`onTouchEnd` con `useMonthStep`).
   - Annuncio per screen reader (`aria-live="polite"`) sul cambio di periodo.
-  - Frase ponte esplicativa (`bridge`) quando il saldo attuale è sotto zero ma la proiezione a fine mese/anno è positiva.
-  - Sezione prossimi addebiti: mostra tutte le uscite programmate (ricorrenti e variabili con data futura) fino a fine mese (sul mese corrente) o nei successivi 30 giorni (sull'intero anno), con totale aggregato e disposizione a colonne su schermi larghi.
-  - Colori semantici e avvisi: per le scadenze imminenti (`daysLeft <= 3`), l'importo resta in grigio neutro (`text-slate-700`) e l'attenzione visiva viene focalizzata sul conteggio dei giorni, evidenziato con accento ambra (`text-amber-700 font-medium`), riservando rigorosamente il rosso solo a saldi negativi sotto zero.
-- **Componenti inclusi:** [`AppHeader`](../../src/components/AppHeader.vue), [`BalancePanel`](../../src/components/BalancePanel.vue), [`BackupReminder`](../../src/components/BackupReminder.vue), [`BreakdownList`](../../src/components/BreakdownList.vue), [`WelcomePanel`](../../src/components/WelcomePanel.vue).
+  - Ritorno dal dettaglio: in `onMounted`, se `router.options.history.state.forward` è un indirizzo `/dettaglio/…`, il focus torna sulla riga della ripartizione da cui si era entrati (`preventScroll`, la posizione la ripristina il router).
+- **Componenti inclusi:** [`BalancePanel`](../../src/components/BalancePanel.vue), [`BreakdownList`](../../src/components/BreakdownList.vue), [`MonthSelector`](../../src/components/MonthSelector.vue), [`WelcomePanel`](../../src/components/WelcomePanel.vue), [`TransactionForm`](../../src/components/TransactionForm.vue), [`RecurringForm`](../../src/components/RecurringForm.vue). `AppHeader` e `BackupReminder` stanno in `App.vue`, fuori dalla vista.
 
 ### `BreakdownDetailView.vue` (`/dettaglio/:kind(categoria|metodo)/:id`)
 - **Ruolo:** Vista di dettaglio analitico di una riga delle ripartizioni della Dashboard.
-- **Funzionalità:** Raggiungibile cliccando su una categoria o metodo di pagamento dalla Dashboard (tramite la prop `linked` di `BreakdownList`). Mostra l'elenco completo delle voci che compongono quella riga (sia spese una tantum che singole scadenze di spese ricorrenti nel periodo) tramite `breakdownItems`, ordinate dalla più recente. Include la specifica del periodo (es. "Fino a oggi", "Solo programmato", "Anno intero") e il selettore mese [`MonthSelector`](../../src/components/MonthSelector.vue) per cambiare periodo senza tornare indietro. Il totale coincide sempre con l'importo mostrato nella riga della Dashboard ed è formattato in grigio neutro (`text-slate-800`), coerentemente con la semantica cromatica che evita il rosso per spese ordinarie.
+- **Funzionalità:** Raggiungibile cliccando su una categoria o metodo di pagamento dalla Dashboard (tramite la prop `linked` di `BreakdownList`). Mostra l'elenco completo delle voci che compongono quella riga (sia spese una tantum che singole scadenze di spese ricorrenti nel periodo) tramite `breakdownItems`. Include la specifica del periodo (`periodLabel`: anno fino a oggi, anno, mese fino a oggi, mese programmato, mese) e il selettore mese [`MonthSelector`](../../src/components/MonthSelector.vue) per cambiare periodo senza tornare indietro. Il totale coincide sempre con l'importo mostrato nella riga della Dashboard ed è in grigio neutro (`text-slate-800`).
+- **Modifica delle voci:** ogni riga è un pulsante (`edit`, `aria-label` da `detail.editRow`) che apre [`TransactionForm`](../../src/components/TransactionForm.vue) per una spesa variabile o [`RecurringForm`](../../src/components/RecurringForm.vue) per un addebito ricorrente, passando la data dell'addebito come `occurrence`. Alla chiusura (`closeForm`) il focus torna sulla riga, o sul titolo se la voce non c'è più (per esempio perché le si è cambiata categoria).
+- **Categoria o metodo inesistente:** al posto dell'elenco un riquadro con titolo specifico per tipo (`detail.notFoundTitle` / `detail.notFoundMethodTitle`) e due azioni: "Torna alla dashboard" e "Gestisci categorie e metodi" (verso `/impostazioni`).
 - **Accessibilità e Navigazione:**
-  - Autofocus programmatico: al montaggio della pagina e al variare dell'entità, `document.title` si aggiorna dinamicamente (`"{name} · Pocketly"`) e l'intestazione principale `h2` riceve immediatamente il focus (`ref="heading"`, `tabindex="-1"`, `focus:outline-none`), informando subito gli screen reader e gli utenti da tastiera del nuovo contesto.
-  - Navigazione di ritorno intelligente (`back`): il pulsante di ritorno verifica la cronologia precedente (`router.options.history.state.back === '/'`); se si proviene dalla dashboard viene eseguito `router.back()`, permettendo a `scrollBehavior` di riposizionare la dashboard nell'esatta posizione di scorrimento precedente. Aprendo direttamente l'URL, la navigazione reindirizza normalmente alla radice `/`.
+  - Autofocus programmatico: al montaggio della pagina e al variare dell'entità, `document.title` si aggiorna dinamicamente (`"{name} · Pocketly"`) e l'intestazione principale `h2` riceve il focus (`ref="heading"`, `tabindex="-1"`, `focus:outline-none`); in `onBeforeUnmount` il titolo precedente viene ripristinato.
+  - Ritorno (`back`): il link "Torna alla dashboard" è un `<a href="/">` normale, non un `RouterLink`: il `RouterLink` navigherebbe da solo prima del gestore, e il `push('/')` in più farebbe montare la dashboard senza sapere da quale riga si torna. Ctrl/Cmd/Maiusc/Alt+clic e il tasto centrale restano al browser; altrimenti, se si arriva dalla dashboard (`router.options.history.state.back === '/'`) si usa `router.back()` (la dashboard riappare nella posizione di scorrimento e con il focus sulla riga di partenza), se no `router.push('/')`.
   - Compatibilità scorciatoie: `MonthSelector` non intercetta tasti modificatori, preservando le scorciatoie del browser come `Alt+ArrowLeft` per tornare indietro nella cronologia.
 
 ### `OneTimeView.vue` (`/una-tantum`)
@@ -73,11 +85,11 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `RecurringView.vue` (`/ricorrenti`)
 - **Ruolo:** Gestione delle spese periodiche.
-- **Funzionalità:** Raggruppamento per frequenza (mensile, trimestrale, semestrale, annuale). Mostra il costo equivalente mensile complessivo. Permette di configurare regole di notifica per ciascuna spesa tramite [`RecurringForm`](../../src/components/RecurringForm.vue) e [`NotificationRulesEditor`](../../src/components/NotificationRulesEditor.vue).
+- **Funzionalità:** Un unico elenco delle spese ricorrenti attive nell'anno (`finance.recurringOfYear`), con la frequenza indicata su ogni riga insieme a periodo, categoria, metodo e riepilogo dei promemoria. Mostra il costo equivalente mensile complessivo. Creazione e modifica con [`RecurringForm`](../../src/components/RecurringForm.vue), che include le regole di notifica ([`NotificationRulesEditor`](../../src/components/NotificationRulesEditor.vue)).
 
 ### `IncomeView.vue` (`/entrate`)
 - **Ruolo:** Gestione delle entrate dell'anno.
-- **Funzionalità:** Elenco entrate registrate (`finance.incomesOfYear`), somma complessiva in testata, form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con opzione `isIncome`.
+- **Funzionalità:** Elenco entrate registrate (`finance.incomesOfYear`), somma complessiva in testata, form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
 - *Nota architettonica:* visualizza l'intero anno corrente senza selettore mese individuale (vedi [known-issues.md](../known-issues.md)).
 
 ### `BudgetView.vue` (`/budget`)
@@ -111,17 +123,18 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ### Liste e Righe Dati
 - **`EntryList.vue`**: Wrapper per elenchi dati con gestione stato vuoto personalizzato e riga del totale.
 - **`EntryRow.vue`**: Singola voce interattiva con slot per badge/metadati e pulsanti contestuali di modifica ed eliminazione.
-- **`BreakdownList.vue`**: Lista ripartizioni percentuali con barre di progresso colorate per categoria o tag; con prop `linked` trasforma ogni riga in link di navigazione verso `BreakdownDetailView`.
+- **`BreakdownList.vue`**: Lista ripartizioni percentuali con barre di progresso colorate per categoria o tag; con prop `linked` trasforma ogni riga in link di navigazione verso `BreakdownDetailView`, con un `aria-label` leggibile (`dashboard.breakdownRowLabel`: nome, importo, quota e destinazione).
 - **`BudgetBar.vue`**: Visualizzazione a doppia barra per mostrare l'importo già speso e la quota già programmata rispetto al tetto limite.
-- **`BalancePanel.vue`**: Riquadro bilancio con entrate, uscite e saldo a data odierna. Applica la convenzione cromatica semantica: il rosso è riservato esclusivamente a saldi o previsti negativi (`signColor`, con transizione a colore neutro se il rientro a fine periodo è positivo via `bridge`), le entrate sono verdi (`incomeColor`) solo se strettamente positive (`> 0`), e le uscite contabili sono in grigio neutro (`text-slate-800`). Include note espandibili per il confronto ricorrenti/variabili (`notesOpen`), frase ponte saldo/previsto (`bridge`) e gesture swipe touch orizzontali per il cambio mese delegate a `useMonthStep`.
+- **`BalancePanel.vue`**: Riquadro principale della dashboard. Props: `main` (`{ label, value, today?: { label, value }, estimate?, neutral?, note?, hint? }`), `income`, `expenses`, `split` (parti ricorrenti/variabili con nota) ed `explain` (il conto dietro il previsto). Mostra la cifra grande con sotto la riga della stima, il risultato fino a oggi, nota e suggerimento; poi entrate e uscite; poi la barretta ricorrenti/variabili con la legenda (ricorrenti a sinistra, variabili allineate a destra) e i verdetti rispetto alla media. Il pulsante "Come si arriva a questa cifra" (`explainOpen`, chiuso di serie) apre il conto, con un link a `/previsioni` per cambiare la stima. Da `lg` la cifra grande e la coppia entrate/uscite stanno affiancate. Colori: `signColor` (blu se `>= 0`, rosso se `< 0`), neutro se `main.neutral`; entrate verdi (`incomeColor`) solo se `> 0`; uscite in grigio neutro (`text-slate-800`). Lo swipe per cambiare mese non è qui: lo gestisce `DashboardView`.
 - **`MonthSelector.vue`**: Controllo unificato per il filtro mese con pulsante rapido «Questo mese», menu a tendina `<select>` (opzione «Tutti i mesi» e 12 mesi) e pulsanti freccia passo a passo (‹ e ›). Centralizza i listener globali da tastiera per le frecce ← e → (`ArrowLeft`/`ArrowRight`), applica la preservazione del focus (reindirizzato al menu a tendina quando un pulsante si nasconde o si disabilita), fornisce etichette ARIA contestuali parlanti per l'ingresso da «Tutti i mesi» (`dashboard.goToMonth`) e gestisce il cambio mese/anno tramite `useMonthStep`.
 
 ### Moduli e Form
-- **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (importo, data, nome, categoria, metodo, tag, note).
-- **`RecurringForm.vue`**: Modulo per spese ricorrenti con scelta di frequenza, date inizio/fine e configurazione regole promemoria.
+Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di scartare modifiche non salvate), mostrano "Annulla" accanto a "Salva" e precompilano l'importo con il separatore decimale della lingua (`useFormat().amountInput`).
+- **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (`kind`; importo, data, nome, categoria, metodo, tag, note).
+- **`RecurringForm.vue`**: Modulo per spese ricorrenti con scelta di frequenza, date inizio/fine e configurazione regole promemoria. Prop `occurrence`: l'addebito da cui si è aperta la modifica (senza, il prossimo da oggi). Modificando una serie che ha un addebito successivo al primo, si sceglie "Da questo addebito in poi" (di serie: divide la serie con `splitRecurring`, e la data di inizio diventa di sola lettura) o "Tutta la serie"; altrimenti un avviso dice che la modifica vale per tutta la serie.
 - **`LoanForm.vue`**: Modulo per prestiti (nome contatto, tipo dato/ricevuto, importo, data, note).
 - **`RepaymentForm.vue`**: Modulo per registrare una tranche di rimborso a un prestito esistente.
-- **`SubmitButton.vue`**: Pulsante standard di conferma form con stati attivi/disabilitati omogenei.
+- **`SubmitButton.vue`**: Pulsante di conferma dei moduli; con `cancelLabel` mostra accanto un pulsante "Annulla" che emette `cancel`.
 
 ### Tag, Categorie e Metodi
 - **`TagBadge.vue`**: Pillola colorata che visualizza il nome di una categoria, metodo o tag recuperando dinamicamente il colore associato.
@@ -133,11 +146,11 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 - **`SyncSettings.vue`**: Gestione del collegamento al server di sincronizzazione, visualizzazione stato ETag, disconnessione pulita con revoca di iscrizione e promemoria dal server (`leaveServer`).
 - **`NotificationSettings.vue`**: Pannello di gestione notifiche browser, registrazione Web Push per il dispositivo corrente, avviso orizzonte temporale a 60 giorni, diagnostica limite/errori di invio calendario e invio notifica test.
 - **`NotificationRulesEditor.vue`**: Editor dinamico per definire promemoria multipli con giorni di anticipo e orario target.
-- **`BackupReminder.vue`**: Banner di avviso nella dashboard per ricordare di esportare una copia dei dati dopo 30 giorni.
+- **`BackupReminder.vue`**: Banner (in `App.vue`, sopra ogni vista) che ricorda di esportare una copia dei dati quando sono passati almeno 7 giorni (`REMINDER_DAYS`) dall'ultimo backup e i dati sono cambiati da allora (hash diverso); "Più tardi" lo rimanda.
 
 ### Feedback, Modali e Sistema
-- **`BaseModal.vue`**: Dialogo modale accessibile con gestione focus, pressione tasto Escape e overlay sfumato.
-- **`ConfirmHost.vue`**: Host globale per mostrare dialoghi di conferma distruttiva (richieste tramite `useConfirmDelete`).
+- **`BaseModal.vue`**: Dialogo modale accessibile. All'apertura il focus va sul titolo e alla chiusura torna all'elemento che l'ha aperto; finché è aperto `#app` è `inert`. Una pila di finestre a livello di modulo dà a ogni finestra uno `z-index` crescente e solo quella in cima risponde a Esc e al Tab, che resta intrappolato dentro. Con la prop `dirty`, chiudere con Esc, ✕ o clic sullo sfondo chiede prima "Scartare le modifiche?" tramite `ui.confirm` (con `cancelLabel` "Continua a modificare"); "Annulla" nel modulo chiude subito.
+- **`ConfirmHost.vue`**: Host globale dei dialoghi di conferma richiesti con `ui.confirm` (anche tramite `useConfirmDelete`); usa `cancelLabel` se indicato, altrimenti "Annulla".
 - **`ToastHost.vue`**: Host per notifiche a comparsa temporanee gestite tramite `useUiStore().toast(...)`.
 - **`UpdatePrompt.vue`**: Banner per notificare la disponibilità di una nuova versione PWA scaricata dal service worker.
 - **`WelcomePanel.vue`**: Schermata introduttiva visualizzata al primo avvio su database completamente vuoto.

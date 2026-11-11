@@ -4,13 +4,18 @@ source-files:
   - src/services/excelImport.ts
   - src/services/xlsx/workbook.ts
   - src/services/xlsx/zip.ts
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # Importare in Pocketly i dati dell'Excel "Expense Tracker"
 
-Pocketly non legge direttamente i file Excel. Lo script `scripts/xlsx_to_pocketly.py` converte l'Excel in
-un file JSON di backup, che poi si importa dalle Impostazioni dell'app.
+Pocketly legge direttamente il file `.xlsx`: in **Impostazioni → Importa da Excel** tocca **Scegli file
+Excel**, controlla il riepilogo (conteggi e avvisi) e conferma con **Sostituisci i dati**. Il file viene
+letto sul dispositivo e non viene inviato da nessuna parte (`readExcelFile` in `src/services/excelImport.ts`).
+Anche questo import **sostituisce tutti i dati**, compresi budget, prestiti e simulazioni.
+
+In alternativa, lo script `scripts/xlsx_to_pocketly.py` converte l'Excel in un file JSON di backup, che poi
+si importa con *Importa backup*. Il resto di questa guida descrive questa strada.
 
 ```
 Excel (.xlsx)  ──►  scripts/xlsx_to_pocketly.py  ──►  pocketly-import.json  ──►  app: Importa backup
@@ -27,10 +32,10 @@ da Excel almeno una volta dopo l'ultima modifica.
 
 ## 2. Convertire
 
-Dalla cartella del progetto (PowerShell o Git Bash):
+Dalla cartella del progetto (su Windows con `py -3`, su macOS e Linux con `python3`):
 
 ```
-python scripts/xlsx_to_pocketly.py "C:\percorso\Expense_Tracker_2026_v3.xlsx" "C:\percorso\pocketly-import.json"
+py -3 scripts/xlsx_to_pocketly.py "C:\percorso\Expense_Tracker_2026_v3.xlsx" "C:\percorso\pocketly-import.json"
 ```
 
 Salva il JSON **fuori dalla cartella del progetto**: contiene i tuoi dati personali e non deve finire
@@ -39,7 +44,7 @@ nel repository.
 Se nel file c'è solo il mese e non il giorno, lo script usa il giorno 1. Per usare un altro giorno:
 
 ```
-python scripts/xlsx_to_pocketly.py ... --default-day 30
+py -3 scripts/xlsx_to_pocketly.py ... --default-day 30
 ```
 
 Alla fine lo script stampa quante voci ha scritto per ogni tipo e, se c'è qualcosa da controllare, un
