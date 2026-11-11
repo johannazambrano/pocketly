@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
-import { upcomingCharges } from '@/domain/calculations'
+import { upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
 import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
+import TransactionForm from '@/components/TransactionForm.vue'
+import RecurringForm from '@/components/RecurringForm.vue'
+import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
@@ -274,20 +277,46 @@ watch(
 )
 
 /**
- * Ciò che deve ancora uscire. Sul mese in corso arriva a fine mese, così l'elenco e la sua somma coincidono con
- * "ancora in arrivo" sotto le uscite; sull'anno guarda i prossimi 30 giorni.
+ * I prossimi addebiti. Sul mese in corso arrivano a fine mese, così l'elenco somma come la nota sotto le uscite ("Più X
+ * in arrivo"): il totale non si ripete nel titolo. Sull'anno guardano i prossimi 30 giorni, una finestra diversa da
+ * quella della nota (fino a dicembre): il titolo lo dice e non usa la stessa parola, e lì il totale resta.
  */
 const upcomingUntil = computed(() =>
   monthToDate.value ? lastDayOfMonth(finance.selectedYear, finance.selectedMonth as number) : addDays(finance.today, 30),
 )
 const upcoming = computed(() => upcomingCharges(finance.data, finance.today, upcomingUntil.value))
 const upcomingTotal = computed(() => upcoming.value.reduce((acc, c) => acc + c.amount, 0))
+const showUpcomingTotal = computed(() => !monthToDate.value && upcoming.value.length > 0)
 const upcomingTitle = computed(() =>
   monthToDate.value ? t('dashboard.upcomingMonth', monthArgs.value) : t('dashboard.upcoming'),
 )
 const upcomingEmpty = computed(() =>
   monthToDate.value ? t('dashboard.noUpcomingMonth', monthArgs.value) : t('dashboard.noUpcoming'),
 )
+
+/**
+ * Ogni addebito si apre per la modifica, con lo stesso modulo delle pagine Variabili e Ricorrenti (per un ricorrente si
+ * modifica la spesa intera). Chiuso il modulo, il focus torna sulla riga, o sul titolo dell'elenco se non c'è più.
+ */
+const editingOneTime = ref<OneTimeExpense | null>(null)
+const editingRecurring = ref<RecurringExpense | null>(null)
+const upcomingHeading = ref<HTMLElement | null>(null)
+let returnKey: string | null = null
+function editCharge(c: UpcomingCharge) {
+  returnKey = c.key
+  if (c.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === c.id) ?? null
+  else editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === c.id) ?? null
+}
+async function closeChargeForm() {
+  editingOneTime.value = null
+  editingRecurring.value = null
+  await nextTick()
+  const row = returnKey ? document.querySelector<HTMLElement>(`[data-charge-key="${CSS.escape(returnKey)}"]`) : null
+  ;(row ?? upcomingHeading.value)?.focus()
+  returnKey = null
+}
+const chargeLabel = (c: UpcomingCharge) =>
+  t('dashboard.editCharge', { name: c.name, date: date(c.date), due: t('dashboard.dueIn', c.daysLeft), amount: money(c.amount) })
 
 /** I prossimi addebiti riguardano il presente: si mostrano solo guardando l'anno in corso o il mese in corso. */
 const showUpcoming = computed(
@@ -324,10 +353,10 @@ const showUpcoming = computed(
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
           <div class="flex items-baseline justify-between gap-3">
-            <h3 class="text-sm font-semibold text-slate-700">
+            <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-slate-700 focus:outline-none">
               <i class="fa-solid fa-clock mr-1 text-indigo-600" aria-hidden="true"></i> {{ upcomingTitle }}
             </h3>
-            <span v-if="upcoming.length" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
+            <span v-if="showUpcomingTotal" class="shrink-0 text-sm font-semibold text-slate-700">{{ money(upcomingTotal) }}</span>
           </div>
           <!--
             Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
@@ -342,19 +371,30 @@ const showUpcoming = computed(
             <li
               v-for="(c, i) in upcoming"
               :key="c.key"
-              class="flex items-center justify-between gap-2 border-b border-slate-100 py-2 last:border-b-0"
+              class="border-b border-slate-100 last:border-b-0"
               :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
             >
-              <div class="min-w-0">
-                <div class="truncate text-sm font-medium">{{ c.name }}</div>
-                <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
-                <div class="text-xs text-slate-500">
-                  {{ date(c.date) }} ·
-                  <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
-                  <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
-                </div>
-              </div>
-              <span class="shrink-0 text-sm font-semibold text-slate-700">{{ money(c.amount) }}</span>
+              <button
+                type="button"
+                :data-charge-key="c.key"
+                :aria-label="chargeLabel(c)"
+                class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-slate-50"
+                @click="editCharge(c)"
+              >
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-medium">{{ c.name }}</span>
+                  <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
+                  <span class="block text-xs text-slate-500">
+                    {{ date(c.date) }} ·
+                    <span :class="{ 'font-medium text-amber-700': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
+                    <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
+                  </span>
+                </span>
+                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-slate-700">
+                  {{ money(c.amount) }}
+                  <i class="fa-solid fa-pen text-xs text-slate-400" aria-hidden="true"></i>
+                </span>
+              </button>
             </li>
           </ul>
           <p v-else class="text-xs text-slate-500">{{ upcomingEmpty }}</p>
@@ -371,5 +411,7 @@ const showUpcoming = computed(
         </div>
       </div>
     </template>
+    <TransactionForm :open="!!editingOneTime" kind="expense" :item="editingOneTime" @close="closeChargeForm" />
+    <RecurringForm :open="!!editingRecurring" :item="editingRecurring" @close="closeChargeForm" />
   </section>
 </template>
