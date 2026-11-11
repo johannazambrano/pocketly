@@ -3,6 +3,82 @@
 @import '@fortawesome/fontawesome-free/css/fontawesome.css';
 @import '@fortawesome/fontawesome-free/css/solid.css';
 
+/*
+ * Gettoni di colore: nomi di significato (superficie, testo, linea, azione…) invece di colori fissi. Le classi Tailwind
+ * li usano come `bg-surface`, `text-ink-2`, `border-line`. I valori stanno nelle variabili `--pk-*`, che cambiano per
+ * piattaforma (`html[data-platform]`) e tema (`html[data-theme]`). Questi sono i valori di partenza: identici ai colori
+ * usati finora, così sostituire le classi non cambia niente a vista.
+ */
+@theme inline {
+  --color-canvas: var(--pk-canvas);
+  --color-surface: var(--pk-surface);
+  --color-surface-2: var(--pk-surface-2);
+  --color-surface-3: var(--pk-surface-3);
+  --color-line-soft: var(--pk-line-soft);
+  --color-line: var(--pk-line);
+  --color-line-strong: var(--pk-line-strong);
+  --color-ink: var(--pk-ink);
+  --color-ink-2: var(--pk-ink-2);
+  --color-ink-3: var(--pk-ink-3);
+  --color-ink-4: var(--pk-ink-4);
+  --color-ink-5: var(--pk-ink-5);
+  --color-accent: var(--pk-accent);
+  --color-accent-strong: var(--pk-accent-strong);
+  --color-accent-icon: var(--pk-accent-icon);
+  --color-accent-soft: var(--pk-accent-soft);
+  --color-accent-soft-2: var(--pk-accent-soft-2);
+  --color-on-accent: var(--pk-on-accent);
+  --color-positive: var(--pk-positive);
+  --color-negative: var(--pk-negative);
+  --color-negative-strong: var(--pk-negative-strong);
+  --color-negative-soft: var(--pk-negative-soft);
+  --color-caution: var(--pk-caution);
+  --color-caution-strong: var(--pk-caution-strong);
+  --color-caution-soft: var(--pk-caution-soft);
+  --color-caution-line: var(--pk-caution-line);
+  --color-recurring: var(--pk-recurring);
+  --color-variable: var(--pk-variable);
+  --color-chrome: var(--pk-chrome);
+  --color-chrome-2: var(--pk-chrome-2);
+  --color-on-chrome: var(--pk-on-chrome);
+  --color-on-chrome-accent: var(--pk-on-chrome-accent);
+}
+
+:root {
+  --pk-canvas: var(--color-slate-100);
+  --pk-surface: var(--color-white);
+  --pk-surface-2: var(--color-slate-50);
+  --pk-surface-3: var(--color-slate-100);
+  --pk-line-soft: var(--color-slate-100);
+  --pk-line: var(--color-slate-200);
+  --pk-line-strong: var(--color-slate-300);
+  --pk-ink: var(--color-slate-800);
+  --pk-ink-2: var(--color-slate-700);
+  --pk-ink-3: var(--color-slate-600);
+  --pk-ink-4: var(--color-slate-500);
+  --pk-ink-5: var(--color-slate-400);
+  --pk-accent: var(--color-emerald-700);
+  --pk-accent-strong: var(--color-emerald-800);
+  --pk-accent-icon: var(--color-emerald-600);
+  --pk-accent-soft: var(--color-emerald-50);
+  --pk-accent-soft-2: var(--color-emerald-100);
+  --pk-on-accent: var(--color-white);
+  --pk-positive: var(--color-blue-600);
+  --pk-negative: var(--color-rose-600);
+  --pk-negative-strong: var(--color-rose-700);
+  --pk-negative-soft: var(--color-rose-50);
+  --pk-caution: var(--color-amber-700);
+  --pk-caution-strong: var(--color-amber-800);
+  --pk-caution-soft: var(--color-amber-50);
+  --pk-caution-line: var(--color-amber-200);
+  --pk-recurring: var(--color-indigo-600);
+  --pk-variable: var(--color-orange-500);
+  --pk-chrome: var(--color-slate-900);
+  --pk-chrome-2: var(--color-slate-800);
+  --pk-on-chrome: var(--color-white);
+  --pk-on-chrome-accent: var(--color-emerald-400);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;

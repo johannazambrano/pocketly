@@ -7,11 +7,14 @@ import { useBackupStore } from './stores/backup'
 import { useFinanceStore } from './stores/finance'
 import { useNotificationsStore } from './stores/notifications'
 import { useSyncStore } from './stores/sync'
+import { useAppearanceStore } from './stores/appearance'
 import { requestPersistentStorage } from './services/storage'
 import './style.css'
 
 const app = createApp(App).use(createPinia()).use(router).use(i18n)
 document.documentElement.lang = i18n.global.locale.value
+// Piattaforma e tema su <html> prima del primo disegno: niente lampo con l'aspetto sbagliato.
+useAppearanceStore()
 app.mount('#app')
 
 void useFinanceStore()

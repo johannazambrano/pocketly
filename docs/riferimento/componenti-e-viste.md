@@ -109,7 +109,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `SettingsView.vue` (`/impostazioni`)
 - **Ruolo:** Amministrazione dati, preferenze e collegamenti.
-- **Funzionalità:** Selettore lingua (IT/EN), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)).
+- **Funzionalità:** Selettore lingua (IT/EN), aspetto ("Stile": automatico / iPhone / Android / PC, con la piattaforma riconosciuta; "Tema": sistema / chiaro / scuro, store `appearance`), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)).
 
 ---
 

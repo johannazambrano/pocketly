@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useBackupStore } from '@/stores/backup'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
+import { useAppearanceStore, type PlatformChoice, type ThemeChoice } from '@/stores/appearance'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
@@ -18,6 +19,10 @@ import TagManager from '@/components/TagManager.vue'
 const finance = useFinanceStore()
 const backup = useBackupStore()
 const ui = useUiStore()
+const appearance = useAppearanceStore()
+/** Aspetto e tema: di serie automatici, si possono fissare a mano (preferenze di questo dispositivo). */
+const PLATFORM_CHOICES: PlatformChoice[] = ['auto', 'ios', 'android', 'desktop']
+const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
 const { t, locale } = useFormat()
 const version = __APP_VERSION__
 
@@ -279,6 +284,45 @@ function changeLocale(code: LocaleCode) {
           >
             {{ l.label }}
           </button>
+        </div>
+      </div>
+
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-palette mr-1 text-indigo-600"></i> {{ t('settings.appearance') }}</h3>
+        <div class="space-y-1">
+          <p id="appearance-platform" class="text-xs font-medium text-slate-600">{{ t('settings.platform') }}</p>
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-labelledby="appearance-platform">
+            <button
+              v-for="c in PLATFORM_CHOICES"
+              :key="c"
+              type="button"
+              class="min-h-10 rounded-lg border px-3 text-sm font-medium"
+              :class="appearance.platformChoice === c ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-600'"
+              :aria-pressed="appearance.platformChoice === c"
+              @click="appearance.setPlatform(c)"
+            >
+              {{ t(`settings.platforms.${c}`) }}
+            </button>
+          </div>
+          <p v-if="appearance.platformChoice === 'auto'" class="text-xs text-slate-500">
+            {{ t('settings.platformDetected', { platform: t(`settings.platforms.${appearance.detected}`) }) }}
+          </p>
+        </div>
+        <div class="space-y-1">
+          <p id="appearance-theme" class="text-xs font-medium text-slate-600">{{ t('settings.theme') }}</p>
+          <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="appearance-theme">
+            <button
+              v-for="c in THEME_CHOICES"
+              :key="c"
+              type="button"
+              class="min-h-10 rounded-lg border px-3 text-sm font-medium"
+              :class="appearance.themeChoice === c ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-600'"
+              :aria-pressed="appearance.themeChoice === c"
+              @click="appearance.setTheme(c)"
+            >
+              {{ t(`settings.themes.${c}`) }}
+            </button>
+          </div>
         </div>
       </div>
 

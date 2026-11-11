@@ -127,6 +127,10 @@ La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramit
 ## 6. Layout, Accessibilità e Design Semantico
 
 Lo stile globale in [`src/style.css`](../../src/style.css) è integrato con Tailwind CSS 4:
+- **Aspetto per piattaforma e tema:**
+  L'app segue le convenzioni del sistema su cui gira (iPhone e iPad, Android, PC) e il tema chiaro o scuro. Lo store [`appearance`](../../src/stores/appearance.ts) riconosce la piattaforma con `detectPlatform` ([`src/utils/platform.ts`](../../src/utils/platform.ts)) e segue `prefers-color-scheme`; dalle Impostazioni si possono fissare a mano. Il risultato va su `<html>` come `data-platform` (`ios` / `android` / `desktop`) e `data-theme` (`light` / `dark`) prima del primo disegno (in `main.ts`, prima di `mount`).
+- **Gettoni di colore:**
+  I colori si scrivono con nomi di significato, non con colori fissi: `bg-canvas`, `bg-surface` / `-2` / `-3`, `border-line-soft` / `line` / `line-strong`, `text-ink` … `text-ink-5`, `accent` (con `-strong`, `-icon`, `-soft`, `on-accent`), `positive`, `negative`, `caution`, `recurring`, `variable`, `chrome` (l'intestazione scura). Sono definiti in `@theme inline` e prendono il valore dalle variabili `--pk-*`, che le regole `html[data-platform=…]` e `html[data-theme=dark]` cambiano. Un componente nuovo usa solo i gettoni.
 - **Scroll Padding e Safe Area:**
   L'intestazione in alto ([`AppHeader.vue`](../../src/components/AppHeader.vue)) e la barra di navigazione inferiore ([`BottomNav.vue`](../../src/components/BottomNav.vue)) sono ancorate fisse. Per impedire che la tastiera virtuale o la navigazione con tasti freccia copra l'elemento su cui è posizionato il focus, `src/style.css` definisce:
   ```css

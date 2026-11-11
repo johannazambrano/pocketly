@@ -20,7 +20,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/App.vue`](../../src/App.vue) | Radice dell'albero Vue: coordinamento header, layout, router view, bottom nav, toast, modali e dialoghi di conferma | — | [frontend.md](../architettura/frontend.md) |
 | [`src/main.ts`](../../src/main.ts) | Bootstrap dell'app: creazione istanza Vue, registrazione Pinia, Vue Router, vue-i18n e montaggio su `#app` | — | [frontend.md](../architettura/frontend.md) |
 | [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite | — | [frontend.md](../architettura/frontend.md) |
-| [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4, safe-area scroll padding, classi utility e variabili colore | — | [frontend.md](../architettura/frontend.md) |
+| [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4: gettoni di colore con nomi di significato (`bg-surface`, `text-ink-2`, `border-line`…, valori nelle variabili `--pk-*` che cambiano per `html[data-platform]` e `html[data-theme]`), safe-area scroll padding, classi utility | — | [frontend.md](../architettura/frontend.md) |
 | [`src/router/index.ts`](../../src/router/index.ts) | Definizione delle 9 rotte (8 principali e 1 di dettaglio), lazy loading viste e metadati dei tab (`TABS`) | — | [frontend.md](../architettura/frontend.md) |
 | [`public/push-worker.js`](../../public/push-worker.js) | Service worker Web Push: gestione ricezione eventi push, icona badge e navigazione su click | — | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`index.html`](../../index.html) | Entry point HTML dell'applicazione PWA, meta tag viewport, thema e aggancio mount Vue | — | [frontend.md](../architettura/frontend.md) |
@@ -59,6 +59,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/stores/sync.ts`](../../src/stores/sync.ts) | Store di sincronizzazione: credenziali server, stato polling, avvio sync e gestione errori | `services/sync/engine.test.ts` | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/stores/notifications.ts`](../../src/stores/notifications.ts) | Store notifiche: permessi browser, sottoscrizione Web Push, scheduler locale e sync pianificazione push | [`src/stores/notifications.test.ts`](../../src/stores/notifications.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/stores/backup.ts`](../../src/stores/backup.ts) | Store promemoria backup: salva in IndexedDB (`'backup-meta'`) un `BackupMeta` con data e impronta dei dati dell'ultimo backup, e segnala modifiche non salvate | `services/backup.test.ts` | [frontend.md](../architettura/frontend.md) |
+| [`src/stores/appearance.ts`](../../src/stores/appearance.ts) | Aspetto dell'app: piattaforma (automatica o scelta: iPhone, Android, PC) e tema (sistema, chiaro, scuro), salvati in `localStorage` (`'appearance-platform'`, `'appearance-theme'`) e applicati a `<html>` come `data-platform` e `data-theme` | — | [frontend.md](../architettura/frontend.md) |
 | [`src/stores/ui.ts`](../../src/stores/ui.ts) | Store interfaccia utente: toast temporanei (gli errori restano 10 secondi e si chiudono con `dismissToast`), apertura del modulo rapido (`quickAddOpen`) e richieste di conferma (`confirm`, con `cancelLabel` facoltativo) | — | [frontend.md](../architettura/frontend.md) |
 
 ---
@@ -145,6 +146,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/utils/dates.ts`](../../src/utils/dates.ts) | Utility per date IsoDate: parsing `YYYY-MM-DD`, formattazione, calcolo indici mese, `addDays`, `lastDayOfMonth` | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/hash.ts`](../../src/utils/hash.ts) | Calcolo fingerprint e digest SHA-256 su stringhe | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
 | [`src/utils/id.ts`](../../src/utils/id.ts) | Generatore di ID unici casuali (`newId`) per entità e transazioni | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
+| [`src/utils/platform.ts`](../../src/utils/platform.ts) | Riconoscimento della piattaforma dal browser (`detectPlatform`: iOS, anche iPad che si presenta come Mac; Android; altrimenti PC) | [`src/utils/platform.test.ts`](../../src/utils/platform.test.ts) | [frontend.md](../architettura/frontend.md) |
 | [`src/utils/money.ts`](../../src/utils/money.ts) | Conversione tra stringhe valutarie dell'utente e interi in centesimi: `toCents` (virgola o punto), `centsToInput` (separatore della lingua), `formatCents` | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/uuidv5.ts`](../../src/utils/uuidv5.ts) | Generatore di UUID v5 deterministici basati su namespace e stringa | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
 
