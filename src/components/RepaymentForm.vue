@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
@@ -12,6 +12,8 @@ import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; loan: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
+/** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
+const formId = useId()
 const { t, money, amountInput } = useFormat()
 const finance = useFinanceStore()
 
@@ -50,8 +52,8 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
-    <form class="space-y-3" @submit.prevent="submit">
+  <BaseModal :open="open" :dirty="dirty" :form-id="formId" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
+    <form :id="formId" class="space-y-3" @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('common.amount') }}</span>

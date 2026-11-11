@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Loan, LoanType } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
@@ -11,6 +11,8 @@ import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; item?: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
+/** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
+const formId = useId()
 const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
@@ -56,8 +58,8 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
-    <form class="space-y-3" @submit.prevent="submit">
+  <BaseModal :open="open" :dirty="dirty" :form-id="formId" :title="t(item ? 'loans.edit' : 'loans.new')" @close="emit('close')">
+    <form :id="formId" class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('loans.counterparty') }}</span>
         <input v-model="form.name" required maxlength="80" class="field" :placeholder="t('loans.counterpartyPlaceholder')" />

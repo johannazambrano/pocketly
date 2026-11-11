@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Frequency, NotificationRule, RecurringExpense } from '@/types/models'
 import { FREQUENCIES, nextDueDate, splitRecurring } from '@/domain/recurrence'
@@ -19,6 +19,8 @@ import SubmitButton from './SubmitButton.vue'
  */
 const props = defineProps<{ open: boolean; item?: RecurringExpense | null; occurrence?: string | null }>()
 const emit = defineEmits<{ close: [] }>()
+/** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
+const formId = useId()
 const { t, amountInput, date } = useFormat()
 const finance = useFinanceStore()
 const notificationsStore = useNotificationsStore()
@@ -128,9 +130,9 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
-    <form v-else class="space-y-3" @submit.prevent="submit">
+    <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
       <!--
         Modificare una spesa ricorrente non deve riscrivere i mesi già passati senza volerlo: se c'è un addebito da cui
         partire, si sceglie se la modifica vale da lì in poi (di serie) o per tutta la serie. Il caso più comune è

@@ -255,7 +255,7 @@ function removeRule(index: number) {
         <button
           type="button"
           :disabled="disabled"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-icon hover:text-accent disabled:opacity-50"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-strong disabled:opacity-50"
           @click="addRule"
         >
           <i class="fa-solid fa-plus text-[10px]"></i>

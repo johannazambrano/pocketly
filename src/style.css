@@ -466,3 +466,56 @@
 :root[data-platform='ios'][data-theme='dark'] .seg-on {
   background-color: #636366;
 }
+
+/*
+ * I campi dei moduli per piattaforma. Tutti i moduli usano la stessa struttura (`label` con `.field-label` e `.field`),
+ * quindi la forma si decide qui una volta sola. Per ora vale nei fogli (le finestre dei moduli); le pagine seguono.
+ * iPhone: campi bianchi senza bordo sul fondo grigio del foglio, alti 44 px, etichette piccole e grigie sopra.
+ * Android: campi a contorno di Material, alti 56 px, con l'etichetta appoggiata sul bordo in alto.
+ */
+:root[data-platform='ios'] .sheet .field {
+  border-color: transparent;
+  border-radius: 10px;
+}
+/* `.field-compact`: i campi piccoli accanto a un pulsante (il nuovo tag) tengono la loro altezza e il loro rientro. */
+:root[data-platform='ios'] .sheet .field:not(.field-compact) {
+  min-height: 2.75rem;
+}
+/* Al buio iOS alza i fogli: fondo grigio "elevato" (#1c1c1e) invece del nero, campi un tono più chiari. */
+:root[data-platform='ios'][data-theme='dark'] .sheet {
+  background-color: var(--color-surface);
+}
+:root[data-platform='ios'][data-theme='dark'] .sheet .field {
+  background-color: var(--color-surface-3);
+}
+:root[data-platform='ios'] .sheet .field-label {
+  margin-left: 0.25rem;
+  font-weight: 400;
+  color: var(--color-ink-4);
+}
+:root[data-platform='android'] .sheet label:has(> .field-label) {
+  position: relative;
+  padding-top: 0.375rem;
+}
+:root[data-platform='android'] .sheet label > .field-label {
+  position: absolute;
+  top: 0;
+  left: 0.75rem;
+  z-index: 1;
+  margin: 0;
+  padding: 0 0.25rem;
+  /* Il fondo dell'etichetta copre il bordo del campo: è il colore del foglio. */
+  background-color: var(--color-surface);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--color-ink-4);
+}
+:root[data-platform='android'] .sheet .field {
+  background-color: transparent;
+  border-radius: 4px;
+}
+:root[data-platform='android'] .sheet .field:not(.field-compact) {
+  min-height: 3.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}

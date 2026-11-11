@@ -25,6 +25,7 @@ export default {
   common: {
     save: 'Salva',
     cancel: 'Annulla',
+    done: 'Fine',
     discardTitle: 'Scartare le modifiche?',
     discardMessage: 'Hai cambiato dei campi: se chiudi ora, le modifiche non vengono salvate.',
     discardConfirm: 'Scarta',

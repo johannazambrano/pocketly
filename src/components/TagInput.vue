@@ -96,13 +96,13 @@ function handleAddNew() {
     <!-- Campo per creare un nuovo tag al volo -->
     <div class="flex gap-1.5">
       <div class="relative flex-1">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-xs text-ink-5">#</span>
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-xs text-ink-4">#</span>
         <input
           v-model="newTagName"
           type="text"
           maxlength="30"
           :placeholder="t('onetime.newTagPlaceholder')"
-          class="field h-9 min-h-9 pl-6 text-xs"
+          class="field field-compact h-9 min-h-9 pl-6 text-xs"
           @keydown.enter.prevent="handleAddNew"
         />
       </div>

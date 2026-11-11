@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Modulo per spese una tantum (`kind="expense"`) ed entrate (`kind="income"`). */
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Income, OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
@@ -14,6 +14,8 @@ import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null }>()
 const emit = defineEmits<{ close: [] }>()
+/** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
+const formId = useId()
 const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
@@ -77,9 +79,9 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :title="title" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
-    <form v-else class="space-y-3" @submit.prevent="submit">
+    <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
         <input v-model="form.name" required maxlength="80" class="field" />
