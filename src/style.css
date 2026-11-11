@@ -134,10 +134,11 @@
   --pk-caution-strong: var(--color-amber-800);
   --pk-caution-stronger: var(--color-amber-900);
   --pk-recurring: var(--color-indigo-600);
-  --pk-recurring-dot: var(--color-indigo-500);
+  /* Ricorrenti e variabili sono due toni dello stesso indaco: la stessa famiglia (le uscite), pieno e chiaro. */
+  --pk-recurring-dot: var(--color-indigo-600);
   --pk-recurring-soft: var(--color-indigo-50);
   --pk-recurring-strong: var(--color-indigo-700);
-  --pk-variable: var(--color-orange-500);
+  --pk-variable: var(--color-indigo-300);
   --pk-sync: var(--color-sky-600);
   --pk-sync-light: var(--color-sky-300);
   --pk-chrome: var(--color-slate-900);
@@ -210,7 +211,7 @@
   --pk-recurring-dot: var(--color-indigo-400);
   --pk-recurring-soft: color-mix(in oklab, var(--color-indigo-500) 16%, transparent);
   --pk-recurring-strong: var(--color-indigo-200);
-  --pk-variable: var(--color-orange-400);
+  --pk-variable: var(--color-indigo-200);
   --pk-sync: var(--color-sky-400);
   --pk-sync-light: var(--color-sky-300);
   --pk-chrome: var(--color-slate-900);

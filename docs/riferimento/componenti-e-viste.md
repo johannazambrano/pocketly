@@ -110,7 +110,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `SettingsView.vue` (`/impostazioni`)
 - **Ruolo:** Amministrazione dati, preferenze e collegamenti.
-- **Funzionalità:** Selettore lingua (IT/EN), aspetto ("Stile": automatico / iPhone / Android / PC, con la piattaforma riconosciuta; "Tema": sistema / chiaro / scuro, store `appearance`), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)).
+- **Funzionalità:** Selettore lingua (IT/EN), "Riarmonizza i colori" (con conferma, `finance.harmonizeColors`: colori in equilibrio per categorie, metodi e tag, grigio per "Altro"), aspetto ("Stile": automatico / iPhone / Android / PC, con la piattaforma riconosciuta; "Tema": sistema / chiaro / scuro, store `appearance`), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)).
 
 ---
 
@@ -138,10 +138,10 @@ Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di 
 - **`SubmitButton.vue`**: Pulsante di conferma dei moduli; con `cancelLabel` mostra accanto un pulsante "Annulla" che emette `cancel`; con `deleteLabel` un pulsante "Elimina" che emette `delete` (iPhone: riga rossa a tutta larghezza; Android: testo rosso a sinistra; PC: sotto i due pulsanti). Segue la piattaforma: sul PC i due pulsanti a tutta larghezza, su Android "Annulla" di testo e "Salva" pieno a pillola allineati a destra, su iPhone niente (Annulla e Fine sono nella barra del foglio).
 
 ### Tag, Categorie e Metodi
-- **`TagBadge.vue`**: Pillola colorata che visualizza il nome di una categoria, metodo o tag recuperando dinamicamente il colore associato. Con `clickable` è un vero `<button>` (raggiungibile da tastiera e toccabile dentro le righe che si aprono al tocco).
+- **`TagBadge.vue`**: Pillola colorata che visualizza il nome di una categoria, metodo o tag recuperando dinamicamente il colore associato. Fondo e testo vengono da `badgeColors`, quindi restano leggibili anche con un colore scelto a mano. Con `clickable` è un vero `<button>` (raggiungibile da tastiera e toccabile dentro le righe che si aprono al tocco).
 - **`TagSelect.vue`**: Menu a tendina uniforme per la selezione rapida di categorie o metodi di pagamento.
 - **`TagInput.vue`**: Componente combinato per associare tag multipli a una transazione o crearne di nuovi all'istante.
-- **`TagManager.vue`**: Interfaccia di amministrazione delle liste anagrafiche (aggiunta, cambio colore palette, cancellazione sicura con controllo riferimenti orfani).
+- **`TagManager.vue`**: Interfaccia di amministrazione delle liste anagrafiche (aggiunta con il colore più lontano da quelli usati, scelta del colore a mano o casuale tra le tinte ammesse, cancellazione sicura con controllo riferimenti orfani).
 
 ### Impostazioni, Notifiche e Sync
 - **`SyncSettings.vue`**: Gestione del collegamento al server di sincronizzazione, visualizzazione stato ETag, disconnessione pulita con revoca di iscrizione e promemoria dal server (`leaveServer`).

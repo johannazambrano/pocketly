@@ -1,5 +1,5 @@
 import type { BudgetSettings, FinanceData, ForecastSettings, Tag } from '@/types/models'
-import { PALETTE } from '@/utils/colors'
+import { harmonizedColors } from '@/utils/colors'
 import { newId } from '@/utils/id'
 
 const DEFAULT_CATEGORIES: Record<string, string[]> = {
@@ -12,8 +12,11 @@ const DEFAULT_PAYMENT_METHODS: Record<string, string[]> = {
   en: ['Bank transfer', 'Cash', 'Debit card', 'Credit card', 'PayPal'],
 }
 
-function toTags(names: string[], colorOffset = 0): Tag[] {
-  return names.map((name, i) => ({ id: newId(), name, color: PALETTE[(i + colorOffset) % PALETTE.length]! }))
+/** Le voci iniziali con colori in equilibrio, lontani anche da quelli già dati (`given`, aggiornato). */
+function toTags(names: string[], given: string[]): Tag[] {
+  const colors = harmonizedColors(names, given)
+  given.push(...colors)
+  return names.map((name, i) => ({ id: newId(), name, color: colors[i]! }))
 }
 
 export function defaultForecastSettings(): ForecastSettings {
@@ -27,10 +30,11 @@ export function defaultBudgetSettings(): BudgetSettings {
 
 export function createDefaultData(locale: string): FinanceData {
   const lang = locale in DEFAULT_CATEGORIES ? locale : 'en'
+  const given: string[] = []
   return {
     schemaVersion: 2,
-    categories: toTags(DEFAULT_CATEGORIES[lang]!),
-    paymentMethods: toTags(DEFAULT_PAYMENT_METHODS[lang]!, 8),
+    categories: toTags(DEFAULT_CATEGORIES[lang]!, given),
+    paymentMethods: toTags(DEFAULT_PAYMENT_METHODS[lang]!, given),
     tags: [],
     oneTimeExpenses: [],
     recurringExpenses: [],

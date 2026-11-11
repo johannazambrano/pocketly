@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
-import { readableTextColor } from '@/utils/colors'
+import { badgeColors, OTHER_COLOR } from '@/utils/colors'
 
 const props = withDefaults(
   defineProps<{
@@ -18,7 +18,8 @@ const props = withDefaults(
 const finance = useFinanceStore()
 const { t } = useI18n()
 const tag = computed(() => finance.tag(props.kind, props.id))
-const background = computed(() => tag.value?.color ?? '#94a3b8')
+/** Fondo e testo sempre leggibili, anche per un colore scelto a mano (vedi `badgeColors`). */
+const colors = computed(() => badgeColors(tag.value?.color ?? OTHER_COLOR))
 </script>
 
 <template>
@@ -32,7 +33,7 @@ const background = computed(() => tag.value?.color ?? '#94a3b8')
       'cursor-pointer hover:opacity-85 active:scale-95': clickable,
       'rounded-full px-2 shadow-2xs': kind === 'tags',
     }"
-    :style="{ backgroundColor: background, color: readableTextColor(background) }"
+    :style="{ backgroundColor: colors.background, color: colors.color }"
   >
     <span v-if="kind === 'tags'" class="font-semibold opacity-75">#</span>
     <span class="truncate">{{ tag?.name ?? t('common.unknown') }}</span>

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newId } from './id'
 import { centsToInput, toCents, formatCents } from './money'
 import { isValidIsoDate, parseIsoDate } from './dates'
-import { PALETTE, pickUniqueColor, readableTextColor } from './colors'
+import { OTHER_COLOR, PALETTE, badgeColors, contrast, harmonizedColors, hexToOklch, pickUniqueColor, randomUniqueColor, readableTextColor } from './colors'
 
 describe('toCents', () => {
   it('accetta virgola e punto ed evita errori di arrotondamento', () => {
@@ -35,12 +35,67 @@ describe('date', () => {
   })
 })
 
+const hueGap = (a: string, b: string) => {
+  const d = Math.abs(hexToOklch(a)![2] - hexToOklch(b)![2]) % 360
+  return Math.min(d, 360 - d)
+}
+const isReddish = (c: string) => {
+  const [, chroma, h] = hexToOklch(c)!
+  return chroma > 0.04 && (h < 40 || h > 350)
+}
+
+describe('tavolozza', () => {
+  it('ha la stessa luminosità per tutte le tinte, niente rossi e testo scuro leggibile sopra', () => {
+    for (const c of PALETTE) {
+      expect(hexToOklch(c)![0]).toBeCloseTo(0.66, 2)
+      expect(isReddish(c)).toBe(false)
+      expect(contrast(c, readableTextColor(c))).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(new Set(PALETTE).size).toBe(PALETTE.length)
+  })
+})
+
 describe('pickUniqueColor', () => {
-  it('usa prima la palette, poi colori nuovi', () => {
+  it('sceglie la tinta della tavolozza più lontana da quelle usate', () => {
+    expect(pickUniqueColor([])).toBe(PALETTE[0])
     expect(pickUniqueColor([PALETTE[0]!])).toBe(PALETTE[1])
+    const next = pickUniqueColor(PALETTE.slice(0, 3))
+    expect(PALETTE).toContain(next)
+    for (const used of PALETTE.slice(0, 3)) expect(hueGap(next, used)).toBeGreaterThan(30)
+  })
+
+  it('a tavolozza finita crea colori nuovi con la stessa luminosità, mai rossi', () => {
     const next = pickUniqueColor(PALETTE)
     expect(next).toMatch(/^#[0-9a-f]{6}$/)
     expect(PALETTE).not.toContain(next)
+    expect(hexToOklch(next)![0]).toBeCloseTo(0.66, 2)
+    expect(isReddish(next)).toBe(false)
+  })
+
+  it('ignora i grigi: non occupano nessuna tinta', () => {
+    expect(pickUniqueColor([OTHER_COLOR])).toBe(PALETTE[0])
+  })
+})
+
+describe('randomUniqueColor', () => {
+  it('resta nelle tinte ammesse con la stessa luminosità', () => {
+    let seed = 0.1
+    const random = () => (seed = (seed * 9301 + 0.49297) % 1)
+    for (let i = 0; i < 20; i++) {
+      const c = randomUniqueColor([], random)
+      expect(hexToOklch(c)![0]).toBeCloseTo(0.66, 2)
+      expect(isReddish(c)).toBe(false)
+    }
+  })
+})
+
+describe('harmonizedColors', () => {
+  it('dà il grigio ad «Altro» e tinte diverse agli altri, lontane anche da quelle già date', () => {
+    const colors = harmonizedColors(['Cibo', 'Altro', 'Casa', 'Other'], [PALETTE[0]!])
+    expect(colors[1]).toBe(OTHER_COLOR)
+    expect(colors[3]).toBe(OTHER_COLOR)
+    expect(colors[0]).not.toBe(PALETTE[0])
+    expect(colors[2]).not.toBe(colors[0])
   })
 })
 
@@ -50,6 +105,21 @@ describe('readableTextColor', () => {
     expect(readableTextColor('#87FAB1')).toBe('#0f172a')
     expect(readableTextColor('#221675')).toBe('#ffffff')
     expect(readableTextColor('#356F6B')).toBe('#ffffff')
+  })
+})
+
+describe('badgeColors', () => {
+  it('tiene i colori che reggono già un testo leggibile', () => {
+    expect(badgeColors(PALETTE[0]!).background).toBe(PALETTE[0])
+    expect(badgeColors('#221675')).toEqual({ background: '#221675', color: '#ffffff' })
+  })
+
+  it('schiarisce le tinte medie scelte a mano finché il testo scuro arriva a 4,5:1', () => {
+    for (const c of ['#ef4444', '#3b82f6', '#8b5cf6', '#e11d48']) {
+      const b = badgeColors(c)
+      expect(contrast(b.background, b.color)).toBeGreaterThanOrEqual(4.5)
+      expect(hueGap(b.background, c)).toBeLessThan(8)
+    }
   })
 })
 

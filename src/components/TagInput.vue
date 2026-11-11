@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
-import { readableTextColor } from '@/utils/colors'
+import { badgeColors } from '@/utils/colors'
 
 const model = defineModel<string[]>({ default: () => [] })
 const finance = useFinanceStore()
@@ -64,7 +64,7 @@ function handleAddNew() {
         v-for="tag in selectedTags"
         :key="tag.id"
         class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium shadow-2xs"
-        :style="{ backgroundColor: tag.color, color: readableTextColor(tag.color) }"
+        :style="{ backgroundColor: badgeColors(tag.color).background, color: badgeColors(tag.color).color }"
       >
         <span>#{{ tag.name }}</span>
         <button

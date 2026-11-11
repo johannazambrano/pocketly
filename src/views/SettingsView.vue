@@ -60,6 +60,18 @@ const lastBackupText = computed(() => {
   return t('settings.lastBackup', { when })
 })
 
+/** "Riarmonizza i colori": sostituisce anche i colori scelti a mano, quindi si chiede prima. */
+async function harmonize() {
+  const ok = await ui.confirm({
+    title: t('settings.harmonizeTitle'),
+    message: t('settings.harmonizeMessage'),
+    confirmLabel: t('settings.harmonize'),
+  })
+  if (!ok) return
+  finance.harmonizeColors()
+  ui.toast(t('settings.harmonizeDone'))
+}
+
 async function doExport(mode: ExportMode) {
   if (busy.value || passwordProblem.value) return
   busy.value = true
@@ -271,6 +283,18 @@ function changeLocale(code: LocaleCode) {
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
       <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
+
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.colorsTitle') }}</h3>
+        <p class="text-xs text-ink-4">{{ t('settings.colorsHint') }}</p>
+        <button
+          type="button"
+          class="flex min-h-10 w-full items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
+          @click="harmonize"
+        >
+          {{ t('settings.harmonize') }}
+        </button>
+      </div>
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-language mr-1 text-recurring"></i> {{ t('settings.language') }}</h3>

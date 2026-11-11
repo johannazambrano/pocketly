@@ -18,7 +18,7 @@ import { normalizeNotifications } from '@/domain/notifications'
 import { isActiveInYear } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
-import { pickUniqueColor, randomUniqueColor } from '@/utils/colors'
+import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
 import { lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
@@ -288,6 +288,21 @@ export const useFinanceStore = defineStore('finance', () => {
     setTagColor(kind, id, randomUniqueColor(allColors()))
   }
 
+  /**
+   * "Riarmonizza i colori": categorie, poi metodi, poi tag prendono colori della tavolozza in equilibrio, ognuno la
+   * tinta più lontana da quelle già date (anche tra elenchi diversi, che compaiono uno accanto all'altro); "Altro" il
+   * grigio. Sostituisce anche i colori scelti a mano: la pagina chiede conferma.
+   */
+  function harmonizeColors() {
+    const given: string[] = []
+    for (const kind of ['categories', 'paymentMethods', 'tags'] as const) {
+      const list = data.value[kind]
+      const colors = harmonizedColors(list.map((t) => t.name), given)
+      list.forEach((t, i) => (t.color = colors[i]!))
+      given.push(...colors)
+    }
+  }
+
   function tagUsage(kind: TagKind, id: Id): number {
     if (kind === 'tags') {
       return data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length
@@ -372,6 +387,7 @@ export const useFinanceStore = defineStore('finance', () => {
     renameTag,
     setTagColor,
     randomizeTagColor,
+    harmonizeColors,
     tagUsage,
     deleteTag,
   }

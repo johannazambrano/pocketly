@@ -196,7 +196,7 @@ Il modulo `migration.ts` garantisce che Pocketly possa leggere e importare quals
   Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 2`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
 - **Valori predefiniti (`src/domain/defaults.ts`):**
   - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite (stima delle entrate attiva, nessun limite di budget).
-  - `createDefaultData(locale)`: genera un dataset iniziale con categorie e metodi di pagamento predefiniti nella lingua indicata (inglese se non supportata), con colori della palette. Categorie in italiano: Cibo e bevande, Trasporti, Altro, Salute e benessere, Finanza, Digitale, Auto, Vacanze, Stipendio. Metodi: Bonifico, Contanti, Carta di debito, Carta di credito, PayPal.
+  - `createDefaultData(locale)`: genera un dataset iniziale con categorie e metodi di pagamento predefiniti nella lingua indicata (inglese se non supportata), con colori in equilibrio (`harmonizedColors`: ogni voce la tinta più lontana dalle precedenti, "Altro" grigia). Categorie in italiano: Cibo e bevande, Trasporti, Altro, Salute e benessere, Finanza, Digitale, Auto, Vacanze, Stipendio. Metodi: Bonifico, Contanti, Carta di debito, Carta di credito, PayPal.
 
 ---
 
