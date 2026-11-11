@@ -84,8 +84,12 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 
 <template>
   <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" :aria-label="main.label">
-    <div class="grid">
-      <div class="px-4 pt-4 pb-3 md:py-5">
+    <!--
+      Sui telefoni tutto in colonna. Da schermo largo la cifra grande e la coppia entrate/uscite stanno affiancate:
+      una cifra sola in un riquadro largo lasciava mezza riga vuota.
+    -->
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div class="px-4 pt-4 pb-3 md:py-5 lg:border-r lg:border-slate-100">
         <h3 class="text-xs font-medium text-balance text-slate-500">{{ main.label }}</h3>
         <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), signColor(main.value)]">
           {{ money(main.value) }}
@@ -133,7 +137,7 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
       <div
-        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] border-t border-slate-100"
+        class="grid grid-cols-2 grid-rows-[auto_auto_1fr] content-start border-t border-slate-100 lg:border-t-0"
       >
         <div class="row-span-3 grid grid-rows-subgrid gap-y-1 px-4 py-3 md:py-5">
           <p class="text-xs font-medium text-balance text-slate-500">{{ income.label }}</p>

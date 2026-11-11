@@ -117,7 +117,7 @@ function back(e: MouseEvent) {
     <!-- Una categoria eliminata, o un indirizzo vecchio: si dice cosa è successo e dove andare. -->
     <div v-if="!tag" class="card space-y-3">
       <h2 ref="heading" tabindex="-1" class="text-lg font-bold text-slate-800 focus:outline-none">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethodTitle' : 'detail.notFoundTitle') }}</h2>
-      <p class="text-sm text-slate-600">{{ t('detail.notFound') }}</p>
+      <p class="text-sm text-slate-600">{{ t(kind === 'paymentMethods' ? 'detail.notFoundMethod' : 'detail.notFound') }}</p>
       <div class="flex flex-wrap gap-2">
         <a href="/" class="btn-primary" @click="back">{{ t('detail.back') }}</a>
         <RouterLink

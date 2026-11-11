@@ -6,7 +6,7 @@ import { parseIsoDate } from '@/utils/dates'
 import { useMonthStep, type MonthTarget } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
-const { t, month } = useFormat()
+const { t, month, locale } = useFormat()
 
 const todayParts = computed(() => parseIsoDate(finance.today))
 const currentMonth = computed(() => todayParts.value.month)
@@ -47,10 +47,14 @@ async function step(target: MonthTarget | null, event: MouseEvent) {
   if (button.disabled) select.value?.focus()
 }
 
-/** Nel nome sulla freccia l'anno compare solo quando cambia: "Dicembre 2025", ma "Ottobre". */
+/**
+ * Nel nome sulla freccia l'anno compare solo quando cambia: "dicembre 2025", ma "ottobre". In una frase italiana il mese
+ * va in minuscolo ("Vai a ottobre"); in inglese resta maiuscolo.
+ */
 function targetName(target: MonthTarget | null): string {
   if (!target) return ''
-  return target.year === finance.selectedYear ? month(target.month) : `${month(target.month)} ${target.year}`
+  const name = locale.value === 'it' ? month(target.month).toLocaleLowerCase('it') : month(target.month)
+  return target.year === finance.selectedYear ? name : `${name} ${target.year}`
 }
 /** Da "Tutti i mesi" la freccia non va a un mese "precedente" ma entra in un mese: l'etichetta dice dove. */
 const fromAll = computed(() => finance.selectedMonth === 'all')
