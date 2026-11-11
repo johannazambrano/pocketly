@@ -7,8 +7,15 @@ export function toCents(value: string | number): Cents | null {
   return Math.round(normalized * 100)
 }
 
-export function centsToInput(cents: Cents): string {
-  return (cents / 100).toFixed(2)
+/**
+ * L'importo da mettere in un campo da modificare, con il separatore decimale della lingua ("13,00" in italiano, "13.00"
+ * in inglese), come lo si scriverebbe a mano. `toCents` legge entrambi.
+ */
+export function centsToInput(cents: Cents, locale?: string): string {
+  const fixed = (cents / 100).toFixed(2)
+  if (!locale) return fixed
+  const decimal = new Intl.NumberFormat(locale).formatToParts(1.5).find((p) => p.type === 'decimal')?.value ?? '.'
+  return decimal === '.' ? fixed : fixed.replace('.', decimal)
 }
 
 const formatters = new Map<string, Intl.NumberFormat>()

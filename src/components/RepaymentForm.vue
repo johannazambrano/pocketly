@@ -4,14 +4,14 @@ import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { centsToInput, toCents } from '@/utils/money'
+import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; loan: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
-const { t, money } = useFormat()
+const { t, money, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({ amount: '', date: '' })
@@ -27,7 +27,7 @@ watch(
   (open) => {
     if (!open) return
     error.value = ''
-    form.amount = remaining.value > 0 ? centsToInput(remaining.value) : ''
+    form.amount = remaining.value > 0 ? amountInput(remaining.value) : ''
     form.date = todayIso()
   },
   { immediate: true },
@@ -60,7 +60,7 @@ function submit() {
       </div>
       <p v-if="exceeds" class="text-xs text-amber-700">{{ t('loans.exceedsRemaining', { amount: money(remaining) }) }}</p>
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
+      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
 </template>

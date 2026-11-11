@@ -169,6 +169,7 @@ export default {
     title: 'Spese ricorrenti',
     new: 'Nuova spesa ricorrente',
     edit: 'Modifica spesa ricorrente',
+    editSeries: 'Le modifiche valgono per tutti gli addebiti di «{name}», dal {date} in poi, non solo per uno.',
     empty: 'Nessuna spesa ricorrente attiva in questo anno.',
     totalMonthly: 'Totale (equivalente mensile)',
     frequency: 'Frequenza',

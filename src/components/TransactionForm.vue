@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /** Modulo per spese una tantum (`kind="expense"`) ed entrate (`kind="income"`). */
 import { computed, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useFormat } from '@/i18n'
 import type { Income, OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
-import { centsToInput, toCents } from '@/utils/money'
+import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import TagSelect from './TagSelect.vue'
@@ -13,7 +13,7 @@ import SubmitButton from './SubmitButton.vue'
 
 const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null }>()
 const emit = defineEmits<{ close: [] }>()
-const { t } = useI18n()
+const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
 const form = reactive({
@@ -41,7 +41,7 @@ watch(
     error.value = ''
     Object.assign(form, {
       name: i?.name ?? '',
-      amount: i ? centsToInput(i.amount) : '',
+      amount: i ? amountInput(i.amount) : '',
       date: i?.date ?? todayIso(),
       categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
       paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
@@ -104,7 +104,7 @@ function submit() {
       </label>
       <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <div class="pt-2"><SubmitButton :label="t('common.save')" /></div>
+      <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
 </template>

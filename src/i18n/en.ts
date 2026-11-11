@@ -171,6 +171,7 @@ const en: typeof it = {
     title: 'Recurring expenses',
     new: 'New recurring expense',
     edit: 'Edit recurring expense',
+    editSeries: 'Changes apply to every charge of “{name}”, from {date} on, not just one.',
     empty: 'No recurring expenses active this year.',
     totalMonthly: 'Total (monthly equivalent)',
     frequency: 'Frequency',

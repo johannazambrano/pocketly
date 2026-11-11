@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { createI18n, useI18n } from 'vue-i18n'
 import it from './it'
 import en from './en'
-import { formatCents } from '@/utils/money'
+import { centsToInput, formatCents } from '@/utils/money'
 import { formatDate, monthName } from '@/utils/dates'
 import type { Cents, IsoDate } from '@/types/models'
 
@@ -50,6 +50,8 @@ export function useFormat() {
     t,
     locale,
     money: (cents: Cents) => formatCents(cents, intl.value),
+    /** Un importo da mettere in un campo da modificare: "13,00", non "13.00". */
+    amountInput: (cents: Cents) => centsToInput(cents, intl.value),
     date: (d: IsoDate) => formatDate(d, intl.value),
     month: (m: number, style: 'long' | 'short' = 'long') => monthName(m, intl.value, style),
     percent: (ratio: number) =>
