@@ -20,6 +20,8 @@ interface Figure {
  */
 interface Main extends Figure {
   today?: { label: string; value: number }
+  /** Le entrate stimate su cui conta la cifra, dette subito sotto di essa. */
+  estimate?: string
   note?: string
 }
 
@@ -95,6 +97,9 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
           {{ money(main.value) }}
         </p>
         <!-- Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
+        <p v-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-slate-700">
+          <i class="fa-solid fa-circle-info mt-1 text-xs text-slate-500" aria-hidden="true"></i>{{ main.estimate }}
+        </p>
         <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-slate-700">
           {{ main.today.label }}
           <b class="font-bold whitespace-nowrap text-slate-800">{{ money(main.today.value) }}</b>
