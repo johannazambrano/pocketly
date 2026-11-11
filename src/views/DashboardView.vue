@@ -90,7 +90,7 @@ const displayBalance = computed(() => {
   if (!ms.value) return s.value.balanceToDate
   return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
 })
-/** Un mese futuro non ha ancora un saldo: c'è solo ciò che è programmato, e l'etichetta lo dice. */
+/** Un mese futuro non ha ancora un saldo: c'è solo ciò che è già fissato, e l'etichetta lo dice. */
 const isFutureMonth = computed(() => ms.value?.timing === 'future')
 const balanceLabel = computed(() => {
   if (isFutureMonth.value) return t('dashboard.balanceScheduled', monthArgs.value)
@@ -99,7 +99,10 @@ const balanceLabel = computed(() => {
 })
 const balanceHint = computed(() => {
   if (ms.value) {
-    if (ms.value.timing === 'future') return t('dashboard.balanceScheduledHint')
+    // Un mese futuro: la cifra si spiega con le due parti che la compongono, niente di stimato.
+    if (ms.value.timing === 'future') {
+      return t('dashboard.balanceScheduledHint', { expenses: money(ms.value.expenses), income: money(ms.value.income) })
+    }
     return monthToDate.value ? t('dashboard.balanceHint') : undefined
   }
   return isPastYear.value ? undefined : t('dashboard.balanceHint')
