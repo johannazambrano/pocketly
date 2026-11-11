@@ -23,7 +23,7 @@ Pocketly dispone di una suite di test rigorosa che copre calcoli finanziari, cri
 ```bash
 npm run test
 ```
-Esegue i 187 test unitari in `src/` (la configurazione di Vitest è nella sezione `test` di `vite.config.ts`) (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
+Esegue tutti i test unitari in `src/` (la configurazione di Vitest è nella sezione `test` di `vite.config.ts`) (calcoli, budget, ricorrenze, notifiche, crypto, sync engine, migrazioni, utils). Tutti i test devono passare senza warning.
 
 ### Controllo Statico dei Tipi (TypeScript)
 ```bash
@@ -38,11 +38,12 @@ npm run test:server
 ```
 `npm run test:server` lancia `node scripts/python.mjs -m unittest server.test_main`: il lanciatore prova `python3`, poi `python`, poi `py -3`, quindi funziona su Windows, macOS e Linux.
 
-Esegue la suite di 27 test sul server `server/main.py` e `server/webpush.py`, verificando tra l'altro:
+Esegue tutti i test del server `server/main.py` e `server/webpush.py`, verificando tra l'altro:
 - Autenticazione Bearer, rifiuto delle chiavi troppo corte e blocco 429 dopo 10 tentativi falliti.
 - Salvataggio con versione e `409` se `baseVersion` non è l'ultima; conservazione delle versioni precedenti.
 - Rifiuto dei dati non cifrati e dei calendari push non `aes128gcm`.
 - Firma VAPID ES256, invio dei promemoria scaduti senza duplicati e pulizia dei dispositivi su `410`.
+- Invio che solleva un'eccezione (DNS, timeout, SSL): la notifica di prova risponde `{"status": 0}` invece di un errore 500, e il giro dei promemoria arriva in fondo senza rimandare agli altri dispositivi quelli già consegnati.
 - `push.json` rovinato: le notifiche si fermano, la sincronizzazione continua.
 
 ### Validazione della Documentazione e i18n

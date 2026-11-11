@@ -119,9 +119,13 @@ class WebPushTest(unittest.TestCase):
         self.data_dir = Path(self.tmp.name)
         self.sent_calls: list[tuple[str, str, dict]] = []
         self.next_status = 201
+        # Endpoint per cui l'invio solleva un'eccezione (DNS, timeout, SSL), come farebbe urllib.
+        self.raise_for: set[str] = set()
 
         def fake_sender(endpoint: str, payload_b64: str, vapid: dict, ttl: int = 86400) -> int:
             self.sent_calls.append((endpoint, payload_b64, vapid))
+            if endpoint in self.raise_for:
+                raise OSError('timed out')
             return self.next_status
 
         self.server = main.make_server(
@@ -244,6 +248,40 @@ class WebPushTest(unittest.TestCase):
         status, body = self.request('POST', '/api/push/test', {'deviceId': 'device-12345678', 'payload': self.enc_payload})
         self.assertEqual((status, body), (200, {'status': 201}))
         self.assertEqual(len(self.sent_calls), 1)
+
+    def test_notifica_di_prova_con_eccezione_non_da_errore_500(self):
+        sub = {
+            'deviceId': 'device-12345678',
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        self.raise_for.add(sub['endpoint'])
+        status, body = self.request('POST', '/api/push/test', {'deviceId': 'device-12345678', 'payload': self.enc_payload})
+        self.assertEqual(status, 200)
+        self.assertEqual(body['status'], 0)
+
+    def test_eccezione_su_un_dispositivo_non_ripete_gli_invii_agli_altri(self):
+        ok = {'deviceId': 'device-ok-1234', 'endpoint': 'https://fcm.googleapis.com/fcm/send/ok', 'p256dh': self.p256dh, 'auth': self.auth}
+        bad = {'deviceId': 'device-ko-1234', 'endpoint': 'https://fcm.googleapis.com/fcm/send/ko', 'p256dh': self.p256dh, 'auth': self.auth}
+        self.request('PUT', '/api/push/subscription', ok)
+        self.request('PUT', '/api/push/subscription', bad)
+        self.raise_for.add(bad['endpoint'])
+
+        base_ts = int(time.time())
+        items = [
+            {'id': 'rem-1', 'deviceId': ok['deviceId'], 'fireAt': base_ts + 100, 'payload': self.enc_payload},
+            {'id': 'rem-1', 'deviceId': bad['deviceId'], 'fireAt': base_ts + 100, 'payload': self.enc_payload},
+        ]
+        self.assertEqual(self.request('PUT', '/api/push/schedule', {'items': items})[0], 200)
+
+        # Primo giro: il dispositivo buono riceve, quello in errore no, e il giro arriva in fondo.
+        self.assertEqual(self.server.push_store.dispatch_due(now_ts=base_ts + 200), 1)
+        # Secondo giro: il dispositivo buono non deve ricevere di nuovo lo stesso promemoria.
+        self.server.push_store.dispatch_due(now_ts=base_ts + 260)
+        ok_calls = [c for c in self.sent_calls if c[0] == ok['endpoint']]
+        self.assertEqual(len(ok_calls), 1)
 
     def test_vapid_subject_configurabile(self):
         vapid = webpush.generate_vapid_keys()

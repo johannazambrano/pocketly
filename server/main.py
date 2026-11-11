@@ -49,6 +49,7 @@ logger = logging.getLogger('pocketly.server')
 
 try:
     from server.webpush import (
+        PushResponse,
         endpoint_host,
         generate_vapid_keys,
         get_vapid_subject,
@@ -61,6 +62,7 @@ try:
     )
 except ImportError:
     from webpush import (  # type: ignore[no-redef]
+        PushResponse,
         endpoint_host,
         generate_vapid_keys,
         get_vapid_subject,
