@@ -15,7 +15,7 @@ Pocketly è una **Progressive Web App (PWA)** per la gestione delle finanze pers
 - **State Management:** Pinia
 - **Routing:** Vue Router (9 viste: 8 viste principali + 1 vista di dettaglio)
 - **Persistenza locale:** IndexedDB tramite libreria `idb-keyval`
-- **Stile:** Tailwind CSS v4, FontAwesome Free icons
+- **Stile:** Tailwind CSS v4 con gettoni di colore semantici (`src/style.css`), aspetto per piattaforma (iOS / Android / PC) e tema chiaro/scuro, caratteri `@fontsource` inclusi (Inter, Roboto), FontAwesome Free icons
 - **i18n:** `vue-i18n` (supporto completo Italiano `it` e Inglese `en`)
 - **Test:** Vitest
 
@@ -76,7 +76,7 @@ Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul
 
 5. **Persistenza dati separata:**
    - I dati finanziari dell'utente (`FinanceData`) passano sempre e solo dall'interfaccia `DataStore` in `src/services/storage.ts` (salvati in IndexedDB nella chiave `'finance-data'`, costante `DATA_KEY`).
-   - Le configurazioni di dispositivo / preferenze locali usano direttamente `idb-keyval` nei rispettivi store: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). Non vengono sincronizzate.
+   - Le configurazioni di dispositivo / preferenze locali usano direttamente `idb-keyval` nei rispettivi store: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). Lingua e aspetto stanno in `localStorage` (`'locale'`, `'appearance-platform'`, `'appearance-theme'`), perché servono prima del primo disegno. Non vengono sincronizzate.
 
 6. **Sincronizzazione cifrata Zero-Knowledge e Merge a 3 Vie:**
    - Il server `server/main.py` non possiede la chiave di cifratura e memorizza esclusivamente payload cifrati `EncryptedBackup` con numero di versione crescente.
@@ -84,6 +84,9 @@ Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul
 
 7. **Allineamento i18n obbligatorio:**
    Pocketly supporta sia l'italiano (`src/i18n/it.ts`) che l'inglese (`src/i18n/en.ts`). Ogni nuova etichetta, messaggio di errore o testo UI aggiunto in `it.ts` DEVE avere la corrispettiva chiave in `en.ts`. Lo script `npm run docs:check` verifica questo allineamento.
+
+8. **Solo gettoni di colore, sei combinazioni da verificare:**
+   Nei componenti non si scrivono colori fissi di Tailwind (`text-slate-700`) né esadecimali: si usano i gettoni semantici (`text-ink-2`, `bg-surface`, `text-accent`…) definiti in `src/style.css` e valorizzati per `data-platform` (`ios` / `android` / `desktop`) e `data-theme` (`light` / `dark`). Un gettone nuovo va valorizzato in ogni blocco (le regole Android vengono dopo lo scuro: Android scuro va ridetto). Il testo grigio non scende sotto `ink-4`; le cifre verdi usano `accent` (`accent-icon` solo per le icone). I colori di categorie, metodi e tag passano da `src/utils/colors.ts` (`pickUniqueColor`, `badgeColors`). Dettagli in [docs/architettura/frontend.md](docs/architettura/frontend.md).
 
 ---
 

@@ -14,8 +14,13 @@ Pocketly è un'applicazione web progressiva (**PWA**) per la gestione e il contr
   5. **Budget Mensile:** definizione di tetti di spesa per categoria con monitoraggio in tempo reale del passo di spesa (ritmo giornaliero, sforamenti previsti).
   6. **Prestiti:** tracciamento di denaro dato o ricevuto con registro dei rimborsi parziali e calcolo del debito/credito residuo.
   7. **Previsioni & Simulazioni:** proiezione del flusso di cassa mese per mese fino a fine anno, stima automatica/manuale delle entrate ricorrenti e simulazioni di acquisto.
-  8. **Impostazioni:** gestione categorie, metodi di pagamento, tag personalizzati, backup protetti da password (AES-GCM), sincronizzazione multi-dispositivo e notifiche.
+  8. **Impostazioni:** aspetto (stile automatico / iPhone / Android / PC, tema sistema / chiaro / scuro), gestione categorie, metodi di pagamento, tag personalizzati e «Riarmonizza i colori», backup protetti da password (AES-GCM), sincronizzazione multi-dispositivo e notifiche.
   - *Vista di Dettaglio Ripartizioni:* consultazione analitica di tutte le voci (variabili e ricorrenti) di una categoria o metodo di pagamento toccando la riga corrispondente nella Dashboard.
+
+- **Aspetto della piattaforma:**
+  - L'app riconosce il sistema e ne segue le convenzioni: Apple su iPhone e iPad, Material 3 su Android, un aspetto neutro sul PC; chiaro e scuro seguono il sistema.
+  - Caratteri inclusi nell'app (sistema su iPhone, Roboto su Android, Inter sul PC): niente viene scaricato da internet.
+  - Ogni testo resta leggibile (almeno 4,5:1) in tutte le combinazioni, anche le etichette con i colori scelti dall'utente.
 
 - **Privacy & Crittografia:**
   - Nessuna dipendenza da servizi cloud di terze parti o API bancarie esterne.
