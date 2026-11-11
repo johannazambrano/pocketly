@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useFormat } from '@/i18n'
 
 /**
@@ -38,9 +38,9 @@ const { t, money } = useFormat()
 
 /**
  * Le medie e i confronti sotto ricorrenti e variabili servono a chi vuole approfondire, non al colpo d'occhio:
- * restano chiusi finché non si chiede di vederli. La scelta vale finché la pagina è aperta.
+ * restano chiusi finché non si chiede di vederli. Chi usa il riquadro può tenere la scelta con `v-model:notes-open`.
  */
-const notesOpen = ref(false)
+const notesOpen = defineModel<boolean>('notesOpen', { default: false })
 const hasNotes = computed(() => (props.split ?? []).some((p) => p.note))
 
 /** Larghezza di ogni parte nella barretta, in proporzione al totale delle parti (che coincide con le uscite mostrate). */

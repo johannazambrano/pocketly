@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
+import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
 import { upcomingCharges } from '@/domain/calculations'
 import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
@@ -11,7 +13,20 @@ import WelcomePanel from '@/components/WelcomePanel.vue'
 import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
+const ui = useUiStore()
+const router = useRouter()
 const { t, money, month, date, locale } = useFormat()
+
+/**
+ * Tornando indietro da un dettaglio, il focus riparte dalla riga da cui si era entrati, non dall'inizio della pagina:
+ * con la tastiera o un lettore di schermo si continua da lì. La cronologia dice da quale pagina si torna (`forward`);
+ * `preventScroll` lascia la pagina nel punto che il router ha già ripristinato.
+ */
+onMounted(() => {
+  const from = router.options.history.state.forward
+  if (typeof from !== 'string' || !from.startsWith('/dettaglio/')) return
+  document.querySelector<HTMLElement>(`a[href="${CSS.escape(from)}"]`)?.focus({ preventScroll: true })
+})
 
 const s = computed(() => finance.summary)
 /** App ancora vuota: niente saldi a zero, solo il benvenuto con i primi passi. */
@@ -285,6 +300,7 @@ const showUpcoming = computed(
         :expenses="expensesFigure"
         :split="expensesSplit"
         :projection="projectionFigure"
+        v-model:notes-open="ui.dashboardNotesOpen"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
