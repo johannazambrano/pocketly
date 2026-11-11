@@ -130,7 +130,11 @@ const expensesHint = computed(() => {
   return toCome > 0 ? t('dashboard.stillToCome', { amount: money(toCome), until: until.value }) : t('dashboard.expensesHint')
 })
 
-/** Il saldo fino a oggi (o finale, per un periodo passato; per un mese futuro: ciò che è già registrato). */
+/**
+ * Il risultato (entrate meno uscite) fino a oggi, o finale per un periodo passato; per un mese futuro, ciò che è già
+ * registrato. Nell'interfaccia si chiama sempre "Risultato": non è il saldo del conto, che l'app non conosce, e un nome
+ * solo per ogni periodo evita che la stessa grandezza sembri tre cose diverse.
+ */
 const displayBalance = computed(() => {
   if (!ms.value) return s.value.balanceToDate
   return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
