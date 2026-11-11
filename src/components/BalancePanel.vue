@@ -40,13 +40,6 @@ const props = defineProps<{
 
 const { t, money } = useFormat()
 
-/**
- * Le medie e i confronti sotto ricorrenti e variabili servono a chi vuole approfondire, non al colpo d'occhio:
- * restano chiusi finché non si chiede di vederli. Chi usa il riquadro può tenere la scelta con `v-model:notes-open`.
- */
-const notesOpen = defineModel<boolean>('notesOpen', { default: false })
-const hasNotes = computed(() => (props.split ?? []).some((p) => p.note))
-
 /** Larghezza di ogni parte nella barretta, in proporzione al totale delle parti (che coincide con le uscite mostrate). */
 const width = (value: number) => {
   const total = (props.split ?? []).reduce((acc, p) => acc + p.value, 0)
@@ -117,21 +110,12 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
             <span class="h-2 w-2 shrink-0 rounded-full" :class="part.dot" aria-hidden="true"></span>{{ part.label }}
           </dt>
           <dd class="text-sm font-semibold whitespace-nowrap text-slate-800">{{ money(part.value) }}</dd>
-          <dd v-if="part.note && notesOpen" class="text-xs leading-snug text-slate-500">
+          <!-- Il confronto con la media, sempre visibile: è la risposta a "come sto andando" su questa parte. -->
+          <dd v-if="part.note" class="text-xs leading-snug text-slate-500">
             {{ part.note }}
           </dd>
         </div>
       </dl>
-      <button
-        v-if="hasNotes"
-        type="button"
-        class="-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-emerald-700 hover:text-emerald-800"
-        :aria-expanded="notesOpen"
-        @click="notesOpen = !notesOpen"
-      >
-        <span aria-hidden="true"><i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': notesOpen }"></i></span>
-        {{ t(notesOpen ? 'dashboard.splitNotesHide' : 'dashboard.splitNotesShow') }}
-      </button>
     </div>
   </section>
 </template>

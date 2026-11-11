@@ -18,11 +18,6 @@ export interface Toast {
 export const useUiStore = defineStore('ui', () => {
   /** Apertura del modulo "nuova spesa" dal pulsante + dell'header. */
   const quickAddOpen = ref(false)
-  /**
-   * "Confronta con le medie" della dashboard aperto o chiuso: sta qui e non nel riquadro, così resta com'era quando si
-   * torna dal dettaglio o da un'altra pagina. Non si salva: alla prossima apertura dell'app riparte chiuso.
-   */
-  const dashboardNotesOpen = ref(false)
   const confirmRequest = ref<ConfirmRequest | null>(null)
   const toasts = ref<Toast[]>([])
   let toastSeq = 0
@@ -45,5 +40,5 @@ export const useUiStore = defineStore('ui', () => {
     setTimeout(() => (toasts.value = toasts.value.filter((t) => t.id !== id)), 3500)
   }
 
-  return { quickAddOpen, dashboardNotesOpen, confirmRequest, toasts, confirm, answerConfirm, toast }
+  return { quickAddOpen, confirmRequest, toasts, confirm, answerConfirm, toast }
 })

@@ -2,10 +2,9 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
-import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
-import { upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
-import { addDays, lastDayOfMonth, yearOf } from '@/utils/dates'
+import { averageBalanceBefore, compareToAverage, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
+import { addDays, lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -16,7 +15,6 @@ import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
 const finance = useFinanceStore()
-const ui = useUiStore()
 const router = useRouter()
 const { t, money, month, date, locale } = useFormat()
 
@@ -144,6 +142,18 @@ const projected = computed(() => {
 })
 
 /**
+ * Un mese chiuso dice com'è andato: il suo saldo rispetto alla media dei mesi precedenti dell'anno.
+ * Per un saldo "sopra" vuol dire meglio, quindi la frase dice meglio o peggio, non sopra o sotto.
+ */
+const pastMonthVerdict = computed(() => {
+  if (ms.value?.timing !== 'past') return undefined
+  const average = averageBalanceBefore(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
+  if (average === null) return undefined
+  const verdict = compareToAverage(ms.value.balance, average)
+  return t(`dashboard.balanceVs${VERDICT_KEY[verdict]}`, { average: money(average) })
+})
+
+/**
  * La cifra grande. Per un mese futuro è sempre il previsto (non c'è un "oggi"). Per l'anno e il mese in corso è il
  * previsto, con il saldo di oggi nella frase sotto; se da qui alla fine non cambia più niente i due coincidono, e
  * resta solo il saldo. Per un periodo passato è il saldo finale.
@@ -172,7 +182,7 @@ const mainFigure = computed(() => {
     return {
       label: t(monthToDate.value ? 'dashboard.balanceMonthToDate' : 'dashboard.balanceMonth', monthArgs.value),
       value: displayBalance.value,
-      hint: monthToDate.value ? t('dashboard.balanceHint') : undefined,
+      hint: monthToDate.value ? t('dashboard.balanceHint') : pastMonthVerdict.value,
     }
   }
   return {
@@ -206,35 +216,56 @@ const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLower
 /**
  * Le uscite mostrate nel riquadro, divise tra ricorrenti e variabili: le due parti sommano sempre il totale.
  * Se una parte è zero la divisione ripeterebbe il totale, quindi non si mostra.
- * Le note conservano i due confronti utili, per l'anno e per ogni mese già iniziato: il costo medio mensile delle
- * ricorrenti e le variabili rispetto alla media dei mesi precedenti (per il mese in corso "finora", perché non è finito).
+ * Sotto ogni parte una frase sempre visibile dice com'è rispetto alla media, con la media tra parentesi: il confronto
+ * è già fatto, non resta da calcolare a mente. Nel mese in corso le variabili si confrontano con il "ritmo" medio,
+ * cioè la media mensile riportata al giorno di oggi: metà mese contro un mese intero sarebbe un confronto ingiusto.
  */
+const VERDICT_KEY = { above: 'Above', inline: 'Inline', below: 'Below' } as const
+
+/** La media mensile riportata al punto del mese in cui siamo (giorno di oggi su giorni del mese). */
+function paceSoFar(average: number): number {
+  const today = parseIsoDate(finance.today)
+  const days = parseIsoDate(lastDayOfMonth(today.year, today.month)).day
+  return Math.round((average * today.day) / days)
+}
+
 const expensesSplit = computed(() => {
   const m = ms.value
   const recurring = m ? (monthToDate.value ? m.recurringToDate : m.recurringInMonth) : s.value.recurringToDate
   const variable = m ? (monthToDate.value ? m.oneTimeToDate : m.oneTimeTotal) : s.value.oneTimeToDate
   if (recurring <= 0 || variable <= 0) return null
 
-  const v = finance.variableThisMonth
+  const monthlyRecurring = Math.round(s.value.monthlyRecurring)
   let recurringNote: string | undefined
   let variableNote: string | undefined
   if (!m) {
-    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(Math.round(s.value.monthlyRecurring)) })
-    if (v) {
-      const args = { month: monthName(v.month), amount: money(v.toDate) }
-      variableNote =
-        v.previousAverage === null
-          ? t('dashboard.splitVariableSoFar', args)
-          : t('dashboard.splitVariableSoFarAverage', { ...args, average: money(v.previousAverage) })
+    // Sull'anno le ricorrenti hanno solo la loro media; le variabili parlano del mese in corso.
+    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(monthlyRecurring) })
+    const v = finance.variableThisMonth
+    if (v && v.previousAverage !== null) {
+      const verdict = compareToAverage(v.toDate, paceSoFar(v.previousAverage))
+      variableNote = t(`dashboard.splitPaceYear${VERDICT_KEY[verdict]}`, {
+        month: monthName(v.month),
+        average: money(v.previousAverage),
+      })
     }
   } else if (m.timing !== 'future') {
-    // Nei mesi, passati o in corso, le stesse medie dell'anno: costo medio delle ricorrenti e variabili a confronto.
-    recurringNote = t('dashboard.splitRecurringAverage', { amount: money(Math.round(s.value.monthlyRecurring)) })
+    // Le ricorrenti del mese a confronto con la loro media mensile (solo a mese finito: a metà mese sarebbero parziali).
+    if (!monthToDate.value) {
+      const verdict = compareToAverage(recurring, monthlyRecurring)
+      recurringNote = t(`dashboard.splitRecurring${VERDICT_KEY[verdict]}`, { average: money(monthlyRecurring) })
+    } else {
+      recurringNote = t('dashboard.splitRecurringAverage', { amount: money(monthlyRecurring) })
+    }
     const vm = finance.variableOfSelectedMonth
     if (vm && vm.previousAverage !== null) {
-      // Nel mese in corso le variabili sono "finora": la frase dice che la media è di mesi interi.
-      const key = monthToDate.value ? 'dashboard.splitVariableAverageSoFar' : 'dashboard.splitVariableAverage'
-      variableNote = t(key, { amount: money(vm.previousAverage) })
+      variableNote = monthToDate.value
+        ? t(`dashboard.splitPace${VERDICT_KEY[compareToAverage(vm.toDate, paceSoFar(vm.previousAverage))]}`, {
+            average: money(vm.previousAverage),
+          })
+        : t(`dashboard.splitVariable${VERDICT_KEY[compareToAverage(vm.total, vm.previousAverage)]}`, {
+            average: money(vm.previousAverage),
+          })
     }
   }
 
@@ -347,7 +378,6 @@ const showUpcoming = computed(
         :income="incomeFigure"
         :expenses="expensesFigure"
         :split="expensesSplit"
-        v-model:notes-open="ui.dashboardNotesOpen"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

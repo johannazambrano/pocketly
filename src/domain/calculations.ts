@@ -457,6 +457,26 @@ export function variableSpending(data: FinanceData, today: string): VariableSpen
   }
 }
 
+/** Un valore rispetto alla sua media: sopra, in linea (entro il 10% della media) o sotto. */
+export type Verdict = 'above' | 'inline' | 'below'
+
+export function compareToAverage(value: Cents, average: Cents, tolerance = 0.1): Verdict {
+  const margin = Math.abs(average) * tolerance
+  if (value > average + margin) return 'above'
+  if (value < average - margin) return 'below'
+  return 'inline'
+}
+
+/**
+ * La media del saldo (entrate meno uscite) dei mesi dell'anno prima di `month`, dal primo mese con movimenti.
+ * Null se non ci sono mesi precedenti da confrontare.
+ */
+export function averageBalanceBefore(data: FinanceData, year: number, month: number, today: string): Cents | null {
+  const balances: Cents[] = []
+  for (let m = periodStartMonth(data, year); m < month; m++) balances.push(monthSummary(data, year, m, today).balance)
+  return balances.length ? Math.round(sum(balances) / balances.length) : null
+}
+
 export interface UpcomingCharge {
   /** Chiave unica nell'elenco: un addebito ricorrente compare una volta per scadenza. */
   key: string
