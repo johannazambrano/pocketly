@@ -63,24 +63,27 @@ onBeforeUnmount(() => (document.title = previousTitle))
 /**
  * "Torna alla dashboard": se si è arrivati da lì si torna indietro nella cronologia, così la dashboard riappare nel
  * punto in cui la si era lasciata; aprendo il link direttamente si va alla dashboard dall'inizio.
+ * È un link normale e non un RouterLink: il RouterLink naviga da solo prima di questo gestore, e quel `push('/')` in più
+ * faceva montare la dashboard senza sapere da quale riga si tornava (e quindi senza rimetterci il focus).
+ * Ctrl/Cmd+clic e il tasto centrale restano al browser, che apre la dashboard in un'altra scheda.
  */
 function back(e: MouseEvent) {
-  if (router.options.history.state.back === '/') {
-    e.preventDefault()
-    router.back()
-  }
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+  e.preventDefault()
+  if (router.options.history.state.back === '/') router.back()
+  else router.push('/')
 }
 </script>
 
 <template>
   <section class="space-y-4">
-    <RouterLink
-      to="/"
+    <a
+      href="/"
       @click="back"
       class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-emerald-700 hover:text-emerald-800"
     >
       <i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i>{{ t('detail.back') }}
-    </RouterLink>
+    </a>
 
     <div v-if="!tag" class="card text-sm text-slate-600">{{ t('detail.notFound') }}</div>
 
