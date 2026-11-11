@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { averageBalanceBefore, compareToAverage, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
+import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
 import { addDays, lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
@@ -192,6 +192,50 @@ const mainFigure = computed(() => {
   }
 })
 
+/**
+ * "Come si arriva a questa cifra": il conto dietro il previsto, solo quando la cifra grande è un previsto.
+ * Le righe sommano sempre al previsto: risultato fino a oggi (o, per un mese futuro, niente), più le entrate che devono
+ * ancora arrivare (registrate e stimate separate), meno le uscite in arrivo.
+ */
+const explain = computed(() => {
+  const main = mainFigure.value
+  if (projected.value === null || main.value !== projected.value || (!('today' in main) && !isFutureMonth.value)) return null
+  const { toCome, estimated } = incomeAhead.value
+  const recordedAhead = toCome - estimated
+  const expensesAhead = ms.value
+    ? ms.value.timing === 'future'
+      ? ms.value.expenses
+      : ms.value.expenses - ms.value.expensesToDate
+    : s.value.totalExpenses - s.value.expensesToDate
+  const rows: { key: string; label: string; note?: string; value: number }[] = []
+  if (!isFutureMonth.value) {
+    rows.push({
+      key: 'today',
+      label: ms.value ? t('dashboard.sinceMonthStart', monthArgs.value).replace(/:$/, '') : t('dashboard.sinceYearStart').replace(/:$/, ''),
+      value: displayBalance.value,
+    })
+  }
+  if (recordedAhead > 0) rows.push({ key: 'recorded', label: t('dashboard.explainRecorded'), note: t('dashboard.explainRecordedNote'), value: recordedAhead })
+  if (estimated > 0) rows.push({ key: 'estimated', label: t('dashboard.explainEstimated'), note: t('dashboard.explainEstimatedNote'), value: estimated })
+  if (expensesAhead > 0) {
+    rows.push({
+      key: 'expenses',
+      label: t(isFutureMonth.value ? 'dashboard.expensesScheduled' : 'dashboard.explainExpenses'),
+      value: -expensesAhead,
+    })
+  }
+  let estimate: string | undefined
+  if (estimated > 0 && finance.estimatedMonthlyIncome > 0) {
+    const names = finance.estimateCategories.map((id) => finance.tag('categories', id)?.name).filter(Boolean)
+    estimate = t('dashboard.explainEstimate', {
+      amount: money(finance.estimatedMonthlyIncome),
+      n: ESTIMATE_MONTHS,
+      categories: names.join(', '),
+    })
+  }
+  return { rows, total: { label: main.label, value: main.value }, estimate }
+})
+
 /** Le ripartizioni seguono la stessa regola delle card, così la somma delle righe torna con le uscite mostrate. */
 const categoryTotals = computed(() => {
   if (!ms.value) return s.value.byCategoryToDate
@@ -378,6 +422,7 @@ const showUpcoming = computed(
         :income="incomeFigure"
         :expenses="expensesFigure"
         :split="expensesSplit"
+        :explain="explain"
       />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

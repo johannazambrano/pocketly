@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, useId } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useFormat } from '@/i18n'
 
 /**
@@ -22,6 +23,16 @@ interface Main extends Figure {
   note?: string
 }
 
+/**
+ * Il conto che porta alla cifra grande, aperto solo a richiesta: da dove si parte, cosa entra e cosa esce, fino al
+ * risultato. `estimate` dice su cosa si basa la stima delle entrate e porta a dove la si cambia.
+ */
+export interface Explain {
+  rows: { key: string; label: string; note?: string; value: number }[]
+  total: { label: string; value: number }
+  estimate?: string
+}
+
 /** Una parte delle uscite: ricorrenti o variabili, con il colore del suo pallino e una nota facoltativa. */
 interface Part {
   key: string
@@ -36,9 +47,16 @@ const props = defineProps<{
   income: Figure
   expenses: Figure
   split?: Part[] | null
+  explain?: Explain | null
 }>()
 
 const { t, money } = useFormat()
+
+/** "Come si arriva a questa cifra": chiuso di serie, perché serve a chi vuole capire, non al colpo d'occhio. */
+const explainOpen = ref(false)
+const explainId = useId()
+/** Le righe del conto hanno sempre il segno: si leggono come una somma. */
+const signed = (v: number) => (v > 0 ? `+${money(v)}` : money(v))
 
 /** Larghezza di ogni parte nella barretta, in proporzione al totale delle parti (che coincide con le uscite mostrate). */
 const width = (value: number) => {
@@ -79,6 +97,38 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         </p>
         <p v-if="main.note" class="mt-1.5 text-sm font-medium text-slate-700">{{ main.note }}</p>
         <p v-if="main.hint" class="mt-1 text-xs text-slate-500">{{ main.hint }}</p>
+
+        <template v-if="explain">
+          <button
+            type="button"
+            class="-ml-1 mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-xs font-medium text-emerald-700 hover:text-emerald-800"
+            :aria-expanded="explainOpen"
+            :aria-controls="explainId"
+            @click="explainOpen = !explainOpen"
+          >
+            <span aria-hidden="true"><i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{ 'rotate-180': explainOpen }"></i></span>
+            {{ t('dashboard.explainToggle') }}
+          </button>
+          <div v-show="explainOpen" :id="explainId" class="mt-1 rounded-lg bg-slate-50 px-3 py-2">
+            <dl>
+              <div v-for="row in explain.rows" :key="row.key" class="flex items-baseline justify-between gap-3 py-1">
+                <dt class="min-w-0 text-sm text-slate-700">
+                  {{ row.label }}
+                  <span v-if="row.note" class="block text-xs text-slate-600">{{ row.note }}</span>
+                </dt>
+                <dd class="shrink-0 text-sm font-semibold whitespace-nowrap text-slate-800">{{ signed(row.value) }}</dd>
+              </div>
+              <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-slate-200 pt-2">
+                <dt class="text-sm font-semibold text-slate-800">{{ explain.total.label }}</dt>
+                <dd class="shrink-0 text-sm font-bold whitespace-nowrap" :class="signColor(explain.total.value)">{{ money(explain.total.value) }}</dd>
+              </div>
+            </dl>
+            <p v-if="explain.estimate" class="mt-2 text-xs leading-snug text-slate-600">
+              {{ explain.estimate }}
+              <RouterLink to="/previsioni" class="font-medium text-emerald-700 underline hover:text-emerald-800">{{ t('dashboard.explainChange') }}</RouterLink>
+            </p>
+          </div>
+        </template>
       </div>
 
       <!-- Le due colonne condividono le righe (subgrid): se un'etichetta va a capo, le cifre restano allineate. -->
