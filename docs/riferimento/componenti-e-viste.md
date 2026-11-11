@@ -144,13 +144,13 @@ Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di 
 
 ### Impostazioni, Notifiche e Sync
 - **`SyncSettings.vue`**: Gestione del collegamento al server di sincronizzazione, visualizzazione stato ETag, disconnessione pulita con revoca di iscrizione e promemoria dal server (`leaveServer`).
-- **`NotificationSettings.vue`**: Pannello di gestione notifiche browser, registrazione Web Push per il dispositivo corrente, avviso orizzonte temporale a 60 giorni, diagnostica limite/errori di invio calendario e invio notifica test.
+- **`NotificationSettings.vue`**: Pannello di gestione notifiche browser, registrazione Web Push per il dispositivo corrente, avviso orizzonte temporale a 60 giorni, diagnostica limite/errori di invio calendario e invio notifica test. Se la prova fallisce mostra la causa detta dal servizio push (`notifications.lastTestFailure`, messaggi `notifications.testFailure.*`).
 - **`NotificationRulesEditor.vue`**: Editor dinamico per definire promemoria multipli con giorni di anticipo e orario target.
 - **`BackupReminder.vue`**: Banner (in `App.vue`, sopra ogni vista) che ricorda di esportare una copia dei dati quando sono passati almeno 7 giorni (`REMINDER_DAYS`) dall'ultimo backup e i dati sono cambiati da allora (hash diverso); "Più tardi" lo rimanda.
 
 ### Feedback, Modali e Sistema
 - **`BaseModal.vue`**: Dialogo modale accessibile. All'apertura il focus va sul titolo e alla chiusura torna all'elemento che l'ha aperto; finché è aperto `#app` è `inert`. Una pila di finestre a livello di modulo dà a ogni finestra uno `z-index` crescente e solo quella in cima risponde a Esc e al Tab, che resta intrappolato dentro. Con la prop `dirty`, chiudere con Esc, ✕ o clic sullo sfondo chiede prima "Scartare le modifiche?" tramite `ui.confirm` (con `cancelLabel` "Continua a modificare"); "Annulla" nel modulo chiude subito.
 - **`ConfirmHost.vue`**: Host globale dei dialoghi di conferma richiesti con `ui.confirm` (anche tramite `useConfirmDelete`); usa `cancelLabel` se indicato, altrimenti "Annulla".
-- **`ToastHost.vue`**: Host per notifiche a comparsa temporanee gestite tramite `useUiStore().toast(...)`.
+- **`ToastHost.vue`**: Host per notifiche a comparsa temporanee gestite tramite `useUiStore().toast(...)`. Gli errori (`kind: 'error'`) restano 10 secondi invece di 3,5, hanno `role="alert"` e si chiudono con la ✕ (`dismissToast`).
 - **`UpdatePrompt.vue`**: Banner per notificare la disponibilità di una nuova versione PWA scaricata dal service worker.
 - **`WelcomePanel.vue`**: Schermata introduttiva visualizzata al primo avvio su database completamente vuoto.

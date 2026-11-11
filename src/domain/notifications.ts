@@ -269,3 +269,27 @@ export function formatRulesSummary(
   return list.map((r) => formatRuleShort(r, t)).join(', ')
 }
 
+/** Perché una notifica di prova non è arrivata, detto in modo che l'app lo possa spiegare. */
+export type PushTestCause = 'rejectedSender' | 'expired' | 'unreachable' | 'other'
+
+/**
+ * Dal codice con cui il servizio push (Apple, Google, Mozilla…) ha risposto alla causa da mostrare: 401/403 il servizio
+ * ha rifiutato il mittente (di solito l'indirizzo di contatto VAPID del server), 404/410 l'iscrizione del dispositivo
+ * è scaduta, 0 il server non è riuscito a raggiungere il servizio (rete, DNS, certificati).
+ */
+export function pushTestCause(status: number): PushTestCause {
+  if (status === 401 || status === 403) return 'rejectedSender'
+  if (status === 404 || status === 410) return 'expired'
+  if (status === 0) return 'unreachable'
+  return 'other'
+}
+
+/** Il nome del servizio push da mostrare, a partire dall'host dell'endpoint. */
+export function pushServiceName(host: string | undefined): string {
+  if (!host) return ''
+  if (host.endsWith('push.apple.com')) return 'Apple'
+  if (host.endsWith('googleapis.com')) return 'Google'
+  if (host.endsWith('mozilla.com')) return 'Mozilla'
+  if (host.endsWith('notify.windows.com')) return 'Microsoft'
+  return host
+}

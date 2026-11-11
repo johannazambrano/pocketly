@@ -437,6 +437,13 @@ const en: typeof it = {
     testButton: 'Send test notification',
     testSent: 'Test notification sent.',
     testError: 'Failed to send test notification.',
+    testServiceUnknown: 'the notification service',
+    testFailure: {
+      rejectedSender: '{service} rejected the notification sender{detail}. Usually the server contact address (POCKETLY_VAPID_SUBJECT) is missing: see the notifications guide.',
+      expired: 'This device’s notification subscription has expired{detail}. Turn notifications off and on again.',
+      unreachable: 'The server cannot reach {service}{detail}. Check the server’s internet connection.',
+      other: '{service} answered with code {status}{detail}. Try again later.',
+    },
     testTitle: 'Pocketly – Test notification',
     testBody: 'Recurring expense notifications are working properly!',
     defaultRulesTitle: 'Default reminders for new recurring expenses',

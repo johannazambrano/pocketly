@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RecurringExpense } from '@/types/models'
-import {
-  calculateDueLocalReminders,
-  calculateUpcomingReminders,
-  formatReminderMessage,
-  formatRuleShort,
-  formatRulesSummary,
-  nextCandidateRule,
-  normalizeNotifications,
-  occurrencesBetween,
-  reminderTriggerDate,
-  shiftIsoDate,
-} from './notifications'
+import { calculateDueLocalReminders, calculateUpcomingReminders, formatReminderMessage, formatRuleShort, formatRulesSummary, nextCandidateRule, normalizeNotifications, occurrencesBetween, pushServiceName, pushTestCause, reminderTriggerDate, shiftIsoDate } from './notifications'
 
 const rec = (over: Partial<RecurringExpense> = {}): RecurringExpense => ({
   id: 'rec-1',
@@ -197,3 +186,24 @@ describe('formatReminderMessage & formatRuleShort & formatRulesSummary', () => {
   })
 })
 
+describe('pushTestCause', () => {
+  it('traduce il codice del servizio push nella causa da mostrare', () => {
+    expect(pushTestCause(401)).toBe('rejectedSender')
+    expect(pushTestCause(403)).toBe('rejectedSender')
+    expect(pushTestCause(404)).toBe('expired')
+    expect(pushTestCause(410)).toBe('expired')
+    expect(pushTestCause(0)).toBe('unreachable')
+    expect(pushTestCause(429)).toBe('other')
+    expect(pushTestCause(500)).toBe('other')
+  })
+})
+
+describe('pushServiceName', () => {
+  it('dà un nome ai servizi noti e lascia l host per gli altri', () => {
+    expect(pushServiceName('web.push.apple.com')).toBe('Apple')
+    expect(pushServiceName('fcm.googleapis.com')).toBe('Google')
+    expect(pushServiceName('updates.push.services.mozilla.com')).toBe('Mozilla')
+    expect(pushServiceName('push.example.org')).toBe('push.example.org')
+    expect(pushServiceName(undefined)).toBe('')
+  })
+})

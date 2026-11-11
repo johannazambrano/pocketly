@@ -39,7 +39,8 @@ export interface PushApi {
   putSubscription(sub: PushSubscriptionRegistration): Promise<void>
   deleteSubscription(deviceId: string): Promise<void>
   putSchedule(items: EncryptedScheduledPushItem[]): Promise<{ scheduled: number }>
-  sendTest(deviceId: string, payload: string): Promise<{ status: number }>
+  /** `reason` e `service` arrivano solo se il servizio push ha rifiutato l'invio o non era raggiungibile. */
+  sendTest(deviceId: string, payload: string): Promise<{ status: number; reason?: string; service?: string }>
 }
 
 async function call(path: string, init: RequestInit): Promise<Response> {
@@ -104,7 +105,7 @@ export function createPushApi(serverKey: string): PushApi {
         body: JSON.stringify({ deviceId, payload }),
       })
       if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
-      return (await res.json()) as { status: number }
+      return (await res.json()) as { status: number; reason?: string; service?: string }
     },
   }
 }

@@ -435,6 +435,13 @@ export default {
     testButton: 'Invia notifica di prova',
     testSent: 'Notifica di prova inviata.',
     testError: 'Invio della notifica di prova non riuscito.',
+    testServiceUnknown: 'il servizio di notifiche',
+    testFailure: {
+      rejectedSender: '{service} ha rifiutato il mittente delle notifiche{detail}. Di solito manca l’indirizzo di contatto del server (POCKETLY_VAPID_SUBJECT): vedi la guida alle notifiche.',
+      expired: 'L’iscrizione di questo dispositivo alle notifiche è scaduta{detail}. Disattiva e riattiva le notifiche.',
+      unreachable: 'Il server non riesce a raggiungere {service}{detail}. Controlla la connessione a internet del server.',
+      other: '{service} ha risposto con il codice {status}{detail}. Riprova più tardi.',
+    },
     testTitle: 'Pocketly – Notifica di prova',
     testBody: 'Le notifiche per le spese ricorrenti funzionano correttamente!',
     defaultRulesTitle: 'Promemoria predefiniti per le nuove spese ricorrenti',

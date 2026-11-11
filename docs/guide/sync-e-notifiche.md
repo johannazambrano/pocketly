@@ -70,6 +70,7 @@ Pocketly supporta due modalità di notifica:
    - Il client invia una notifica test a `/api/push/test`.
    - Il server invia il push al gateway del browser.
    - Se il browser supporta le notifiche in background, apparirà la notifica di sistema "Pocketly – Notifica di prova".
+   - Se il servizio push rifiuta l'invio, `/api/push/test` risponde comunque `200` con `{"status": <codice>, "reason": "...", "service": "<host>"}` (per esempio `{"status": 403, "reason": "BadJwtToken", "service": "web.push.apple.com"}`; `status` 0 se il server non ha raggiunto il servizio). L'app lo traduce in un messaggio che dice la causa (mittente rifiutato, iscrizione scaduta, servizio non raggiungibile) e resta a schermo 10 secondi.
 
 ---
 

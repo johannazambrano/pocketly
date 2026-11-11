@@ -261,6 +261,33 @@ class WebPushTest(unittest.TestCase):
         status, body = self.request('POST', '/api/push/test', {'deviceId': 'device-12345678', 'payload': self.enc_payload})
         self.assertEqual(status, 200)
         self.assertEqual(body['status'], 0)
+        self.assertEqual(body['service'], 'fcm.googleapis.com')
+        self.assertIn('timed out', body['reason'])
+
+    def test_notifica_di_prova_rifiutata_dice_motivo_e_servizio(self):
+        sub = {
+            'deviceId': 'device-iphone-1',
+            'endpoint': 'https://web.push.apple.com/Q12345',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        self.next_status = webpush.PushResponse(403, '{"reason":"BadJwtToken"}')
+        status, body = self.request('POST', '/api/push/test', {'deviceId': 'device-iphone-1', 'payload': self.enc_payload})
+        self.assertEqual(status, 200)
+        self.assertEqual(body, {'status': 403, 'reason': 'BadJwtToken', 'service': 'web.push.apple.com'})
+
+    def test_notifica_di_prova_riuscita_risponde_solo_lo_stato(self):
+        sub = {
+            'deviceId': 'device-12345678',
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/1',
+            'p256dh': self.p256dh,
+            'auth': self.auth,
+        }
+        self.request('PUT', '/api/push/subscription', sub)
+        self.next_status = webpush.PushResponse(201, 'ok')
+        _, body = self.request('POST', '/api/push/test', {'deviceId': 'device-12345678', 'payload': self.enc_payload})
+        self.assertEqual(body, {'status': 201})
 
     def test_eccezione_su_un_dispositivo_non_ripete_gli_invii_agli_altri(self):
         ok = {'deviceId': 'device-ok-1234', 'endpoint': 'https://fcm.googleapis.com/fcm/send/ok', 'p256dh': self.p256dh, 'auth': self.auth}

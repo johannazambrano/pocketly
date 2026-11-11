@@ -63,7 +63,7 @@ graph TD
    - `sync`: stato del collegamento con il server di sincronizzazione, credenziali e polling.
    - `notifications`: sottoscrizioni Web Push locali e remote, pianificazione promemoria.
    - `backup`: monitoraggio dell'età dell'ultimo backup esportato e promemoria periodico.
-   - `ui`: messaggi toast temporanei, apertura rapida del modulo "nuova spesa" (`quickAddOpen`) e dialoghi di conferma (`confirm`, con `cancelLabel` facoltativo; di serie "Annulla").
+   - `ui`: messaggi toast temporanei (errori 10 secondi, chiudibili con `dismissToast`), apertura rapida del modulo "nuova spesa" (`quickAddOpen`) e dialoghi di conferma (`confirm`, con `cancelLabel` facoltativo; di serie "Annulla").
 5. **Dominio (`src/domain/`):**
    Funzioni TypeScript pure senza dipendenze dalla reattività di Vue o dal DOM. Totalmente coperte da test unitari veloci.
 6. **Servizi (`src/services/`):**

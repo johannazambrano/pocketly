@@ -326,6 +326,35 @@ class PushStore:
             self.remove_subscription(device_id)
         return status
 
+    def describe_test_result(self, device_id: str, status: int) -> dict:
+        """
+        La risposta di /api/push/test: il codice del servizio push e, se l'invio non è riuscito, il motivo che il servizio
+        ha dato (il campo `reason` del suo JSON, per esempio "BadJwtToken" di Apple, o il testo accorciato) e quale
+        servizio era. Così l'app può dire perché la notifica non è arrivata invece di un generico "non riuscito".
+        """
+        code = int(status)
+        result: dict = {'status': code}
+        if 200 <= code < 300:
+            return result
+        body = str(getattr(status, 'body', '') or '').strip()
+        reason = ''
+        if body:
+            try:
+                parsed = json.loads(body)
+                if isinstance(parsed, dict) and isinstance(parsed.get('reason'), str):
+                    reason = parsed['reason']
+            except ValueError:
+                pass
+            if not reason:
+                reason = body
+        if reason:
+            result['reason'] = reason[:200]
+        with self.lock:
+            dev = self._ensure_initialized().get('devices', {}).get(device_id)
+        if dev:
+            result['service'] = endpoint_host(dev['endpoint'])
+        return result
+
     def dispatch_due(self, now_ts: Optional[int] = None) -> int:
         """Invia i promemoria scaduti (`fireAt <= now_ts`). Restituisce il numero di invii riusciti."""
         now = int(time.time()) if now_ts is None else now_ts
@@ -627,7 +656,7 @@ def make_handler(store: Store, push_store: PushStore, key: str, failures: Failur
                 if status is None:
                     self.send_json(HTTPStatus.NOT_FOUND, {'error': 'device not registered'})
                     return
-                self.send_json(HTTPStatus.OK, {'status': status})
+                self.send_json(HTTPStatus.OK, push_store.describe_test_result(dev_id, status))
             elif path == '/api/sync':
                 self.send_json(HTTPStatus.METHOD_NOT_ALLOWED, {'error': 'method not allowed'})
             else:

@@ -295,6 +295,8 @@ describe('useNotificationsStore', () => {
 
     const success = await store.sendTestNotification()
     expect(success).toBe(false)
+    // Il perché resta disponibile per spiegarlo: 410 = iscrizione scaduta.
+    expect(store.lastTestFailure).toMatchObject({ cause: 'expired', status: 410 })
   })
 
   /**

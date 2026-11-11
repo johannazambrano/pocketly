@@ -29,9 +29,17 @@ async function handleSendTest() {
   const ok = await notifications.sendTestNotification()
   if (ok) {
     ui.toast(t('notifications.testSent'))
-  } else {
-    ui.toast(t('notifications.testError'), 'error')
+    return
   }
+  // Se il servizio push ha detto perché, lo si dice: "non riuscito" da solo non aiuta a capire cosa sistemare.
+  const failure = notifications.lastTestFailure
+  if (!failure) {
+    ui.toast(t('notifications.testError'), 'error')
+    return
+  }
+  const service = failure.service || t('notifications.testServiceUnknown')
+  const detail = failure.reason ? ` (${failure.reason})` : ''
+  ui.toast(t(`notifications.testFailure.${failure.cause}`, { service, detail, status: failure.status }), 'error')
 }
 
 function handleUpdateDefaultRules(rules: NotificationRule[]) {

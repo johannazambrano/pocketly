@@ -36,11 +36,19 @@ export const useUiStore = defineStore('ui', () => {
     confirmRequest.value = null
   }
 
+  /**
+   * Un messaggio a comparsa. Gli errori restano di più (10 secondi invece di 3,5): spesso spiegano un problema e cosa
+   * fare, e vanno letti con calma. Si possono chiudere toccandoli.
+   */
   function toast(message: string, kind: Toast['kind'] = 'success') {
     const id = ++toastSeq
     toasts.value.push({ id, message, kind })
-    setTimeout(() => (toasts.value = toasts.value.filter((t) => t.id !== id)), 3500)
+    setTimeout(() => dismissToast(id), kind === 'error' ? 10000 : 3500)
   }
 
-  return { quickAddOpen, confirmRequest, toasts, confirm, answerConfirm, toast }
+  function dismissToast(id: number) {
+    toasts.value = toasts.value.filter((t) => t.id !== id)
+  }
+
+  return { quickAddOpen, confirmRequest, toasts, confirm, answerConfirm, toast, dismissToast }
 })

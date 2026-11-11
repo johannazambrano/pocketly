@@ -19,7 +19,7 @@ Il server è implementato interamente in **Python 3** (3.9 o successivo) utilizz
 Componenti principali:
 - [`server/main.py`](../../server/main.py): server HTTP multithread con router REST, gestione persistenza atomica dei file, rate limiting contro attacchi a forza bruta e worker di dispatch delle notifiche.
 - [`server/webpush.py`](../../server/webpush.py): crittografia Web Push RFC 8291 e RFC 8292. Implementa in puro Python curve ellittiche P-256 (NIST P-256 / secp256r1), firma ECDSA SHA-256 per token VAPID e validazione dei pacchetti cifrati `aes128gcm`.
-- [`server/test_main.py`](../../server/test_main.py): suite completa di 27 test unitari eseguibile con `npm run test:server` su Windows, macOS e Linux (oppure a mano con `python3 -m unittest server.test_main`; su Windows `py -3 -m unittest server.test_main`).
+- [`server/test_main.py`](../../server/test_main.py): suite completa di test unitari eseguibile con `npm run test:server` su Windows, macOS e Linux (oppure a mano con `python3 -m unittest server.test_main`; su Windows `py -3 -m unittest server.test_main`).
 
 Il server non accetta argomenti da riga di comando: si configura con variabili d'ambiente (`POCKETLY_SYNC_KEY` obbligatoria, almeno 32 caratteri, altrimenti esce con codice 2; `POCKETLY_HOST` default `127.0.0.1`; `POCKETLY_PORT` default `8787`; `POCKETLY_DATA_DIR` default `/var/lib/pocketly`; `POCKETLY_VAPID_SUBJECT`).
 
@@ -44,7 +44,7 @@ La chiave di accesso viene verificata mediante confronto a tempo costante (`hmac
 | `PUT` | `/api/push/subscription` | Sì | Registra o aggiorna la sottoscrizione Web Push di un dispositivo (`deviceId`, `endpoint`, chiavi `p256dh` e `auth`). |
 | `DELETE`| `/api/push/subscription` | Sì | Rimuove un dispositivo registrato (e le sue voci in calendario); il `deviceId` arriva nel corpo JSON `{"deviceId": "..."}`. |
 | `PUT` | `/api/push/schedule` | Sì | Carica la pianificazione delle notifiche cifrate per i dispositivi (`items: [{id, deviceId, fireAt, payload}]` in `aes128gcm`). |
-| `POST`| `/api/push/test` | Sì | Invia una notifica di prova immediata a un dispositivo specificato. |
+| `POST`| `/api/push/test` | Sì | Invia una notifica di prova immediata a un dispositivo specificato. Risponde `200` con `{"status": <codice del servizio push>}`; se l'invio fallisce aggiunge `reason` (il campo `reason` del JSON del servizio, es. `BadJwtToken`, o il testo accorciato) e `service` (host dell'endpoint), con `status` 0 se il servizio non è stato raggiunto (`describe_test_result`). `404` se il dispositivo non è registrato. |
 
 ---
 

@@ -145,6 +145,8 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 - `calculateDueLocalReminders(expenses, now, lookbackHours = 24)`: promemoria già maturati nelle ultime ore per addebiti non ancora passati, usato dal motore locale all'apertura dell'app.
 - `formatReminderMessage(reminder, t, formattedAmount, formattedDueDate)`:
   Genera titolo e corpo della notifica localizzati (es. titolo "Affitto in scadenza", corpo "Tra 2 giorni (…) addebito previsto di 650,00 €.").
+- `pushTestCause(status)` → `PushTestCause`: dal codice con cui il servizio push ha risposto alla notifica di prova, la causa da mostrare: `rejectedSender` (401/403, di solito il mittente VAPID), `expired` (404/410, iscrizione scaduta), `unreachable` (0, il server non raggiunge il servizio), `other`.
+- `pushServiceName(host)`: il nome del servizio push da mostrare (Apple, Google, Mozilla, Microsoft) a partire dall'host dell'endpoint; per gli altri, l'host stesso.
 
 ---
 

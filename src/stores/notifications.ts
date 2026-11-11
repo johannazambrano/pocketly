@@ -11,6 +11,9 @@ import {
   calculateUpcomingReminders,
   formatReminderMessage,
   normalizeNotifications,
+  pushServiceName,
+  pushTestCause,
+  type PushTestCause,
 } from '@/domain/notifications'
 import {
   createPushApi,
@@ -530,7 +533,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
+  /**
+   * Perché l'ultima notifica di prova non è arrivata, quando lo dice il servizio push: la causa (vedi `pushTestCause`),
+   * il motivo testuale del servizio e quale servizio era. Null se l'ultima prova è riuscita o non c'è un motivo da dire.
+   */
+  const lastTestFailure = ref<{ cause: PushTestCause; status: number; reason?: string; service?: string } | null>(null)
+
   async function sendTestNotification(): Promise<boolean> {
+    lastTestFailure.value = null
     if (permission.value !== 'granted') return false
     testSending.value = true
     try {
@@ -562,7 +572,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
             if (res.status >= 200 && res.status < 300) {
               return true
             }
-            // Push gateway ha rifiutato l'invio (es. endpoint scaduto 410)
+            // Il servizio push ha rifiutato l'invio o non era raggiungibile: si conserva il perché, per dirlo.
+            lastTestFailure.value = {
+              cause: pushTestCause(res.status),
+              status: res.status,
+              reason: res.reason,
+              service: pushServiceName(res.service),
+            }
             return false
           }
         } catch (serverErr) {
@@ -732,6 +748,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     syncPushSchedule,
     checkLocalReminders,
     sendTestNotification,
+    lastTestFailure,
     setDefaultRules,
   }
 })

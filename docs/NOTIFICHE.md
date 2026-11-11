@@ -187,10 +187,10 @@ npm run dev
 
 ### Esecuzione dei test automatici
 ```bash
-# Test frontend (logica di dominio, merge, crittografia, store, edge cases): 187 test
+# Test frontend (logica di dominio, merge, crittografia, store, edge cases)
 npm test
 
-# Test backend Python (API push, VAPID, rate-limit, dispatcher, corruzione file): 27 test
+# Test backend Python (API push, VAPID, rate-limit, dispatcher, corruzione file)
 # Funziona su Windows, macOS e Linux (scripts/python.mjs trova python3, python o py -3)
 npm run test:server
 ```
