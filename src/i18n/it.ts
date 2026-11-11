@@ -92,6 +92,7 @@ export default {
     previousMonthNone: 'Nessun mese precedente',
     nextMonth: 'Mese successivo: {month}',
     nextMonthNone: 'Nessun mese successivo',
+    goToMonth: 'Vai a {month}',
     incomeMonth: 'Entrate di {month}',
     expensesMonth: 'Uscite di {month}',
     balanceMonth: 'Saldo di {month}',

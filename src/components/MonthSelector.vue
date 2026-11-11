@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { parseIsoDate } from '@/utils/dates'
@@ -23,6 +23,22 @@ function goToCurrentMonth() {
 
 const { previous, next, go } = useMonthStep()
 
+/**
+ * Tasti ← → per il mese prima e dopo, su qualunque pagina mostri questo filtro (dashboard, dettaglio, spese variabili).
+ * Non agiscono mentre si scrive, quando il focus è su un menu (lì le frecce cambiano già la scelta) o con una finestra
+ * aperta.
+ */
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+  const el = e.target as HTMLElement | null
+  if (el?.closest('input, select, textarea, [contenteditable="true"]')) return
+  if (document.querySelector('[aria-modal="true"]')) return
+  if (go(e.key === 'ArrowLeft' ? previous.value : next.value)) e.preventDefault()
+}
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
+
 /** Se dopo il passo la freccia si spegne (fine dell'elenco), il focus passa al menu invece di perdersi sulla pagina. */
 async function step(target: MonthTarget | null, event: MouseEvent) {
   const button = event.currentTarget as HTMLButtonElement
@@ -36,12 +52,18 @@ function targetName(target: MonthTarget | null): string {
   if (!target) return ''
   return target.year === finance.selectedYear ? month(target.month) : `${month(target.month)} ${target.year}`
 }
-const previousLabel = computed(() =>
-  previous.value ? t('dashboard.previousMonth', { month: targetName(previous.value) }) : t('dashboard.previousMonthNone'),
-)
-const nextLabel = computed(() =>
-  next.value ? t('dashboard.nextMonth', { month: targetName(next.value) }) : t('dashboard.nextMonthNone'),
-)
+/** Da "Tutti i mesi" la freccia non va a un mese "precedente" ma entra in un mese: l'etichetta dice dove. */
+const fromAll = computed(() => finance.selectedMonth === 'all')
+const previousLabel = computed(() => {
+  if (!previous.value) return t('dashboard.previousMonthNone')
+  const args = { month: targetName(previous.value) }
+  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.previousMonth', args)
+})
+const nextLabel = computed(() => {
+  if (!next.value) return t('dashboard.nextMonthNone')
+  const args = { month: targetName(next.value) }
+  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.nextMonth', args)
+})
 
 const arrow =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white'

@@ -94,6 +94,7 @@ const en: typeof it = {
     previousMonthNone: 'No previous month',
     nextMonth: 'Next month: {month}',
     nextMonthNone: 'No next month',
+    goToMonth: 'Go to {month}',
     incomeMonth: 'Income in {month}',
     expensesMonth: 'Expenses in {month}',
     balanceMonth: 'Balance in {month}',

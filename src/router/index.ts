@@ -28,8 +28,11 @@ export const router = createRouter({
       path: '/dettaglio/:kind(categoria|metodo)/:id',
       name: 'detail',
       component: () => import('@/views/BreakdownDetailView.vue'),
+      // Nel menu resta evidenziata la dashboard: il dettaglio è un suo approfondimento.
+      meta: { navParent: 'dashboard' },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  // Tornando indietro (anche dal dettaglio alla dashboard) si ritrova il punto della pagina dove si era; altrimenti si parte dall'alto.
+  scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
 })
