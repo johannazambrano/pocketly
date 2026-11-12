@@ -3,6 +3,7 @@ source-files:
   - src/types/models.ts
   - src/services/migration.ts
   - src/domain/defaults.ts
+  - src/domain/savings.ts
   - src/utils/dates.ts
   - src/utils/money.ts
   - src/utils/id.ts
@@ -163,6 +164,19 @@ export interface BudgetSettings {
 }
 ```
 
+### `SavingsGoal` (Salvadanaio / Obiettivo di Risparmio)
+```ts
+export interface SavingsGoal {
+  id: Id
+  name: string
+  targetAmount: Cents           // Importo target in centesimi
+  currentAmount: Cents          // Importo già accantonato in centesimi
+  targetDate: IsoDate           // Data entro cui raggiungere il traguardo (YYYY-MM-DD)
+  color?: string                // Colore identificativo personalizzato
+  notes?: string                // Note o promemoria testuali opzionali
+}
+```
+
 ---
 
 ## 3. Struttura Radice: `FinanceData`
@@ -180,6 +194,7 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  savingsGoals: SavingsGoal[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

@@ -60,7 +60,7 @@ function selectResult(item: SearchResult) {
 
   switch (item.kind) {
     case 'onetime':
-      void router.push({ path: '/variabili', query: { highlight: item.id } })
+      void router.push({ path: '/una-tantum', query: { highlight: item.id } })
       break
     case 'recurring':
       void router.push({ path: '/ricorrenti', query: { highlight: item.id } })
@@ -70,6 +70,9 @@ function selectResult(item: SearchResult) {
       break
     case 'loan':
       void router.push({ path: '/prestiti', query: { highlight: item.id } })
+      break
+    case 'goal':
+      void router.push({ path: '/budget', query: { tab: 'savings', highlight: item.id } })
       break
   }
 }
@@ -127,6 +130,7 @@ function selectResult(item: SearchResult) {
                   'bg-chrome-2/15 text-chrome-2': item.kind === 'recurring',
                   'bg-accent-soft text-accent': item.kind === 'income',
                   'bg-caution-soft text-caution-strong': item.kind === 'loan',
+                  'bg-positive-soft text-positive-strong': item.kind === 'goal',
                 }"
               >
                 {{ t(`search.kinds.${item.kind}`) }}

@@ -18,6 +18,7 @@ function data(overrides: Partial<FinanceData> = {}): FinanceData {
     simulations: [],
     forecast: { estimateIncome: false, incomeCategoryIds: [] },
     budget: { limits: {} },
+    savingsGoals: [],
     ...overrides,
   }
 }

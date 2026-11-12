@@ -7,6 +7,7 @@ source-files:
   - src/domain/notifications.ts
   - src/domain/backupReminder.ts
   - src/domain/defaults.ts
+  - src/domain/savings.ts
   - src/domain/search.ts
 verified: 2026-11-12
 ---
@@ -161,3 +162,16 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 
 - `isReminderDue(meta, currentHash, hasData, now)`:
   Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
+
+---
+
+## 7. Salvadanai e Obiettivi di Risparmio (`savings.ts`)
+
+Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi finanziari specifici (`SavingsGoal`):
+- `calculateMonthsRemaining(today, targetDate)`: calcola quanti mesi effettivi mancano alla scadenza, arrotondando sui giorni solari (~30.4375 giorni/mese) con un minimo di 1 mese se entro lo stesso mese.
+- `calculateRemainingAmount(goal)`: calcola l'importo ancora mancante (`targetAmount - currentAmount`), mai negativo.
+- `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.
+- `calculateGoalProgress(goal)`: calcola la percentuale di avanzamento normalizzata tra 0 e 1.
+- `goalStatus(goal, today)`: determina lo stato dell'obiettivo tra `'completed'` (raggiunto o superato), `'overdue'` (data superata e saldo inferiore al target) e `'active'` (in corso nei tempi).
+- `savingsSummary(goals, today)`: produce metriche aggregate complete (totale target, totale accantonato, totale residuo, somma quote mensili raccomandate, progresso complessivo ponderato e conteggi per stato).
+- `sortSavingsGoals(goals, today)`: ordina la lista degli obiettivi dando priorità a quelli scaduti, poi a quelli attivi con scadenza più prossima, collocando i completati in fondo.

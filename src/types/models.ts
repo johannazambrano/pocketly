@@ -125,6 +125,20 @@ export interface BudgetSettings {
   limits: Record<Id, Cents>
 }
 
+/**
+ * Salvadanaio / Obiettivo di risparmio: accumulo di fondi verso un traguardo
+ * con importo target, importo già accantonato e data di scadenza desiderata.
+ */
+export interface SavingsGoal {
+  id: Id
+  name: string
+  targetAmount: Cents
+  currentAmount: Cents
+  targetDate: IsoDate
+  color?: string
+  notes?: string
+}
+
 export interface FinanceData {
   schemaVersion: 2
   categories: Tag[]
@@ -137,6 +151,7 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  savingsGoals: SavingsGoal[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

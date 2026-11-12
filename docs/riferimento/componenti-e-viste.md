@@ -22,6 +22,8 @@ source-files:
   - src/components/RecurringForm.vue
   - src/components/LoanForm.vue
   - src/components/RepaymentForm.vue
+  - src/components/SavingsGoalForm.vue
+  - src/components/SavingsDepositModal.vue
   - src/components/BudgetBar.vue
   - src/components/MonthSelector.vue
   - src/components/TagManager.vue
@@ -94,8 +96,10 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 - **Funzionalità:** Elenco entrate filtrate per mese (`finance.incomesFiltered`) o dell'intero anno, con supporto a [`MonthSelector`](../../src/components/MonthSelector.vue), barra dei filtri per tag, riepilogo raggruppato comprimibile (`tagBreakdown`), banner informativo tag, visualizzazione di note e badge dei tag su ogni riga, e form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
 
 ### `BudgetView.vue` (`/budget`)
-- **Ruolo:** Monitoraggio dei limiti di spesa per categoria.
-- **Funzionalità:** Barra di navigazione mese dedicata (`monthIndex` locale con pulsanti precedente/successivo/mese corrente). Configurazione in linea dei limiti per ciascuna categoria con calcolo immediato di speso, programmato, residuo e ritmo (`MIN_PACE_DAYS`). Visualizzazione con barre colorate [`BudgetBar`](../../src/components/BudgetBar.vue). Pulsante per suggerimento automatico limiti basato sulla cronologia.
+- **Ruolo:** Monitoraggio dei limiti di spesa per categoria e pianificazione attiva tramite salvadanai / obiettivi di risparmio.
+- **Funzionalità:** Selettore a schede superiore che consente di passare tra:
+  1. **Budget mensile:** barra di navigazione mese dedicata (`monthIndex` locale con pulsanti precedente/successivo/mese corrente), configurazione in linea dei limiti per ciascuna categoria con calcolo immediato di speso, programmato, residuo e ritmo (`MIN_PACE_DAYS`), visualizzazione con barre colorate [`BudgetBar`](../../src/components/BudgetBar.vue) e suggeritore automatico basato sulla cronologia.
+  2. **Salvadanai e Obiettivi:** pianificazione di traguardi finanziari (`SavingsGoal`), indicatore di avanzamento globale e per singolo obiettivo, calcolo automatico della quota mensile raccomandata (`calculateSavingsQuota`), chip di versamento rapido (+10€, +50€, +100€), modale di versamento/prelievo dedicato ([`SavingsDepositModal`](../../src/components/SavingsDepositModal.vue)) e modale di creazione/modifica ([`SavingsGoalForm`](../../src/components/SavingsGoalForm.vue)). Supporta deep linking e highlight automatico (es. da Omnisearch tramite `?tab=savings&highlight=...`).
 
 ### `LoansView.vue` (`/prestiti`)
 - **Ruolo:** Registro prestiti dati e ricevuti.
@@ -136,6 +140,8 @@ Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di 
 - **`RecurringForm.vue`**: Modulo per spese ricorrenti con scelta di frequenza, date inizio/fine e configurazione regole promemoria. Prop `occurrence`: l'addebito da cui si è aperta la modifica (senza, il prossimo da oggi). Modificando una serie che ha un addebito successivo al primo, si sceglie "Da questo addebito in poi" (di serie: divide la serie con `splitRecurring`; il «Primo addebito» parte da quell'addebito e si può spostare entro `moveWindow`, cioè tra l'addebito precedente e il successivo, per cambiare il giorno da lì in poi senza saltare né raddoppiare un addebito; fuori dai limiti il modulo non salva) o "Tutta la serie"; altrimenti un avviso dice che la modifica vale per tutta la serie (o, per una spesa già divisa, solo per quel periodo). Su una spesa già divisa «Tutta la serie» parte dal primo addebito della spesa e la riunisce in una parte sola (le altre parti vengono eliminate); le modifiche normali conservano il `seriesId`.
 - **`LoanForm.vue`**: Modulo per prestiti (nome contatto, tipo dato/ricevuto, importo, data, note).
 - **`RepaymentForm.vue`**: Modulo per registrare una tranche di rimborso a un prestito esistente.
+- **`SavingsGoalForm.vue`**: Modulo modale per salvadanai e obiettivi di risparmio (nome, importo target, saldo iniziale, data traguardo, palette cromatica e note).
+- **`SavingsDepositModal.vue`**: Modale rapido per versamenti (+10€, +50€, +100€ o completa target) e prelievi da un salvadanaio specifico.
 - **`SubmitButton.vue`**: Pulsante di conferma dei moduli; con `cancelLabel` mostra accanto un pulsante "Annulla" che emette `cancel`; con `deleteLabel` un pulsante "Elimina" che emette `delete` (iPhone: riga rossa a tutta larghezza; Android: testo rosso a sinistra; PC: sotto i due pulsanti). Segue la piattaforma: sul PC i due pulsanti a tutta larghezza, su Android "Annulla" di testo e "Salva" pieno a pillola allineati a destra, su iPhone niente (Annulla e Fine sono nella barra del foglio).
 
 ### Tag, Categorie e Metodi

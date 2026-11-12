@@ -220,6 +220,40 @@ describe('parseBackup – schema v2', () => {
     expect(withTags.incomes[0]!.tagIds).toEqual(['t1'])
     expect(withTags.incomes[0]!.notes).toBe('Extra')
   })
+
+  it('normalizza gli obiettivi di risparmio e mantiene la retrocompatibilità', () => {
+    // Backup senza savingsGoals
+    const withoutGoals = parseBackup({ schemaVersion: 2 })
+    expect(withoutGoals.savingsGoals).toEqual([])
+
+    // Backup con savingsGoals validi e non validi
+    const withGoals = parseBackup({
+      schemaVersion: 2,
+      savingsGoals: [
+        { id: 'g1', name: 'Fondo emergenza', targetAmount: 300000, currentAmount: 50000, targetDate: '2026-12-31', color: '#10b981', notes: 'Banca' },
+        { id: 'g2', name: 'Importo non valido', targetAmount: -50, currentAmount: 0, targetDate: '2026-12-31' },
+        { id: 'g3', name: 'Senza target', currentAmount: 1000, targetDate: '2026-12-31' },
+        { id: 'g4', name: 'Auto', targetAmount: 500000, targetDate: '2027-06-30' },
+      ],
+    })
+    expect(withGoals.savingsGoals.length).toBe(2)
+    expect(withGoals.savingsGoals[0]).toEqual({
+      id: 'g1',
+      name: 'Fondo emergenza',
+      targetAmount: 300000,
+      currentAmount: 50000,
+      targetDate: '2026-12-31',
+      color: '#10b981',
+      notes: 'Banca',
+    })
+    expect(withGoals.savingsGoals[1]).toMatchObject({
+      id: 'g4',
+      name: 'Auto',
+      targetAmount: 500000,
+      currentAmount: 0,
+      targetDate: '2027-06-30',
+    })
+  })
 })
 
 describe('dati di una versione più nuova', () => {

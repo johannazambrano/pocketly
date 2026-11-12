@@ -204,4 +204,28 @@ describe('searchFinance', () => {
     const repResults = searchFinance(dataWithRepayment, '50')
     expect(repResults.some((r) => r.id === 'l1')).toBe(true)
   })
+
+  it('trova salvadanai e obiettivi di risparmio', () => {
+    const testData = createSampleData()
+    testData.savingsGoals.push({
+      id: 'g1',
+      name: 'Fondo emergenza estate',
+      targetAmount: 250000,
+      currentAmount: 50000,
+      targetDate: '2026-08-31',
+      notes: 'Conto deposito',
+    })
+
+    const byName = searchFinance(testData, 'emergenza')
+    expect(byName).toHaveLength(1)
+    expect(byName[0]?.kind).toBe('goal')
+    expect(byName[0]?.id).toBe('g1')
+    expect(byName[0]?.amount).toBe(250000)
+
+    const byKeyword = searchFinance(testData, 'salvadanaio')
+    expect(byKeyword.some((r) => r.id === 'g1')).toBe(true)
+
+    const byNote = searchFinance(testData, 'deposito')
+    expect(byNote.some((r) => r.id === 'g1')).toBe(true)
+  })
 })

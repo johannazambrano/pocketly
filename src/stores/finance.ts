@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type {
+  Cents,
   FinanceData,
   ForecastSettings,
   Id,
@@ -10,12 +11,14 @@ import type {
   OneTimeExpense,
   RecurringExpense,
   Repayment,
+  SavingsGoal,
   Simulation,
   Tag,
 } from '@/types/models'
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey } from '@/domain/recurrence'
+import { savingsSummary, sortSavingsGoals } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
@@ -174,6 +177,8 @@ export const useFinanceStore = defineStore('finance', () => {
     data.value.simulations.filter((s) => s.year === selectedYear.value).sort((a, b) => a.month - b.month),
   )
   const loans = computed(() => [...data.value.loans].sort(byDateDesc))
+  const savingsGoals = computed(() => sortSavingsGoals(data.value.savingsGoals ?? [], today.value))
+  const savingsSummaryData = computed(() => savingsSummary(data.value.savingsGoals ?? [], today.value))
 
   const tagMaps = computed(() => ({
     categories: new Map(data.value.categories.map((t) => [t.id, t])),
@@ -259,6 +264,35 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   const deleteSimulation = (id: Id) => remove(data.value.simulations, id)
+
+  // --- salvadanai e obiettivi di risparmio ------------------------------
+
+  function saveSavingsGoal(item: WithOptionalId<SavingsGoal>): SavingsGoal {
+    if (!data.value.savingsGoals) data.value.savingsGoals = []
+    return upsert(data.value.savingsGoals, {
+      ...item,
+      targetAmount: Math.max(0, item.targetAmount),
+      currentAmount: Math.max(0, item.currentAmount),
+    })
+  }
+
+  const deleteSavingsGoal = (id: Id) => {
+    if (data.value.savingsGoals) remove(data.value.savingsGoals, id)
+  }
+
+  function adjustSavingsGoalAmount(id: Id, deltaCents: Cents) {
+    const goal = data.value.savingsGoals?.find((g) => g.id === id)
+    if (goal) {
+      goal.currentAmount = Math.max(0, goal.currentAmount + deltaCents)
+    }
+  }
+
+  function setSavingsGoalAmount(id: Id, amount: Cents) {
+    const goal = data.value.savingsGoals?.find((g) => g.id === id)
+    if (goal) {
+      goal.currentAmount = Math.max(0, amount)
+    }
+  }
 
   // --- previsioni --------------------------------------------------------
 
@@ -396,6 +430,8 @@ export const useFinanceStore = defineStore('finance', () => {
     recurringSeriesOfYear,
     simulationsOfYear,
     loans,
+    savingsGoals,
+    savingsSummaryData,
     tag,
     saveOneTime,
     saveIncome,
@@ -411,6 +447,10 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteRepayment,
     addSimulation,
     deleteSimulation,
+    saveSavingsGoal,
+    deleteSavingsGoal,
+    adjustSavingsGoalAmount,
+    setSavingsGoalAmount,
     addTag,
     renameTag,
     setTagColor,

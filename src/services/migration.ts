@@ -10,6 +10,7 @@ import type {
   OneTimeExpense,
   RecurringExpense,
   Repayment,
+  SavingsGoal,
   Simulation,
   Tag,
 } from '@/types/models'
@@ -102,6 +103,7 @@ export function migrateV1(raw: Obj): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    savingsGoals: [],
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -303,6 +305,20 @@ function normalizeV2(raw: Obj): FinanceData {
     }),
     forecast: normalizeForecast(raw.forecast),
     budget: normalizeBudget(raw.budget, categories),
+    savingsGoals: valid<SavingsGoal>(raw.savingsGoals, (o) => {
+      const targetAmount = cents(o.targetAmount)
+      const currentAmount = cents(o.currentAmount) ?? 0
+      if (targetAmount === null || targetAmount <= 0) return null
+      return {
+        id: id(o.id),
+        name: str(o.name),
+        targetAmount,
+        currentAmount: Math.max(0, currentAmount),
+        targetDate: date(o.targetDate, today),
+        ...(isHexColor(o.color) ? { color: o.color } : {}),
+        ...(typeof o.notes === 'string' && o.notes ? { notes: str(o.notes) } : {}),
+      }
+    }),
   }
 }
 

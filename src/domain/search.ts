@@ -1,7 +1,7 @@
 import type { Cents, FinanceData, Frequency, Id, IsoDate, LoanType } from '@/types/models'
 import { parseIsoDate } from '@/utils/dates'
 
-export type SearchResultKind = 'onetime' | 'recurring' | 'income' | 'loan'
+export type SearchResultKind = 'onetime' | 'recurring' | 'income' | 'loan' | 'goal'
 
 export interface SearchResult {
   id: Id
@@ -144,6 +144,26 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
         date: l.date,
         loanType: l.type,
         notes: l.notes,
+        year,
+        month,
+      })
+    }
+  }
+
+  // Salvadanai e obiettivi di risparmio
+  for (const g of data.savingsGoals ?? []) {
+    const keywords = 'salvadanaio obiettivo risparmio goal savings'
+    const searchable = `${g.name} ${g.notes ?? ''} ${amountStrings(g.targetAmount)} ${amountStrings(g.currentAmount)} ${g.targetDate} ${keywords}`
+
+    if (matches(searchable)) {
+      const { year, month } = parseIsoDate(g.targetDate)
+      results.push({
+        id: g.id,
+        kind: 'goal',
+        name: g.name,
+        amount: g.targetAmount,
+        date: g.targetDate,
+        notes: g.notes,
         year,
         month,
       })
