@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Mappa del Codice
@@ -19,12 +19,12 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|---|
 | [`src/App.vue`](../../src/App.vue) | Radice dell'albero Vue: coordinamento header, layout, router view, bottom nav, toast, modali e dialoghi di conferma | — | [frontend.md](../architettura/frontend.md) |
 | [`src/main.ts`](../../src/main.ts) | Bootstrap dell'app: creazione istanza Vue, registrazione Pinia, Vue Router, vue-i18n e montaggio su `#app` | — | [frontend.md](../architettura/frontend.md) |
-| [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite | — | [frontend.md](../architettura/frontend.md) |
+| [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite, e delle costanti di build (`__APP_VERSION__`, `__APP_COMMIT__`, `__APP_BUILT_AT__`) | — | [frontend.md](../architettura/frontend.md) |
 | [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4: gettoni di colore con nomi di significato (`bg-surface`, `text-ink-2`, `border-line`…, valori nelle variabili `--pk-*` che cambiano per `html[data-platform]` e `html[data-theme]`), safe-area scroll padding, classi utility | — | [frontend.md](../architettura/frontend.md) |
 | [`src/router/index.ts`](../../src/router/index.ts) | Definizione delle 9 rotte (8 principali e 1 di dettaglio), lazy loading viste e metadati dei tab (`TABS`) | — | [frontend.md](../architettura/frontend.md) |
 | [`public/push-worker.js`](../../public/push-worker.js) | Service worker Web Push: gestione ricezione eventi push, icona badge e navigazione su click | — | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`index.html`](../../index.html) | Entry point HTML dell'applicazione PWA, meta tag viewport, thema e aggancio mount Vue | — | [frontend.md](../architettura/frontend.md) |
-| [`vite.config.ts`](../../vite.config.ts) | Configurazione bundler Vite, integrazione Workbox PWA e proxy di sviluppo per `/api` verso porta 8787 | — | [deploy.md](../architettura/deploy.md) |
+| [`vite.config.ts`](../../vite.config.ts) | Configurazione bundler Vite, integrazione Workbox PWA, proxy di sviluppo per `/api` verso porta 8787 e costanti di build (versione, commit corto, ora della build) | — | [deploy.md](../architettura/deploy.md) |
 | [`pwa-assets.config.ts`](../../pwa-assets.config.ts) | Configurazione generazione automatica asset e icone PWA | — | [frontend.md](../architettura/frontend.md) |
 
 ---
@@ -42,7 +42,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
 | [`src/domain/calculations.ts`](../../src/domain/calculations.ts) | Calcoli finanziari: `yearSummary`, `monthSummary`, `monthBreakdown`, `forecast`, `estimateCategoryIds`, `estimateMonthlyIncome`, `periodStartMonth`, `variableSpending`, `compareToAverage` (verdetto sopra/in linea/sotto la media), `averageBalanceBefore`, `breakdownItems`, `upcomingCharges`, `loanStatus`, `availableYears`, `oneTimeTagBreakdown` | [`src/domain/calculations.test.ts`](../../src/domain/calculations.test.ts) | [domain.md](./domain.md) |
-| [`src/domain/recurrence.ts`](../../src/domain/recurrence.ts) | Regole temporali ricorrenze: `monthlyEquivalent`, `occursIn`, `dueDateIn`, `nextDueDate`, `amountInMonth`, `splitRecurring` (divide una serie da un addebito in poi), `isActiveInYear` | [`src/domain/recurrence.test.ts`](../../src/domain/recurrence.test.ts) | [domain.md](./domain.md) |
+| [`src/domain/recurrence.ts`](../../src/domain/recurrence.ts) | Regole temporali ricorrenze: `monthlyEquivalent`, `occursIn`, `dueDateIn`, `nextDueDate`, `amountInMonth`, `splitRecurring` (divide una serie da un addebito in poi, collegando le parti con `seriesId`), `moveWindow` (dove si può spostare il giorno di un addebito), `seriesKey`, `groupRecurringSeries` (una spesa per riga), `isActiveInYear` | [`src/domain/recurrence.test.ts`](../../src/domain/recurrence.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/budget.ts`](../../src/domain/budget.ts) | Logica budget mensile (`budgetMonth`): consumato, programmato, stato con soglia `BUDGET_WARNING_RATIO`, proiezione a fine mese; suggeritore limiti (`suggestLimits`) | [`src/domain/budget.test.ts`](../../src/domain/budget.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/merge.ts`](../../src/domain/merge.ts) | Algoritmo deterministico di merge a 3 vie: `mergeFinanceData`, `deepEqual` (unione per ID interna) | [`src/domain/merge.test.ts`](../../src/domain/merge.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/domain/notifications.ts`](../../src/domain/notifications.ts) | Calcolo promemoria futuri (`calculateUpcomingReminders`), formattazione messaggi, normalizzazione regole e causa di una notifica di prova fallita (`pushTestCause`, `pushServiceName`) | [`src/domain/notifications.test.ts`](../../src/domain/notifications.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
@@ -71,12 +71,12 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|---|
 | [`src/views/DashboardView.vue`](../../src/views/DashboardView.vue) | Vista principale (`/`): saldo, verdetti rispetto alla media (`compareToAverage`), ripartizioni, prossime scadenze modificabili con i moduli, delega tasti a `MonthSelector` | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/OneTimeView.vue`](../../src/views/OneTimeView.vue) | Vista spese una tantum (`/una-tantum`): lista spese, filtro per mese, filtro e spaccato per tag | — | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/views/RecurringView.vue`](../../src/views/RecurringView.vue) | Vista spese ricorrenti (`/ricorrenti`): lista, frequenze, costo equivalente mensile e configurazione promemoria | — | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/views/RecurringView.vue`](../../src/views/RecurringView.vue) | Vista spese ricorrenti (`/ricorrenti`): una riga per spesa (`recurringSeriesOfYear`), «Storico» dei periodi, costo equivalente mensile della parte in corso e configurazione promemoria | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/IncomeView.vue`](../../src/views/IncomeView.vue) | Vista entrate (`/entrate`): registrazione e consultazione delle entrate dell'anno | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/BudgetView.vue`](../../src/views/BudgetView.vue) | Vista budget (`/budget`): gestione limiti per categoria, monitoraggio ritmo giornaliero e barre di avanzamento | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/LoansView.vue`](../../src/views/LoansView.vue) | Vista prestiti (`/prestiti`): tracciamento crediti e debiti, storico rimborsi parziali e saldo residuo | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/ForecastView.vue`](../../src/views/ForecastView.vue) | Vista previsioni (`/previsioni`): proiezione fino a dicembre, simulazioni d'acquisto, stima automatica/manuale | — | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/views/SettingsView.vue`](../../src/views/SettingsView.vue) | Vista impostazioni (`/impostazioni`): anagrafiche (categorie, metodi, tag), backup AES-GCM, sync e Web Push | — | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/views/SettingsView.vue`](../../src/views/SettingsView.vue) | Vista impostazioni (`/impostazioni`): anagrafiche, backup AES-GCM, sync, Web Push, verifica aggiornamenti e ricarica server | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue) | Dettaglio ripartizioni (`/dettaglio/:kind/:id`): voci analitiche modificabili con i moduli, stato "non trovato", a11y focus heading, ritorno alla dashboard | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 
 ---
@@ -111,7 +111,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/components/TagSelect.vue`](../../src/components/TagSelect.vue) | Menu a tendina standard per la selezione di una categoria o metodo di pagamento | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/ToastHost.vue`](../../src/components/ToastHost.vue) | Host overlay per visualizzare notifiche toast a scomparsa | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/TransactionForm.vue`](../../src/components/TransactionForm.vue) | Modulo versatile per inserimento/modifica spese una tantum o entrate | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) | Notifica non invasiva quando è disponibile un nuovo aggiornamento del service worker | [frontend.md](../architettura/frontend.md) |
+| [`src/components/UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) | Notifica non invasiva e gestione ciclo di vita aggiornamenti Service Worker e risvegli iOS | [frontend.md](../architettura/frontend.md) |
 | [`src/components/WelcomePanel.vue`](../../src/components/WelcomePanel.vue) | Pannello di primo benvenuto mostrato quando non ci sono ancora dati inseriti | [componenti-e-viste.md](./componenti-e-viste.md) |
 
 ---
@@ -143,6 +143,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
 | [`src/composables/useConfirmDelete.ts`](../../src/composables/useConfirmDelete.ts) | Composable per richiedere conferma utente prima di eliminare voci | — | [frontend.md](../architettura/frontend.md) |
+| [`src/composables/useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) | Stato condiviso degli aggiornamenti dell'app (`updateReady`, `reloadPending`) e regole: `checkForUpdate` aspetta l'installazione, `applyUpdate`, ricarica solo della finestra che l'ha chiesto | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useDirty.ts`](../../src/composables/useDirty.ts) | Tracciamento modifiche non salvate dei moduli (`useDirty`: `dirty`, `reset`), usato da `BaseModal` per chiedere conferma prima di chiudere | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Navigazione mensile sequenziale (avanti/indietro con cambio anno) e transizione da `'all'` a mese specifico | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua (`setLocale`) e composable helper `useFormat` (`money`, `amountInput`, `date`, `month`, `percent`) | — | [frontend.md](../architettura/frontend.md) |
@@ -186,5 +187,5 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`deploy/proxmox/make-cert.sh`](../../deploy/proxmox/make-cert.sh) | Generatore di CA e certificati TLS per server locale in rete domestica | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/pocketly-sync.service`](../../deploy/proxmox/pocketly-sync.service) | Definizione della systemd unit con parametri di sicurezza sandboxing | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/publish.sh`](../../deploy/proxmox/publish.sh) | Script per la compilazione frontend e rilascio locale su directory web | [deploy.md](../architettura/deploy.md) |
-| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git rapido con riavvio del servizio | [deploy.md](../architettura/deploy.md) |
+| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git, build, allineamento Nginx (copia in `.bak`, ripristino se `nginx -t` fallisce) e riavvio servizi | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/nginx/pocketly.conf`](../../deploy/proxmox/nginx/pocketly.conf) | Configurazione Virtual Host Nginx per reverse proxy e caching PWA | [deploy.md](../architettura/deploy.md) |

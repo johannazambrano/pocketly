@@ -15,7 +15,7 @@ import type {
 } from '@/types/models'
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
-import { isActiveInYear } from '@/domain/recurrence'
+import { groupRecurringSeries, isActiveInYear, seriesKey } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
@@ -157,6 +157,19 @@ export const useFinanceStore = defineStore('finance', () => {
       .filter((r) => isActiveInYear(r, selectedYear.value))
       .sort((a, b) => a.name.localeCompare(b.name)),
   )
+  /**
+   * Le spese ricorrenti dell'anno come le vede l'utente: una per spesa, anche se divisa in parti da un cambio
+   * «da questo addebito in poi». Si mostra la parte in corso oggi (per un anno passato: al 31 dicembre; per un anno
+   * futuro: al 1° gennaio).
+   */
+  const recurringSeriesOfYear = computed(() => {
+    const year = selectedYear.value
+    const thisYear = Number(today.value.slice(0, 4))
+    const ref = year === thisYear ? today.value : year < thisYear ? `${year}-12-31` : `${year}-01-01`
+    return groupRecurringSeries(data.value.recurringExpenses, ref)
+      .filter((s) => s.parts.some((p) => isActiveInYear(p, year)))
+      .sort((a, b) => a.current.name.localeCompare(b.current.name))
+  })
   const simulationsOfYear = computed(() =>
     data.value.simulations.filter((s) => s.year === selectedYear.value).sort((a, b) => a.month - b.month),
   )
@@ -215,6 +228,11 @@ export const useFinanceStore = defineStore('finance', () => {
   const deleteOneTime = (id: Id) => remove(data.value.oneTimeExpenses, id)
   const deleteIncome = (id: Id) => remove(data.value.incomes, id)
   const deleteRecurring = (id: Id) => remove(data.value.recurringExpenses, id)
+  /** Elimina la spesa intera: tutte le parti collegate a `item` (o solo `item`, se non è mai stata divisa). */
+  function deleteRecurringSeries(item: RecurringExpense) {
+    const key = seriesKey(item)
+    data.value.recurringExpenses = data.value.recurringExpenses.filter((r) => seriesKey(r) !== key)
+  }
 
   // --- prestiti ----------------------------------------------------------
 
@@ -375,6 +393,7 @@ export const useFinanceStore = defineStore('finance', () => {
     oneTimeOfYear,
     incomesOfYear,
     recurringOfYear,
+    recurringSeriesOfYear,
     simulationsOfYear,
     loans,
     tag,
@@ -385,6 +404,7 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteOneTime,
     deleteIncome,
     deleteRecurring,
+    deleteRecurringSeries,
     saveLoan,
     deleteLoan,
     addRepayment,

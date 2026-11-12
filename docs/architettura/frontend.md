@@ -12,16 +12,19 @@ source-files:
   - src/composables/useMonthStep.ts
   - src/composables/useConfirmDelete.ts
   - src/composables/useDirty.ts
+  - src/composables/useAppUpdate.ts
   - src/components/BalancePanel.vue
   - src/components/BaseModal.vue
   - src/components/BottomNav.vue
   - src/components/MonthSelector.vue
   - src/components/SubmitButton.vue
+  - src/components/UpdatePrompt.vue
   - src/views/BreakdownDetailView.vue
   - src/views/DashboardView.vue
+  - src/views/SettingsView.vue
   - src/i18n/index.ts
   - vite.config.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Architettura Frontend
@@ -120,7 +123,11 @@ La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramit
 - Modalità: `generateSW` con Workbox.
 - Pre-caching completo di asset statici, HTML, JS, CSS e font FontAwesome WOFF2.
 - Service worker dedicato per notifiche push: per le notifiche Web Push su browser Chromium/Firefox in background viene registrato il push listener capace di mostrare la notifica anche quando la pagina principale è chiusa.
-- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) ascolta l'evento di rilascio di una nuova versione del service worker e mostra all'utente un banner discreto per ricaricare l'app senza perdere sessioni o dati in corso di digitazione.
+- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) registra il service worker e decide quando cercare una versione nuova; lo stato condiviso e le regole stanno in [`useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) (`updateReady`, `reloadPending`, `checkForUpdate`, `applyUpdate`, `onControllerChange`):
+  - **Quando si controlla:** all'avvio, al ritorno in primo piano (`visibilitychange`, `pageshow`, `focus`: su iPhone, con l'app aperta dalla Home, il solo `visibilitychange` non sempre arriva), al ritorno della rete, ogni 15 minuti e al risveglio dalla sospensione (battito ogni 2 s: un salto oltre 5 s vuol dire processo congelato). Solo con l'app in vista e al massimo una volta al minuto per i segnali di risveglio: al PC `focus` scatta di continuo, e i timer delle schede in sottofondo rallentati sembrerebbero sempre un risveglio.
+  - **Versione pronta:** `checkForUpdate` aspetta che il worker scaricato finisca l'installazione (`update()` si risolve prima) e conta come aggiornamento solo un worker in attesa con la pagina già controllata. Risponde `available`, `none`, `offline` o `error`.
+  - **Ricarica:** si ricarica da sola solo la finestra che ha chiesto l'aggiornamento (`applyUpdate` → `SKIP_WAITING`). Le altre finestre, su `controllerchange`, mostrano l'avviso e aspettano il tocco, così un modulo con modifiche non salvate non si perde. Anche il ricaricamento automatico di Workbox passa da qui (`onNeedReload`).
+- Nelle Impostazioni ([`SettingsView.vue`](../../src/views/SettingsView.vue)) la scheda «Aggiornamenti» mostra la versione con l'ora della build e il commit corto (`__APP_VERSION__`, `__APP_BUILT_AT__`, `__APP_COMMIT__` da `vite.config.ts`, così si vede quale build gira su un telefono). La versione è automatica: le prime due cifre vengono da `package.json` e si alzano a mano per i passaggi grandi, l'ultima è il numero di commit (`git rev-list --count HEAD`, es. 0.1.315). In un clone parziale («shallow», come su Vercel) il conteggio non sarebbe giusto e la versione resta «0.1» e offre «Verifica aggiornamenti» (se trova una versione nuova la applica subito; offline o in errore lo dice, non risponde «già aggiornata») e, come via d'uscita, «Ricarica dal server»: toglie il service worker e svuota la Cache Storage, poi ricarica; i dati in IndexedDB restano. Togliere il worker cancella anche l'iscrizione alle notifiche push del dispositivo: la rifà la sincronizzazione successiva (`runSyncPushSchedule` vede che manca), e la conferma lo dice quando le notifiche sono attive. Su iPhone la nuova iscrizione senza un tocco dell'utente è da verificare.
 
 ---
 

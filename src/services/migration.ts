@@ -260,6 +260,7 @@ function normalizeV2(raw: Obj): FinanceData {
         endDate: isValidIsoDate(o.endDate) ? o.endDate : null,
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
+        ...(typeof o.seriesId === 'string' && o.seriesId ? { seriesId: o.seriesId } : {}),
         ...(notifications.length ? { notifications } : {}),
       }
     }),

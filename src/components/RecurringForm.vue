@@ -2,7 +2,7 @@
 import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Frequency, NotificationRule, RecurringExpense } from '@/types/models'
-import { FREQUENCIES, nextDueDate, splitRecurring } from '@/domain/recurrence'
+import { FREQUENCIES, moveWindow, nextDueDate, seriesKey, splitRecurring } from '@/domain/recurrence'
 import { useFinanceStore } from '@/stores/finance'
 import { useNotificationsStore } from '@/stores/notifications'
 import { toCents } from '@/utils/money'
@@ -50,13 +50,30 @@ const splitDate = computed(() => {
   const d = props.occurrence ?? nextDueDate(i, finance.today)
   return d && d > i.startDate ? d : null
 })
+/**
+ * Tutte le parti della stessa spesa (cambi «da questo addebito in poi» già fatti), in ordine: la voce aperta è una
+ * di queste. Una spesa mai divisa ha una parte sola.
+ */
+const seriesParts = computed(() => {
+  const i = props.item
+  if (!i) return []
+  const key = seriesKey(i)
+  return finance.data.recurringExpenses.filter((r) => seriesKey(r) === key).sort((a, b) => a.startDate.localeCompare(b.startDate))
+})
+/** Primo addebito della spesa intera: da lì parte "Tutta la serie". */
+const seriesStart = computed(() => seriesParts.value[0]?.startDate ?? props.item?.startDate ?? '')
+
 /** "from": da questo addebito in poi (di serie: i mesi passati restano com'erano); "all": tutta la serie. */
 const scope = ref<'from' | 'all'>('from')
 const splitting = computed(() => !!splitDate.value && scope.value === 'from')
-/** Con "da questo addebito in poi" la nuova serie parte da lì: il campo lo mostra e non si cambia. */
+/**
+ * Con "da questo addebito in poi" la nuova serie parte da quell'addebito, ma il giorno si può spostare (es. dal 14 al
+ * 15) entro questi limiti: tra l'addebito prima e quello dopo, così non se ne salta né se ne raddoppia uno.
+ */
+const moveRange = computed(() => (props.item && splitting.value && splitDate.value ? moveWindow(props.item, splitDate.value) : null))
 watch(scope, (s) => {
   if (!props.item) return
-  form.startDate = s === 'from' && splitDate.value ? splitDate.value : props.item.startDate
+  form.startDate = s === 'from' && splitDate.value ? splitDate.value : seriesStart.value
 })
 
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
@@ -94,6 +111,10 @@ function submit() {
     error.value = t('common.invalidAmount')
     return
   }
+  if (moveRange.value && (form.startDate < moveRange.value.min || form.startDate > moveRange.value.max)) {
+    error.value = t('recurring.moveOutOfRange', { min: date(moveRange.value.min), max: date(moveRange.value.max) })
+    return
+  }
   if (form.endDate && form.endDate < form.startDate) {
     error.value = t('recurring.endBeforeStart')
     return
@@ -111,6 +132,7 @@ function submit() {
   if (item && splitting.value && splitDate.value) {
     // Se non è cambiato niente, dividere la serie creerebbe solo un doppione.
     const unchanged =
+      form.startDate === splitDate.value &&
       values.name === item.name &&
       values.amount === item.amount &&
       values.frequency === item.frequency &&
@@ -119,12 +141,17 @@ function submit() {
       values.paymentMethodId === item.paymentMethodId &&
       JSON.stringify(values.notifications) === JSON.stringify(item.notifications ?? [])
     if (!unchanged) {
-      const { before, after } = splitRecurring(item, splitDate.value, values)
+      const { before, after } = splitRecurring(item, splitDate.value, values, form.startDate)
       finance.saveRecurring(before)
       finance.saveRecurring(after)
     }
+  } else if (item && splitDate.value && scope.value === 'all' && seriesParts.value.length > 1) {
+    // "Tutta la serie" su una spesa già divisa: torna una serie sola, con i valori nuovi dal primo addebito.
+    for (const p of seriesParts.value) if (p.id !== item.id) finance.deleteRecurring(p.id)
+    finance.saveRecurring({ id: item.id, startDate: form.startDate, ...values })
   } else {
-    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values })
+    // Il collegamento con le altre parti della spesa resta.
+    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values, ...(item?.seriesId ? { seriesId: item.seriesId } : {}) })
   }
   emit('close')
 }
@@ -152,7 +179,7 @@ function submit() {
         <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
           <input v-model="scope" type="radio" value="all" class="mt-0.5 accent-accent" />
           <span class="text-sm text-ink">
-            {{ t('recurring.scopeAll', { date: date(item.startDate) }) }}
+            {{ t('recurring.scopeAll', { date: date(seriesStart) }) }}
             <span class="block text-xs text-ink-3">{{ t('recurring.scopeAllHint') }}</span>
           </span>
         </label>
@@ -160,7 +187,9 @@ function submit() {
       <!-- Dal primo addebito (o a serie finita) non c'è niente da tenere: la modifica vale per tutta la serie, e lo si dice. -->
       <p v-else-if="item" class="flex items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs leading-snug text-ink-2">
         <i class="fa-solid fa-circle-info mt-0.5 text-ink-4" aria-hidden="true"></i>
-        {{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}
+        <template v-if="seriesParts.length > 1 && item.endDate">{{ t('recurring.editPeriod', { name: item.name, from: date(item.startDate), to: date(item.endDate) }) }}</template>
+        <template v-else-if="seriesParts.length > 1">{{ t('recurring.editPeriodOpen', { name: item.name, from: date(item.startDate) }) }}</template>
+        <template v-else>{{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}</template>
       </p>
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
@@ -181,13 +210,16 @@ function submit() {
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('recurring.startDate') }}</span>
-          <input v-model="form.startDate" type="date" required class="field" :readonly="splitting" :class="{ 'bg-surface-2 text-ink-3': splitting }" />
+          <input v-model="form.startDate" type="date" required class="field" :min="moveRange?.min" :max="moveRange?.max" :aria-describedby="moveRange ? `${formId}-move` : undefined" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('recurring.endDate') }}</span>
           <input v-model="form.endDate" type="date" :min="form.startDate" class="field" />
         </label>
       </div>
+      <p v-if="moveRange" :id="`${formId}-move`" class="-mt-1 text-xs text-ink-3">
+        {{ t('recurring.moveHint', { min: date(moveRange.min), max: date(moveRange.max) }) }}
+      </p>
       <div class="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect v-model="form.paymentMethodId" kind="paymentMethods" :label="t('common.paymentMethod')" />

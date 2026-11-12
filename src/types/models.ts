@@ -54,6 +54,11 @@ export interface RecurringExpense {
   categoryId: Id
   paymentMethodId: Id
   /**
+   * Collega le parti della stessa spesa nate da una modifica «da questo addebito in poi» (`splitRecurring`): tutte
+   * hanno l'id della prima parte. Assente per una spesa mai divisa. La pagina Ricorrenti le mostra come una riga sola.
+   */
+  seriesId?: Id
+  /**
    * Promemoria configurati per questa spesa (stile Google Calendar).
    * Presente solo quando c'è almeno una regola attiva; assente se disattivato.
    */

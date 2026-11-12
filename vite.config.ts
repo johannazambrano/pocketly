@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
@@ -23,9 +24,31 @@ function inlineAppleTouchIcon(): Plugin {
   }
 }
 
+/** Uscita di un comando git, o '' senza git (es. copia senza cartella .git). */
+function git(args: string): string {
+  try {
+    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Numero di versione: le prime due cifre da package.json (si alzano a mano per i passaggi grandi), l'ultima è il numero
+ * di commit e cresce da sola a ogni rilascio (es. 0.1.315). In una copia parziale del repository (clone «shallow»,
+ * come su Vercel) il conteggio sarebbe sbagliato: allora resta «0.1» e la build si riconosce da commit e ora.
+ */
+function appVersion(): string {
+  const [major = '0', minor = '0'] = pkg.version.split('.')
+  const count = git('rev-parse --is-shallow-repository') === 'false' ? git('rev-list --count HEAD') : ''
+  return count ? `${major}.${minor}.${count}` : `${major}.${minor}`
+}
+
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(appVersion()),
+    __APP_COMMIT__: JSON.stringify(git('rev-parse --short HEAD')),
+    __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     inlineAppleTouchIcon(),
