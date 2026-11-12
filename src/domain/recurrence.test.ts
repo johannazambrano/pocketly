@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RecurringExpense } from '@/types/models'
-import { isActiveInYear, monthlyEquivalent, nextDueDate, occursIn, splitRecurring } from './recurrence'
+import { groupRecurringSeries, isActiveInYear, monthlyEquivalent, nextDueDate, occursIn, seriesKey, splitRecurring } from './recurrence'
 
 const rec = (over: Partial<RecurringExpense> = {}): RecurringExpense => ({
   id: 'r',
@@ -86,6 +86,45 @@ describe('splitRecurring', () => {
 
   it('dal primo addebito non si divide: si modifica la serie intera', () => {
     expect(() => splitRecurring(rec(), '2026-01-15', changes)).toThrow()
+  })
+
+  it('collega le due parti con l id della prima, anche dividendo di nuovo', () => {
+    const { before, after } = splitRecurring(rec(), '2026-11-15', changes)
+    expect(before.seriesId).toBe('r')
+    expect(after.seriesId).toBe('r')
+    const again = splitRecurring({ ...after, id: 'n' }, '2027-03-15', { ...changes, amount: 1700 })
+    expect(again.before).toMatchObject({ id: 'n', seriesId: 'r', endDate: '2027-03-14' })
+    expect(again.after.seriesId).toBe('r')
+  })
+})
+
+describe('groupRecurringSeries', () => {
+  const old = rec({ id: 'a', seriesId: 'a', amount: 1300, endDate: '2026-11-14' })
+  const now = rec({ id: 'b', seriesId: 'a', amount: 1599, startDate: '2026-11-15' })
+  const other = rec({ id: 'x', name: 'Palestra' })
+
+  it('una spesa divisa è una sola, con la parte in corso e com era prima', () => {
+    const groups = groupRecurringSeries([now, other, old], '2026-11-20')
+    expect(groups).toHaveLength(2)
+    const netflix = groups.find((g) => g.key === 'a')!
+    expect(netflix.parts.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(netflix).toMatchObject({ current: now, previous: old, next: null, active: true })
+    expect(seriesKey(other)).toBe('x')
+  })
+
+  it('prima del cambio mostra la parte vecchia e il cambio programmato', () => {
+    const netflix = groupRecurringSeries([old, now], '2026-11-12')[0]!
+    expect(netflix).toMatchObject({ current: old, previous: null, next: now, active: true })
+  })
+
+  it('una spesa finita resta l ultima parte, ma non è attiva', () => {
+    const ended = rec({ id: 'e', endDate: '2026-03-31' })
+    expect(groupRecurringSeries([ended], '2026-11-12')[0]).toMatchObject({ current: ended, active: false })
+  })
+
+  it('una spesa non ancora iniziata mostra la prima parte, non attiva', () => {
+    const future = rec({ id: 'f', startDate: '2027-02-01' })
+    expect(groupRecurringSeries([future], '2026-11-12')[0]).toMatchObject({ current: future, active: false })
   })
 })
 

@@ -7,7 +7,7 @@ source-files:
   - src/domain/notifications.ts
   - src/domain/backupReminder.ts
   - src/domain/defaults.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Riferimento: Logica di Dominio
@@ -98,7 +98,9 @@ Gestisce il calcolo temporale delle scadenze e dei cicli periodici.
 - `dueDateIn(r, year, month): IsoDate | null`: calcola la data esatta (`YYYY-MM-DD`) dell'addebito nel mese, adattando il giorno a fine mese (es. se la data di inizio era il 31, in aprile cade il 30 aprile).
 - `nextDueDate(r, from: IsoDate): IsoDate | null`: calcola la data del prossimo addebito a partire dalla data `from` inclusa (`null` se la ricorrenza è terminata).
 - `amountInMonth(r, year, month): Cents`: restituisce `r.amount` se `occursIn` è vero, altrimenti `0`.
-- `splitRecurring(r, from, changes)`: divide una ricorrenza da un addebito in poi. Restituisce `before` (la serie esistente con `endDate` il giorno prima di `from`) e `after` (una nuova serie con i valori di `changes` che parte da `from`). Solleva un errore se `from <= startDate`.
+- `splitRecurring(r, from, changes)`: divide una ricorrenza da un addebito in poi. Restituisce `before` (la serie esistente con `endDate` il giorno prima di `from`) e `after` (una nuova serie con i valori di `changes` che parte da `from`). Solleva un errore se `from <= startDate`. Le due parti ricevono lo stesso `seriesId` (`seriesKey(r)`: il `seriesId` della serie o il suo id).
+- `seriesKey(r)`: la chiave della spesa a cui appartiene una parte (`seriesId ?? id`).
+- `groupRecurringSeries(items, ref)`: raggruppa le parti per spesa e, per ciascuna, sceglie la parte da mostrare alla data `ref` (`current`: quella attiva, altrimenti l'ultima iniziata, altrimenti la prima), con `previous`, `next`, le parti in ordine e `active` (la parte mostrata è attiva a `ref`, quindi conta nel totale mensile).
 - `isActiveInYear(r, year): boolean`: verifica solo che la ricorrenza sia attiva in almeno un giorno dell'anno (inizio non successivo all'anno, fine assente o non precedente).
 
 ---

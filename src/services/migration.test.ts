@@ -177,6 +177,22 @@ describe('parseBackup – schema v2', () => {
     expect(parseBackup(JSON.parse(JSON.stringify(data)))).toEqual(data)
   })
 
+  it('conserva il collegamento tra le parti di una spesa divisa, e lo omette se manca o non è valido', () => {
+    const base = { name: 'Netflix', amount: 1300, frequency: 'monthly', startDate: '2026-01-15', endDate: null, categoryId: 'c', paymentMethodId: 'p' }
+    const data = parseBackup({
+      schemaVersion: 2,
+      recurringExpenses: [
+        { ...base, id: 'a', seriesId: 'a', endDate: '2026-11-14' },
+        { ...base, id: 'b', seriesId: 'a', startDate: '2026-11-15' },
+        { ...base, id: 'c' },
+        { ...base, id: 'd', seriesId: 42 },
+      ],
+    })
+    expect(data.recurringExpenses.map((r) => r.seriesId)).toEqual(['a', 'a', undefined, undefined])
+    expect('seriesId' in data.recurringExpenses[2]!).toBe(false)
+    expect(parseBackup(JSON.parse(JSON.stringify(data)))).toEqual(data)
+  })
+
   it('rifiuta formati sconosciuti', () => {
     expect(() => parseBackup({ foo: 1 })).toThrow(BackupFormatError)
     expect(() => parseBackup('ciao')).toThrow(BackupFormatError)

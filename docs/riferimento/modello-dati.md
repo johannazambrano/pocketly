@@ -8,7 +8,7 @@ source-files:
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -94,11 +94,12 @@ export interface RecurringExpense {
   endDate: IsoDate | null     // Ultimo giorno attivo (incluso), oppure null se a tempo indeterminato
   categoryId: Id
   paymentMethodId: Id
+  seriesId?: Id               // Parti della stessa spesa dopo un cambio «da questo addebito in poi»: l'id della prima parte
   notifications?: NotificationRule[] // Regole di promemoria stile Google Calendar
 }
 ```
 
-`endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data.
+`endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data; le due parti hanno lo stesso `seriesId` (l'id della prima parte), così l'app le mostra come una spesa sola. Il campo è facoltativo e non cambia lo `schemaVersion`: una spesa mai divisa non lo ha. Un dispositivo con una versione dell'app precedente lo scarta quando legge i dati (`parseBackup` tiene solo i campi che conosce): le cifre restano giuste, ma su quel dispositivo le parti tornano righe separate finché non si aggiorna l'app.
 
 ### `Income` (Entrata)
 ```ts

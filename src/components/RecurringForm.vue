@@ -2,7 +2,7 @@
 import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Frequency, NotificationRule, RecurringExpense } from '@/types/models'
-import { FREQUENCIES, nextDueDate, splitRecurring } from '@/domain/recurrence'
+import { FREQUENCIES, nextDueDate, seriesKey, splitRecurring } from '@/domain/recurrence'
 import { useFinanceStore } from '@/stores/finance'
 import { useNotificationsStore } from '@/stores/notifications'
 import { toCents } from '@/utils/money'
@@ -50,13 +50,26 @@ const splitDate = computed(() => {
   const d = props.occurrence ?? nextDueDate(i, finance.today)
   return d && d > i.startDate ? d : null
 })
+/**
+ * Tutte le parti della stessa spesa (cambi «da questo addebito in poi» già fatti), in ordine: la voce aperta è una
+ * di queste. Una spesa mai divisa ha una parte sola.
+ */
+const seriesParts = computed(() => {
+  const i = props.item
+  if (!i) return []
+  const key = seriesKey(i)
+  return finance.data.recurringExpenses.filter((r) => seriesKey(r) === key).sort((a, b) => a.startDate.localeCompare(b.startDate))
+})
+/** Primo addebito della spesa intera: da lì parte "Tutta la serie". */
+const seriesStart = computed(() => seriesParts.value[0]?.startDate ?? props.item?.startDate ?? '')
+
 /** "from": da questo addebito in poi (di serie: i mesi passati restano com'erano); "all": tutta la serie. */
 const scope = ref<'from' | 'all'>('from')
 const splitting = computed(() => !!splitDate.value && scope.value === 'from')
 /** Con "da questo addebito in poi" la nuova serie parte da lì: il campo lo mostra e non si cambia. */
 watch(scope, (s) => {
   if (!props.item) return
-  form.startDate = s === 'from' && splitDate.value ? splitDate.value : props.item.startDate
+  form.startDate = s === 'from' && splitDate.value ? splitDate.value : seriesStart.value
 })
 
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
@@ -123,8 +136,13 @@ function submit() {
       finance.saveRecurring(before)
       finance.saveRecurring(after)
     }
+  } else if (item && splitDate.value && scope.value === 'all' && seriesParts.value.length > 1) {
+    // "Tutta la serie" su una spesa già divisa: torna una serie sola, con i valori nuovi dal primo addebito.
+    for (const p of seriesParts.value) if (p.id !== item.id) finance.deleteRecurring(p.id)
+    finance.saveRecurring({ id: item.id, startDate: form.startDate, ...values })
   } else {
-    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values })
+    // Il collegamento con le altre parti della spesa resta.
+    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values, ...(item?.seriesId ? { seriesId: item.seriesId } : {}) })
   }
   emit('close')
 }
@@ -152,7 +170,7 @@ function submit() {
         <label class="flex min-h-10 cursor-pointer items-start gap-2 py-1">
           <input v-model="scope" type="radio" value="all" class="mt-0.5 accent-accent" />
           <span class="text-sm text-ink">
-            {{ t('recurring.scopeAll', { date: date(item.startDate) }) }}
+            {{ t('recurring.scopeAll', { date: date(seriesStart) }) }}
             <span class="block text-xs text-ink-3">{{ t('recurring.scopeAllHint') }}</span>
           </span>
         </label>
@@ -160,7 +178,9 @@ function submit() {
       <!-- Dal primo addebito (o a serie finita) non c'è niente da tenere: la modifica vale per tutta la serie, e lo si dice. -->
       <p v-else-if="item" class="flex items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs leading-snug text-ink-2">
         <i class="fa-solid fa-circle-info mt-0.5 text-ink-4" aria-hidden="true"></i>
-        {{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}
+        <template v-if="seriesParts.length > 1 && item.endDate">{{ t('recurring.editPeriod', { name: item.name, from: date(item.startDate), to: date(item.endDate) }) }}</template>
+        <template v-else-if="seriesParts.length > 1">{{ t('recurring.editPeriodOpen', { name: item.name, from: date(item.startDate) }) }}</template>
+        <template v-else>{{ t('recurring.editSeries', { name: item.name, date: date(item.startDate) }) }}</template>
       </p>
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
