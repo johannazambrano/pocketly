@@ -5,7 +5,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
 import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
-import { addDays, lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
+import { lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -316,9 +316,6 @@ const categoryEmptyText = computed(() => {
 const incomeFigure = computed(() => ({ label: incomeLabel.value, value: displayIncome.value, hint: incomeHint.value }))
 const expensesFigure = computed(() => ({ label: expensesLabel.value, value: displayExpenses.value, hint: expensesHint.value }))
 
-/** In italiano il mese va in minuscolo ("a novembre"), in inglese resta maiuscolo ("in November"). */
-const monthName = (m: number) => (locale.value === 'it' ? month(m).toLocaleLowerCase('it') : month(m))
-
 /**
  * Le uscite mostrate nel riquadro, divise tra ricorrenti e variabili: le due parti sommano sempre il totale.
  * Se una parte è zero la divisione ripeterebbe il totale, quindi non si mostra.
@@ -345,15 +342,12 @@ const expensesSplit = computed(() => {
   let recurringNote: string | undefined
   let variableNote: string | undefined
   if (!m) {
-    // Sull'anno le ricorrenti hanno solo la loro media; le variabili parlano del mese in corso.
+    // Sull'anno ricorrenti e variabili dicono la loro media mensile: il confronto con il ritmo del mese sta nella
+    // vista del mese, qui parlerebbe di un periodo diverso da quello guardato.
     recurringNote = t('dashboard.splitRecurringAverage', { amount: money(monthlyRecurring) })
     const v = finance.variableThisMonth
     if (v && v.previousAverage !== null) {
-      const verdict = compareToAverage(v.toDate, paceSoFar(v.previousAverage))
-      variableNote = t(`dashboard.splitPaceYear${VERDICT_KEY[verdict]}`, {
-        month: monthName(v.month),
-        average: money(v.previousAverage),
-      })
+      variableNote = t('dashboard.splitRecurringAverage', { amount: money(v.previousAverage) })
     }
   } else if (m.timing !== 'future') {
     // Le ricorrenti del mese a confronto con la loro media mensile (solo a mese finito: a metà mese sarebbero parziali).
@@ -414,16 +408,37 @@ watch(
 )
 
 /**
- * I prossimi addebiti. Sul mese in corso arrivano a fine mese, così l'elenco somma come la nota sotto le uscite ("Più X
- * in arrivo"): il totale non si ripete nel titolo. Sull'anno guardano i prossimi 30 giorni, una finestra diversa da
- * quella della nota (fino a dicembre): il titolo lo dice e non usa la stessa parola, e lì il totale resta.
+ * I prossimi addebiti arrivano alla fine del periodo guardato: a fine mese sul mese in corso, a fine dicembre
+ * sull'anno. È la stessa finestra della nota sotto le uscite ("Più X in arrivo entro …"), così l'elenco somma
+ * esattamente quella cifra e non serve un totale a parte. Sull'anno l'elenco è diviso per mese, con il totale di ogni
+ * mese, e mostra i primi addebiti con «Mostra tutti».
  */
 const upcomingUntil = computed(() =>
-  monthToDate.value ? lastDayOfMonth(finance.selectedYear, finance.selectedMonth as number) : addDays(finance.today, 30),
+  lastDayOfMonth(finance.selectedYear, monthToDate.value ? (finance.selectedMonth as number) : 11),
 )
 const upcoming = computed(() => upcomingCharges(finance.data, finance.today, upcomingUntil.value))
-const upcomingTotal = computed(() => upcoming.value.reduce((acc, c) => acc + c.amount, 0))
-const showUpcomingTotal = computed(() => !monthToDate.value && upcoming.value.length > 0)
+/** Quanti addebiti si vedono sull'anno prima di «Mostra tutti»; se ne restano pochi in più si mostrano tutti. */
+const UPCOMING_FIRST = 6
+const upcomingExpanded = ref(false)
+const upcomingCollapsible = computed(() => !monthToDate.value && upcoming.value.length > UPCOMING_FIRST + 2)
+const upcomingShown = computed(() =>
+  upcomingCollapsible.value && !upcomingExpanded.value ? upcoming.value.slice(0, UPCOMING_FIRST) : upcoming.value,
+)
+/** I gruppi per mese: sul mese in corso uno solo, senza intestazione. Il totale del mese conta anche le righe nascoste. */
+const upcomingGroups = computed(() => {
+  const groups: { month: number; label: string; total: number; charges: UpcomingCharge[] }[] = []
+  for (const c of upcomingShown.value) {
+    const m = parseIsoDate(c.date).month
+    let g = groups.at(-1)
+    if (!g || g.month !== m) {
+      const total = upcoming.value.filter((u) => parseIsoDate(u.date).month === m).reduce((acc, u) => acc + u.amount, 0)
+      g = { month: m, label: month(m), total, charges: [] }
+      groups.push(g)
+    }
+    g.charges.push(c)
+  }
+  return groups
+})
 const upcomingTitle = computed(() =>
   monthToDate.value ? t('dashboard.upcomingMonth', monthArgs.value) : t('dashboard.upcoming'),
 )
@@ -499,64 +514,70 @@ const showUpcoming = computed(
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
-          <div class="flex items-baseline justify-between gap-3">
-            <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-ink-2 focus:outline-none">
-              <i class="fa-solid fa-clock mr-1 text-recurring" aria-hidden="true"></i> {{ upcomingTitle }}
-            </h3>
-            <span v-if="showUpcomingTotal" class="shrink-0 text-sm font-semibold text-ink-2">{{ money(upcomingTotal) }}</span>
-          </div>
+          <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-ink-2 focus:outline-none">
+            <i class="fa-solid fa-clock mr-1 text-recurring" aria-hidden="true"></i> {{ upcomingTitle }}
+          </h3>
           <!--
-            Su schermi larghi due colonne, così l'importo resta vicino al suo nome. La griglia si riempie per colonne
-            (metà delle righe ciascuna): l'ordine per data scende lungo la prima colonna e continua nella seconda,
-            invece di andare a zig-zag.
+            Su schermi larghi due colonne (colonne di testo: l'ordine per data scende lungo la prima e continua nella
+            seconda), così l'importo resta vicino al suo nome. Sull'anno ogni mese ha la sua intestazione con il totale.
           -->
-          <ul
-            v-if="upcoming.length"
-            class="grid gap-x-8 md:grid-flow-col md:grid-cols-2 md:[grid-template-rows:repeat(var(--rows),auto)]"
-            :style="{ '--rows': Math.ceil(upcoming.length / 2) }"
-          >
-            <li
-              v-for="(c, i) in upcoming"
-              :key="c.key"
-              class="border-b border-line-soft last:border-b-0"
-              :class="{ 'md:border-b-0': i === Math.ceil(upcoming.length / 2) - 1 }"
-            >
-              <button
-                type="button"
-                :data-charge-key="c.key"
-                :aria-label="chargeLabel(c)"
-                class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2"
-                @click="editCharge(c)"
+          <div v-if="upcoming.length" class="gap-x-8 md:columns-2">
+            <div v-for="g in upcomingGroups" :key="g.month" class="mb-3 last:mb-0">
+              <h4
+                v-if="!monthToDate"
+                class="flex break-after-avoid items-baseline justify-between gap-3 pb-1 text-xs font-semibold text-ink-4"
               >
-                <!-- Android: l'iniziale in un cerchio, come le liste di Material. -->
-                <span
-                  v-if="appearance.platform === 'android'"
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft-2 text-sm font-medium text-accent-strongest"
-                  aria-hidden="true"
-                >
-                  {{ c.name.charAt(0).toLocaleUpperCase() }}
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block truncate text-sm font-medium">{{ c.name }}</span>
-                  <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
-                  <span class="block text-xs text-ink-4">
-                    {{ date(c.date) }} ·
-                    <span :class="{ 'font-medium text-caution': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
-                    <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
-                  </span>
-                </span>
-                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-ink-2">
-                  {{ money(c.amount) }}
-                  <!-- iPhone: la freccia di una riga che si apre; altrove la matita della modifica. -->
-                  <i
-                    class="fa-solid text-xs text-ink-5"
-                    :class="appearance.platform === 'ios' ? 'fa-chevron-right' : 'fa-pen'"
-                    aria-hidden="true"
-                  ></i>
-                </span>
-              </button>
-            </li>
-          </ul>
+                <span>{{ g.label }}</span><span>{{ money(g.total) }}</span>
+              </h4>
+              <ul>
+                <li v-for="c in g.charges" :key="c.key" class="break-inside-avoid border-b border-line-soft last:border-b-0">
+                  <button
+                    type="button"
+                    :data-charge-key="c.key"
+                    :aria-label="chargeLabel(c)"
+                    class="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-surface-2"
+                    @click="editCharge(c)"
+                  >
+                    <!-- Android: l'iniziale in un cerchio, come le liste di Material. -->
+                    <span
+                      v-if="appearance.platform === 'android'"
+                      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft-2 text-sm font-medium text-accent-strongest"
+                      aria-hidden="true"
+                    >
+                      {{ c.name.charAt(0).toLocaleUpperCase() }}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate text-sm font-medium">{{ c.name }}</span>
+                      <!-- Una scadenza vicina si segnala sul "quando", in ambra, non sull'importo: il rosso resta per il sotto zero. -->
+                      <span class="block text-xs text-ink-4">
+                        {{ date(c.date) }} ·
+                        <span :class="{ 'font-medium text-caution': c.daysLeft <= 3 }">{{ t('dashboard.dueIn', c.daysLeft) }}</span>
+                        <template v-if="c.source === 'oneTime'"> · {{ t('dashboard.upcomingVariable') }}</template>
+                      </span>
+                    </span>
+                    <span class="flex shrink-0 items-center gap-2 text-sm font-semibold text-ink-2">
+                      {{ money(c.amount) }}
+                      <!-- iPhone: la freccia di una riga che si apre; altrove la matita della modifica. -->
+                      <i
+                        class="fa-solid text-xs text-ink-5"
+                        :class="appearance.platform === 'ios' ? 'fa-chevron-right' : 'fa-pen'"
+                        aria-hidden="true"
+                      ></i>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <button
+            v-if="upcomingCollapsible"
+            type="button"
+            class="-ml-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-accent hover:text-accent-strong"
+            :aria-expanded="upcomingExpanded"
+            @click="upcomingExpanded = !upcomingExpanded"
+          >
+            {{ upcomingExpanded ? t('dashboard.upcomingFewer') : t('dashboard.upcomingAll', { n: upcoming.length }) }}
+          </button>
           <p v-else class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
         </div>
 
