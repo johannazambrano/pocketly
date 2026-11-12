@@ -6,7 +6,7 @@ import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore, type PlatformChoice, type ThemeChoice } from '@/stores/appearance'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
-import { downloadOrShareCsv, generateCsv } from '@/services/csvExport'
+import { canShareFiles, executeExport, shareOrDownloadFile, type ExportFormat } from '@/services/exportData'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
 import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
 import { parseBackup } from '@/services/migration'
@@ -90,38 +90,37 @@ async function doExport(mode: ExportMode) {
   }
 }
 
-// --- esportazione CSV -----------------------------------------------------
+// --- esportazione tabellare (Excel / CSV) ----------------------------------
 
-const csvYear = ref<number | 'all'>(finance.selectedYear)
-const csvBusy = ref(false)
+const exportFormat = ref<ExportFormat>('xlsx')
+const exportYear = ref<number | 'all'>(finance.selectedYear)
+const exportBusy = ref(false)
+const shareableFile = canShareFiles()
 
 watch(
   () => finance.selectedYear,
   (y) => {
-    if (csvYear.value !== 'all') {
-      csvYear.value = y
+    if (exportYear.value !== 'all') {
+      exportYear.value = y
     }
   },
 )
 
-async function doExportCsv(mode: 'download' | 'share') {
-  if (csvBusy.value) return
-  csvBusy.value = true
+async function doExportTabular(mode: 'download' | 'share') {
+  if (exportBusy.value) return
+  exportBusy.value = true
   try {
-    const content = generateCsv(finance.data, {
-      year: csvYear.value,
+    const result = await executeExport(exportFormat.value, finance.data, {
+      year: exportYear.value,
       locale: locale.value,
     })
-    const dateStr = finance.today
-    const suffix = csvYear.value === 'all' ? 'tutti-gli-anni' : String(csvYear.value)
-    const filename = `pocketly-movimenti-${suffix}-${dateStr}.csv`
-    const result = await downloadOrShareCsv(content, filename, mode)
-    if (result === 'cancelled') return
-    ui.toast(t(result === 'shared' ? 'csvExport.shared' : 'csvExport.downloaded'))
-  } catch {
-    ui.toast(t('csvExport.error'), 'error')
+    const res = await shareOrDownloadFile(result, mode)
+    ui.toast(t(res === 'shared' ? 'tabularExport.shared' : 'tabularExport.downloaded'))
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') return
+    ui.toast(t('tabularExport.error'), 'error')
   } finally {
-    csvBusy.value = false
+    exportBusy.value = false
   }
 }
 
@@ -318,35 +317,49 @@ function changeLocale(code: LocaleCode) {
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2">
-          <i class="fa-solid fa-file-csv mr-1 text-accent-icon"></i> {{ t('csvExport.title') }}
+          <i class="fa-solid fa-file-excel mr-1 text-accent-icon"></i> {{ t('tabularExport.title') }}
         </h3>
-        <p class="text-xs text-ink-4">{{ t('csvExport.hint') }}</p>
+        <p class="text-xs text-ink-4">{{ t('tabularExport.hint') }}</p>
 
-        <label class="block">
-          <span class="field-label">{{ t('csvExport.period') }}</span>
-          <select v-model="csvYear" class="field">
-            <option :value="finance.selectedYear">{{ t('csvExport.selectedYear', { year: finance.selectedYear }) }}</option>
-            <option value="all">{{ t('csvExport.allYears') }}</option>
-          </select>
-        </label>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label class="block">
+            <span class="field-label">{{ t('tabularExport.format') }}</span>
+            <select v-model="exportFormat" class="field">
+              <option value="xlsx">{{ t('tabularExport.formatXlsx') }}</option>
+              <option value="zip">{{ t('tabularExport.formatZip') }}</option>
+              <option value="onetime">{{ t('tabularExport.formatOnetime') }}</option>
+              <option value="recurring">{{ t('tabularExport.formatRecurring') }}</option>
+              <option value="income">{{ t('tabularExport.formatIncome') }}</option>
+              <option value="loans">{{ t('tabularExport.formatLoans') }}</option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="field-label">{{ t('tabularExport.period') }}</span>
+            <select v-model="exportYear" class="field">
+              <option :value="finance.selectedYear">{{ t('tabularExport.selectedYear', { year: finance.selectedYear }) }}</option>
+              <option value="all">{{ t('tabularExport.allYears') }}</option>
+            </select>
+          </label>
+        </div>
 
         <div class="flex flex-wrap gap-2">
           <button
             type="button"
             class="btn-primary min-w-40 flex-1"
-            :disabled="csvBusy"
-            @click="doExportCsv(shareable ? 'share' : 'download')"
+            :disabled="exportBusy"
+            @click="doExportTabular(shareableFile ? 'share' : 'download')"
           >
-            {{ shareable ? t('csvExport.share') : t('csvExport.download') }}
+            {{ shareableFile ? t('tabularExport.share') : t('tabularExport.download') }}
           </button>
           <button
-            v-if="shareable"
+            v-if="shareableFile"
             type="button"
             class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
-            :disabled="csvBusy"
-            @click="doExportCsv('download')"
+            :disabled="exportBusy"
+            @click="doExportTabular('download')"
           >
-            {{ t('csvExport.download') }}
+            {{ t('tabularExport.download') }}
           </button>
         </div>
       </div>

@@ -7,6 +7,9 @@ source-files:
   - src/services/sync/api.ts
   - src/services/sync/engine.ts
   - src/services/csvExport.ts
+  - src/services/exportData.ts
+  - src/services/xlsx/writer.ts
+  - src/services/xlsx/zipWriter.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
 verified: 2026-11-12
@@ -130,6 +133,13 @@ Nei sistemi di sincronizzazione a due vie, per distinguere un elemento "cancella
 
 ---
 
-## 5. Esportazione Dati CSV / Foglio Elettronico
+## 5. Esportazione Tabellare (Excel .xlsx con Fogli Separati e CSV)
 
-Il modulo [`src/services/csvExport.ts`](../../src/services/csvExport.ts) (`generateCsv`, `downloadOrShareCsv`) genera un file CSV compatibile con Microsoft Excel contenente l'elenco cronologico di tutte le transazioni (spese una tantum, occorrenze delle spese ricorrenti con la rispettiva data di addebito, entrate, prestiti e rimborsi). Include il BOM UTF-8 (`\uFEFF`) iniziale e adatta automaticamente delimitatori e separatori decimali in base alla lingua (`it` usa `;` e `,`, `en` usa `,` e `.`).
+Il servizio [`src/services/exportData.ts`](../../src/services/exportData.ts) organizza i dati esportati esattamente come l'applicazione:
+- **Spese variabili**: elenco delle uscite con date, importi, categorie, metodi, tag e note.
+- **Spese ricorrenti**: elenco delle ricorrenze con frequenza, data inizio, data fine, categoria, metodo e promemoria.
+- **Entrate**: elenco delle entrate con data, importo, categoria, metodo, tag e note.
+- **Prestiti**: elenco dei prestiti concessi/ricevuti, importo, data, rimborsato, residuo e storico rimborsi.
+- **Categorie e metodi**: elenco delle entità ausiliarie con relativi colori.
+
+La generazione delle cartelle di lavoro Excel con più fogli avviene client-side in puro TypeScript tramite [`src/services/xlsx/writer.ts`](../../src/services/xlsx/writer.ts) e [`src/services/xlsx/zipWriter.ts`](../../src/services/xlsx/zipWriter.ts), senza alcuna libreria esterna. È inoltre supportata l'esportazione di archivi ZIP con i singoli file CSV per sezione e di file CSV dedicati a singole sezioni tramite [`src/services/csvExport.ts`](../../src/services/csvExport.ts).
