@@ -29,11 +29,10 @@ const PLATFORM_CHOICES: PlatformChoice[] = ['auto', 'ios', 'android', 'desktop']
 const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
 const { t, locale } = useFormat()
 const version = __APP_VERSION__
-/** «del 12 nov 2026, 15:30 · 8a0e89d»: il numero di versione da solo non cambia tra un rilascio e l'altro. */
-const build = computed(() => {
-  const when = new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(__APP_BUILT_AT__))
-  return __APP_COMMIT__ ? `${when} · ${__APP_COMMIT__}` : when
-})
+/** «del 12 nov 2026, 15:30»: su Vercel la versione resta «0.1», e la build si riconosce dalla data. */
+const build = computed(() =>
+  new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(__APP_BUILT_AT__)),
+)
 
 const persistent = ref<boolean | null>(null)
 onMounted(async () => {
