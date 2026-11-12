@@ -67,6 +67,8 @@ export interface Income {
   date: IsoDate
   categoryId: Id
   paymentMethodId: Id
+  notes?: string
+  tagIds?: Id[]
 }
 
 export type LoanType = 'given' | 'received'

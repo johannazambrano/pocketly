@@ -40,7 +40,7 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/UpdatePrompt.vue
   - src/components/WelcomePanel.vue
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Riferimento: Componenti e Viste
@@ -90,8 +90,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `IncomeView.vue` (`/entrate`)
 - **Ruolo:** Gestione delle entrate dell'anno.
-- **Funzionalità:** Elenco entrate registrate (`finance.incomesOfYear`), somma complessiva in testata, form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
-- *Nota architettonica:* visualizza l'intero anno corrente senza selettore mese individuale (vedi [known-issues.md](../known-issues.md)).
+- **Funzionalità:** Elenco entrate filtrate per mese (`finance.incomesFiltered`) o dell'intero anno, con supporto a [`MonthSelector`](../../src/components/MonthSelector.vue), barra dei filtri per tag, riepilogo raggruppato comprimibile (`tagBreakdown`), banner informativo tag, visualizzazione di note e badge dei tag su ogni riga, e form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
 
 ### `BudgetView.vue` (`/budget`)
 - **Ruolo:** Monitoraggio dei limiti di spesa per categoria.

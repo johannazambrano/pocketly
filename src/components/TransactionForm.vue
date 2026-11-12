@@ -74,7 +74,7 @@ function submit() {
     paymentMethodId: form.paymentMethodId,
   }
   if (props.kind === 'expense') finance.saveOneTime({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
-  else finance.saveIncome(base)
+  else finance.saveIncome({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
   emit('close')
 }
 </script>
@@ -105,11 +105,11 @@ function submit() {
           :label="kind === 'income' ? t('income.creditedTo') : t('common.paymentMethod')"
         />
       </div>
-      <label v-if="kind === 'expense'" class="block">
+      <label class="block">
         <span class="field-label">{{ t('common.notes') }}</span>
         <input v-model="form.notes" maxlength="200" class="field" />
       </label>
-      <TagInput v-if="kind === 'expense'" v-model="form.tagIds" />
+      <TagInput v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton
           :label="t('common.save')"

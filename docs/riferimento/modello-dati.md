@@ -8,7 +8,7 @@ source-files:
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -109,6 +109,8 @@ export interface Income {
   date: IsoDate
   categoryId: Id
   paymentMethodId: Id
+  notes?: string
+  tagIds?: Id[]
 }
 ```
 

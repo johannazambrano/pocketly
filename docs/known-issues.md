@@ -4,26 +4,22 @@ source-files:
   - src/views/BudgetView.vue
   - server/webpush.py
   - src/stores/notifications.ts
-verified: 2026-11-10
+verified: 2026-11-12
 ---
 
 # Stato e Difetti Noti (Known Issues)
 
-*Verificato il 10 Novembre 2026 sul commit `d9f4a6d` (merge `main`).*
+*Verificato il 12 Novembre 2026.*
 
 Questo documento elenca le caratteristiche note, i limiti architetturali e i comportamenti specifici verificati direttamente sul codice sorgente di Pocketly.
 
 ---
 
-## 1. Disallineamento UI Filtro Mese in `IncomeView`
-- **Classificazione:** `Minor Robustness Risk` / Scelta UI
-- **File coinvolti:** [`src/views/IncomeView.vue`](../src/views/IncomeView.vue) vs [`src/views/OneTimeView.vue`](../src/views/OneTimeView.vue)
-- **Descrizione:**
-  In `OneTimeView.vue` è presente il componente `MonthSelector`, che consente all'utente di filtrare le uscite per singolo mese oltre che per l'intero anno. Al contrario, `IncomeView.vue` visualizza direttamente `finance.incomesOfYear` senza componente `MonthSelector`.
-- **Impatto:**
-  L'utente in `IncomeView` vede sempre tutte le entrate dell'anno in corso in una lista unica. Se il numero di entrate nell'anno è elevato, la vista non offre il filtro mensile rapido.
-- **Soluzione futura consigliata:**
-  Introdurre `MonthSelector` anche in `IncomeView.vue` collegandolo a un elenco filtrato (es. `incomesFiltered`), coerentemente con quanto avviene per le spese una tantum.
+## 1. Disallineamento UI Filtro Mese in `IncomeView` [RISOLTO]
+- **Classificazione:** Risolto (12 Novembre 2026)
+- **File coinvolti:** [`src/views/IncomeView.vue`](../src/views/IncomeView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Risoluzione:**
+  `IncomeView.vue` è stata armonizzata con `OneTimeView.vue`: dispone di `MonthSelector` nella testata, mostra `incomesFiltered`, supporta filtri e riepilogo raggruppato per tag (`tagBreakdown`), e visualizza note e badge dei tag per ciascuna entrata.
 
 ---
 

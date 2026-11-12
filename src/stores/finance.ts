@@ -148,6 +148,10 @@ export const useFinanceStore = defineStore('finance', () => {
   const incomesOfYear = computed(() =>
     data.value.incomes.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
   )
+  const incomesFiltered = computed(() => {
+    if (selectedMonth.value === 'all') return incomesOfYear.value
+    return incomesOfYear.value.filter((e) => parseIsoDate(e.date).month === selectedMonth.value)
+  })
   const recurringOfYear = computed(() =>
     data.value.recurringExpenses
       .filter((r) => isActiveInYear(r, selectedYear.value))
@@ -176,7 +180,7 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   function saveIncome(item: WithOptionalId<Income>) {
-    upsert(data.value.incomes, item)
+    upsert(data.value.incomes, { ...item, tagIds: item.tagIds ?? [], notes: item.notes ?? '' })
     selectedYear.value = yearOf(item.date)
   }
 
@@ -305,7 +309,10 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function tagUsage(kind: TagKind, id: Id): number {
     if (kind === 'tags') {
-      return data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length
+      return (
+        data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length +
+        data.value.incomes.filter((x) => x.tagIds?.includes(id)).length
+      )
     }
     const field = REF_FIELD[kind]
     const d = data.value
@@ -316,7 +323,7 @@ export const useFinanceStore = defineStore('finance', () => {
   function deleteTag(kind: TagKind, id: Id, reassignTo?: Id) {
     const d = data.value
     if (kind === 'tags') {
-      for (const x of d.oneTimeExpenses) {
+      for (const x of [...d.oneTimeExpenses, ...d.incomes]) {
         if (x.tagIds?.includes(id)) {
           x.tagIds = x.tagIds.filter((t) => t !== id)
           if (reassignTo && !x.tagIds.includes(reassignTo)) {
@@ -350,6 +357,7 @@ export const useFinanceStore = defineStore('finance', () => {
     isMonthFiltered,
     monthSummaryData,
     oneTimeFiltered,
+    incomesFiltered,
     init,
     flush,
     replaceAll,

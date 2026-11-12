@@ -150,6 +150,8 @@ export function migrateV1(raw: Obj): FinanceData {
         date: date(e.date, firstOfYear),
         categoryId: categories.resolve(e.category, 'Other'),
         paymentMethodId: payments.resolve(e.payment, 'Other'),
+        notes: str(e.notes),
+        tagIds: [],
       })
     }
 
@@ -271,6 +273,8 @@ function normalizeV2(raw: Obj): FinanceData {
         date: o.date,
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
+        notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
       }
     }),
     loans: valid<Loan>(raw.loans, (o) => {

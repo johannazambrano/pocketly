@@ -186,17 +186,23 @@ describe('parseBackup – schema v2', () => {
     const withoutTags = parseBackup({
       schemaVersion: 2,
       oneTimeExpenses: [{ id: '1', name: 'Spesa', amount: 500, date: '2026-01-01', categoryId: 'c1', paymentMethodId: 'p1' }],
+      incomes: [{ id: 'inc1', name: 'Stipendio', amount: 200000, date: '2026-01-27', categoryId: 'c1', paymentMethodId: 'p1' }],
     })
     expect(withoutTags.tags).toEqual([])
     expect(withoutTags.oneTimeExpenses[0]!.tagIds).toEqual([])
+    expect(withoutTags.incomes[0]!.tagIds).toEqual([])
+    expect(withoutTags.incomes[0]!.notes).toBe('')
 
     const withTags = parseBackup({
       schemaVersion: 2,
       tags: [{ id: 't1', name: 'Vacanza', color: '#123456' }],
       oneTimeExpenses: [{ id: '1', name: 'Hotel', amount: 15000, date: '2026-07-01', categoryId: 'c1', paymentMethodId: 'p1', tagIds: ['t1'] }],
+      incomes: [{ id: 'inc2', name: 'Premio', amount: 50000, date: '2026-07-27', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Extra', tagIds: ['t1'] }],
     })
     expect(withTags.tags).toEqual([{ id: 't1', name: 'Vacanza', color: '#123456' }])
     expect(withTags.oneTimeExpenses[0]!.tagIds).toEqual(['t1'])
+    expect(withTags.incomes[0]!.tagIds).toEqual(['t1'])
+    expect(withTags.incomes[0]!.notes).toBe('Extra')
   })
 })
 

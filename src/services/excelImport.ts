@@ -259,7 +259,10 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
         date,
         categoryId: categories.add(clean(r.Categoria) || 'Other'),
         paymentMethodId: payments.add(clean(r['Prelievo su']) || 'Other'),
+        notes: clean(r.Note),
+        tagIds: [],
       })
+      if (clean(r.Tag)) warn('tagIgnored', { row: n, tag: clean(r.Tag) })
     }
   }
 

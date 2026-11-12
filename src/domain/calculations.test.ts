@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -433,13 +433,13 @@ describe('monthSummary', () => {
   })
 })
 
-describe('oneTimeTagBreakdown', () => {
-  it('restituisce un array vuoto se non ci sono spese o nessuna ha tag', () => {
-    expect(oneTimeTagBreakdown([])).toEqual([])
+describe('tagBreakdown / oneTimeTagBreakdown', () => {
+  it('restituisce un array vuoto se non ci sono elementi o nessuno ha tag', () => {
+    expect(tagBreakdown([])).toEqual([])
     expect(
-      oneTimeTagBreakdown([
-        { id: '1', name: 'A', amount: 100, date: '2026-01-01', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
-        { id: '2', name: 'B', amount: 200, date: '2026-01-02', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: [] },
+      tagBreakdown([
+        { amount: 100 },
+        { amount: 200, tagIds: [] },
       ]),
     ).toEqual([])
   })
@@ -452,11 +452,24 @@ describe('oneTimeTagBreakdown', () => {
       { id: '4', name: 'Regalo', amount: 5000, date: '2026-07-20', categoryId: 'c3', paymentMethodId: 'p1', notes: '', tagIds: ['regali'] },
     ]
 
-    const breakdown = oneTimeTagBreakdown(expenses)
+    const breakdown = tagBreakdown(expenses)
     expect(breakdown).toEqual([
       { id: 'vacanza', total: 108000, count: 3 },
       { id: 'alloggio', total: 65000, count: 1 },
       { id: 'regali', total: 5000, count: 1 },
+    ])
+    // Verifica retrocompatibilità
+    expect(oneTimeTagBreakdown(expenses)).toEqual(breakdown)
+  })
+
+  it('funziona anche con entrate dotate di tag', () => {
+    const incomes = [
+      { id: 'i1', name: 'Bonus', amount: 100000, date: '2026-07-15', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['lavoro', 'premio'] },
+      { id: 'i2', name: 'Stipendio', amount: 200000, date: '2026-07-27', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['lavoro'] },
+    ]
+    expect(tagBreakdown(incomes)).toEqual([
+      { id: 'lavoro', total: 300000, count: 2 },
+      { id: 'premio', total: 100000, count: 1 },
     ])
   })
 })

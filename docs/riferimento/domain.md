@@ -7,7 +7,7 @@ source-files:
   - src/domain/notifications.ts
   - src/domain/backupReminder.ts
   - src/domain/defaults.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Riferimento: Logica di Dominio
@@ -85,7 +85,7 @@ Le voci con data `<= today` sono escluse poiché già conteggiate nel consuntivo
 ### Altre funzioni
 - `loanStatus(loan)`: restituisce `{ repaid, remaining }`, cioè la somma dei rimborsi e il residuo del prestito.
 - `availableYears(data, currentYear)`: anni per cui esistono dati (spese, entrate, prestiti, simulazioni, inizio delle ricorrenze) più l'anno corrente, in ordine crescente.
-- `oneTimeTagBreakdown(expenses)`: totale e conteggio delle spese una tantum per ciascun tag, ordinati per importo decrescente.
+- `tagBreakdown(items)` (e alias `oneTimeTagBreakdown`): totale e conteggio delle voci (spese una tantum o entrate) per ciascun tag presente, ordinati per importo decrescente.
 
 ---
 

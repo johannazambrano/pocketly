@@ -1,4 +1,4 @@
-import type { Cents, FinanceData, Id, Loan, OneTimeExpense } from '@/types/models'
+import type { Cents, FinanceData, Id, Loan } from '@/types/models'
 import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
@@ -536,15 +536,20 @@ export interface TagSummaryItem {
   count: number
 }
 
+export interface HasTagsAndAmount {
+  amount: Cents
+  tagIds?: Id[]
+}
+
 /**
- * Calcola il totale e il conteggio delle spese una tantum raggruppate per ciascun tag presente.
+ * Calcola il totale e il conteggio delle voci raggruppate per ciascun tag presente.
  * Restituisce i tag ordinati per importo decrescente.
  */
-export function oneTimeTagBreakdown(expenses: OneTimeExpense[]): TagSummaryItem[] {
+export function tagBreakdown(items: HasTagsAndAmount[]): TagSummaryItem[] {
   const totals = new Map<Id, Cents>()
   const counts = new Map<Id, number>()
 
-  for (const e of expenses) {
+  for (const e of items) {
     if (!e.tagIds || e.tagIds.length === 0) continue
     for (const tagId of e.tagIds) {
       totals.set(tagId, (totals.get(tagId) ?? 0) + e.amount)
@@ -556,4 +561,7 @@ export function oneTimeTagBreakdown(expenses: OneTimeExpense[]): TagSummaryItem[
     .map(([id, total]) => ({ id, total, count: counts.get(id) ?? 0 }))
     .sort((a, b) => b.total - a.total)
 }
+
+/** Per retrocompatibilità */
+export const oneTimeTagBreakdown = tagBreakdown
 
