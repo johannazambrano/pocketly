@@ -7,6 +7,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
 import { searchFinance, type SearchResult } from '@/domain/search'
+import { isActiveInYear } from '@/domain/recurrence'
 import BaseModal from './BaseModal.vue'
 import TagBadge from './TagBadge.vue'
 
@@ -38,26 +39,37 @@ watch(
 )
 
 function selectResult(item: SearchResult) {
-  if (item.year !== undefined) {
-    finance.selectedYear = item.year
+  if (item.kind === 'onetime' || item.kind === 'income') {
+    if (item.year !== undefined) {
+      finance.selectedYear = item.year
+    }
+    if (item.month !== undefined) {
+      finance.selectedMonth = item.month
+    }
+  } else if (item.kind === 'recurring') {
+    // Sposta l'anno solo se la spesa ricorrente non è attiva nell'anno già selezionato
+    const rec = finance.data.recurringExpenses.find((r) => r.id === item.id)
+    if (rec && !isActiveInYear(rec, finance.selectedYear) && item.year !== undefined) {
+      finance.selectedYear = item.year
+    }
   }
-  if (item.month !== undefined) {
-    finance.selectedMonth = item.month
-  }
+  // Per i prestiti, LoansView mostra tutti i prestiti senza filtro anno/mese: non alteriamo selectedYear/Month
+
   ui.closeSearch()
+  ui.quickAddOpen = false
 
   switch (item.kind) {
     case 'onetime':
-      void router.push('/variabili')
+      void router.push({ path: '/variabili', query: { highlight: item.id } })
       break
     case 'recurring':
-      void router.push('/ricorrenti')
+      void router.push({ path: '/ricorrenti', query: { highlight: item.id } })
       break
     case 'income':
-      void router.push('/entrate')
+      void router.push({ path: '/entrate', query: { highlight: item.id } })
       break
     case 'loan':
-      void router.push('/prestiti')
+      void router.push({ path: '/prestiti', query: { highlight: item.id } })
       break
   }
 }
@@ -76,6 +88,7 @@ function selectResult(item: SearchResult) {
           :placeholder="t('search.placeholder')"
           class="field pl-9 pr-9"
           maxlength="100"
+          @keydown.enter="results.length > 0 && selectResult(results[0]!)"
         />
         <button
           v-if="query"

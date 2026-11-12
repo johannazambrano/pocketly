@@ -47,15 +47,21 @@ const hasTags = computed(() => finance.data.categories.length > 0 && finance.dat
 const frequentList = computed(() => {
   if (props.item || isDuplicating.value) return []
   const items = props.kind === 'expense' ? finance.data.oneTimeExpenses : finance.data.incomes
-  return frequentTemplates(items, 5)
+  return frequentTemplates(items, 5).filter(
+    (tpl) =>
+      finance.data.categories.some((c) => c.id === tpl.categoryId) &&
+      finance.data.paymentMethods.some((p) => p.id === tpl.paymentMethodId),
+  )
 })
 
 function applyTemplate(tpl: FrequentTemplate) {
   form.name = tpl.name
   form.amount = amountInput(tpl.amount)
-  form.categoryId = tpl.categoryId
-  form.paymentMethodId = tpl.paymentMethodId
-  form.tagIds = tpl.tagIds ? [...tpl.tagIds] : []
+  const catExists = finance.data.categories.some((c) => c.id === tpl.categoryId)
+  form.categoryId = catExists ? tpl.categoryId : (finance.data.categories[0]?.id ?? '')
+  const payExists = finance.data.paymentMethods.some((p) => p.id === tpl.paymentMethodId)
+  form.paymentMethodId = payExists ? tpl.paymentMethodId : (finance.data.paymentMethods[0]?.id ?? '')
+  form.tagIds = tpl.tagIds ? tpl.tagIds.filter((id) => finance.data.tags.some((t) => t.id === id)) : []
   form.notes = tpl.notes ?? ''
   form.date = todayIso()
 }
@@ -73,14 +79,18 @@ watch(
     isDuplicating.value = false
     const i = props.item
     error.value = ''
+    const catExists = finance.data.categories.some((c) => c.id === i?.categoryId)
+    const payExists = finance.data.paymentMethods.some((p) => p.id === i?.paymentMethodId)
     Object.assign(form, {
       name: i?.name ?? '',
       amount: i ? amountInput(i.amount) : '',
       date: i?.date ?? todayIso(),
-      categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
-      paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
-      notes: i && 'notes' in i ? i.notes : '',
-      tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds) ? [...i.tagIds] : [],
+      categoryId: catExists ? i!.categoryId : (finance.data.categories[0]?.id ?? ''),
+      paymentMethodId: payExists ? i!.paymentMethodId : (finance.data.paymentMethods[0]?.id ?? ''),
+      notes: i && 'notes' in i && typeof i.notes === 'string' ? i.notes : '',
+      tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds)
+        ? i.tagIds.filter((id) => finance.data.tags.some((t) => t.id === id))
+        : [],
     })
     resetDirty()
   },

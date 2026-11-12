@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useBackupStore } from '@/stores/backup'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -94,6 +94,15 @@ async function doExport(mode: ExportMode) {
 
 const csvYear = ref<number | 'all'>(finance.selectedYear)
 const csvBusy = ref(false)
+
+watch(
+  () => finance.selectedYear,
+  (y) => {
+    if (csvYear.value !== 'all') {
+      csvYear.value = y
+    }
+  },
+)
 
 async function doExportCsv(mode: 'download' | 'share') {
   if (csvBusy.value) return

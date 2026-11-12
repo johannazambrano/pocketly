@@ -147,4 +147,61 @@ describe('searchFinance', () => {
       expect(withDate[i]!.date! >= withDate[i + 1]!.date!).toBe(true)
     }
   })
+
+  it('gestisce la ricerca insensibile agli accenti / diacritici', () => {
+    // Aggiungiamo una spesa con accento
+    const dataWithAccents = createSampleData()
+    dataWithAccents.oneTimeExpenses.push({
+      id: 'o-caffe',
+      name: 'Caffè al bar',
+      amount: 130,
+      date: '2026-06-25',
+      categoryId: 'cat-food',
+      paymentMethodId: 'pm-card',
+      notes: 'Espresso',
+    })
+
+    // Cerca senza accento
+    const results = searchFinance(dataWithAccents, 'caffe')
+    expect(results).toHaveLength(1)
+    expect(results[0]?.id).toBe('o-caffe')
+
+    // Cerca con accento
+    const resultsWithAccent = searchFinance(dataWithAccents, 'caffè')
+    expect(resultsWithAccent).toHaveLength(1)
+    expect(resultsWithAccent[0]?.id).toBe('o-caffe')
+  })
+
+  it('trova voci per importo (intero, decimale con virgola o punto)', () => {
+    // o1 ha importo 4500 (45.00 euro)
+    expect(searchFinance(data, '45').some((r) => r.id === 'o1')).toBe(true)
+    expect(searchFinance(data, '45,00').some((r) => r.id === 'o1')).toBe(true)
+    expect(searchFinance(data, '45.00').some((r) => r.id === 'o1')).toBe(true)
+
+    // Ricerca combinata nome + importo
+    const combined = searchFinance(data, 'cena 45')
+    expect(combined).toHaveLength(1)
+    expect(combined[0]?.id).toBe('o1')
+  })
+
+  it('trova voci per data o anno', () => {
+    const results2026 = searchFinance(data, '2026-06-15')
+    expect(results2026).toHaveLength(1)
+    expect(results2026[0]?.id).toBe('o1')
+  })
+
+  it('trova prestiti per tipologia e rimborsi associati', () => {
+    const dataWithRepayment = createSampleData()
+    dataWithRepayment.loans[0]!.repayments.push({
+      id: 'rep-1',
+      amount: 5000,
+      date: '2026-06-01',
+    })
+
+    const givenResults = searchFinance(dataWithRepayment, 'prestito concesso')
+    expect(givenResults.some((r) => r.id === 'l1')).toBe(true)
+
+    const repResults = searchFinance(dataWithRepayment, '50')
+    expect(repResults.some((r) => r.id === 'l1')).toBe(true)
+  })
 })

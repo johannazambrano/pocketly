@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import type { RecurringExpense } from '@/types/models'
 import { monthlyEquivalent } from '@/domain/recurrence'
 import { formatRulesSummary } from '@/domain/notifications'
@@ -15,10 +16,25 @@ import RecurringForm from '@/components/RecurringForm.vue'
 const finance = useFinanceStore()
 const { t, money, date } = useFormat()
 const confirmDelete = useConfirmDelete()
+const route = useRoute()
 
 const formOpen = ref(false)
 const editing = ref<RecurringExpense | null>(null)
 const monthlyTotal = computed(() => Math.round(finance.recurringOfYear.reduce((acc, r) => acc + monthlyEquivalent(r), 0)))
+const highlightedId = ref<string | null>(null)
+
+watch(
+  () => route.query.highlight,
+  (id) => {
+    if (!id || typeof id !== 'string') return
+    highlightedId.value = id
+    nextTick(() => {
+      const el = document.getElementById(`entry-${id}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  },
+  { immediate: true },
+)
 
 function open(item: RecurringExpense | null) {
   editing.value = item
@@ -51,10 +67,12 @@ function period(r: RecurringExpense) {
     >
       <EntryRow
         v-for="r in finance.recurringOfYear"
+        :id="`entry-${r.id}`"
         :key="r.id"
         :name="r.name"
         :amount="money(r.amount)"
         :subtitle="period(r)"
+        :class="{ 'ring-2 ring-accent rounded-xl bg-accent-soft/30 transition-all duration-500': highlightedId === r.id }"
         @edit="open(r)"
         @delete="confirmDelete(r.name, () => finance.deleteRecurring(r.id))"
       >

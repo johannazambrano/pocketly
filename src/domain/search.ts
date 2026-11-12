@@ -19,24 +19,39 @@ export interface SearchResult {
   month?: number
 }
 
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function amountStrings(cents: Cents): string {
+  const euro = (cents / 100).toFixed(2)
+  const euroComma = euro.replace('.', ',')
+  const euroInt = String(Math.floor(cents / 100))
+  return `${euro} ${euroComma} ${euroInt}`
+}
+
 /**
  * Cerca tra spese una tantum, ricorrenti, entrate e prestiti.
  * La query viene divisa in token: tutti i token devono essere presenti nel testo della voce
- * (nome, note, categoria, metodo di pagamento o tag).
+ * (nome, note, categoria, metodo di pagamento, tag, importo o data).
+ * Supporta la ricerca insensibile a maiuscole e accenti (es. 'caffe' trova 'Caffè').
  */
 export function searchFinance(data: FinanceData, query: string): SearchResult[] {
-  const q = query.trim().toLowerCase()
+  const q = query.trim()
   if (!q) return []
 
-  const tokens = q.split(/\s+/).filter(Boolean)
+  const tokens = q.split(/\s+/).filter(Boolean).map(normalize)
   if (tokens.length === 0) return []
 
-  const catMap = new Map(data.categories.map((c) => [c.id, c.name.toLowerCase()]))
-  const payMap = new Map(data.paymentMethods.map((p) => [p.id, p.name.toLowerCase()]))
-  const tagMap = new Map(data.tags.map((t) => [t.id, t.name.toLowerCase()]))
+  const catMap = new Map(data.categories.map((c) => [c.id, c.name]))
+  const payMap = new Map(data.paymentMethods.map((p) => [p.id, p.name]))
+  const tagMap = new Map(data.tags.map((t) => [t.id, t.name]))
 
   function matches(searchableText: string): boolean {
-    const text = searchableText.toLowerCase()
+    const text = normalize(searchableText)
     return tokens.every((token) => text.includes(token))
   }
 
@@ -47,7 +62,7 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
     const catName = catMap.get(e.categoryId) ?? ''
     const payName = payMap.get(e.paymentMethodId) ?? ''
     const tagNames = (e.tagIds ?? []).map((id) => tagMap.get(id) ?? '').join(' ')
-    const searchable = `${e.name} ${e.notes ?? ''} ${catName} ${payName} ${tagNames}`
+    const searchable = `${e.name} ${e.notes ?? ''} ${catName} ${payName} ${tagNames} ${amountStrings(e.amount)} ${e.date}`
 
     if (matches(searchable)) {
       const { year, month } = parseIsoDate(e.date)
@@ -71,7 +86,7 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
   for (const r of data.recurringExpenses) {
     const catName = catMap.get(r.categoryId) ?? ''
     const payName = payMap.get(r.paymentMethodId) ?? ''
-    const searchable = `${r.name} ${catName} ${payName}`
+    const searchable = `${r.name} ${catName} ${payName} ${amountStrings(r.amount)} ${r.startDate} ${r.endDate ?? ''}`
 
     if (matches(searchable)) {
       const { year } = parseIsoDate(r.startDate)
@@ -93,7 +108,7 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
     const catName = catMap.get(i.categoryId) ?? ''
     const payName = payMap.get(i.paymentMethodId) ?? ''
     const tagNames = (i.tagIds ?? []).map((id) => tagMap.get(id) ?? '').join(' ')
-    const searchable = `${i.name} ${i.notes ?? ''} ${catName} ${payName} ${tagNames}`
+    const searchable = `${i.name} ${i.notes ?? ''} ${catName} ${payName} ${tagNames} ${amountStrings(i.amount)} ${i.date}`
 
     if (matches(searchable)) {
       const { year, month } = parseIsoDate(i.date)
@@ -113,9 +128,11 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
     }
   }
 
-  // Prestiti
+  // Prestiti e rimborsi
   for (const l of data.loans) {
-    const searchable = `${l.name} ${l.notes ?? ''}`
+    const typeKeywords = l.type === 'given' ? 'prestito concesso dato credito' : 'prestito ricevuto preso debito'
+    const repaymentsText = l.repayments.map((rep) => `${rep.date} ${amountStrings(rep.amount)}`).join(' ')
+    const searchable = `${l.name} ${l.notes ?? ''} ${amountStrings(l.amount)} ${l.date} ${typeKeywords} ${repaymentsText}`
 
     if (matches(searchable)) {
       const { year, month } = parseIsoDate(l.date)

@@ -34,7 +34,11 @@ export function generateCsv(data: FinanceData, options: CsvExportOptions = {}): 
   const tagMap = new Map(data.tags.map((t) => [t.id, t.name]))
 
   const currentYear = new Date().getFullYear()
-  const years = options.year && options.year !== 'all' ? [options.year] : availableYears(data, currentYear)
+  const rawYears = availableYears(data, currentYear)
+  const minYear = rawYears.length ? Math.min(...rawYears) : currentYear
+  const maxYear = rawYears.length ? Math.max(...rawYears) : currentYear
+  const allYearsSpan = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i)
+  const years = options.year && options.year !== 'all' ? [options.year] : allYearsSpan
 
   interface CsvRow {
     date: string

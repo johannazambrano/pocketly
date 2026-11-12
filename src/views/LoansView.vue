@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
@@ -21,6 +22,21 @@ const formOpen = ref(false)
 const editing = ref<Loan | null>(null)
 const repayingLoan = ref<Loan | null>(null)
 const repaymentOpen = ref(false)
+const route = useRoute()
+const highlightedId = ref<string | null>(null)
+
+watch(
+  () => route.query.highlight,
+  (id) => {
+    if (!id || typeof id !== 'string') return
+    highlightedId.value = id
+    nextTick(() => {
+      const el = document.getElementById(`loan-${id}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  },
+  { immediate: true },
+)
 
 function open(item: Loan | null) {
   editing.value = item
@@ -56,7 +72,13 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
     <PageHeader :title="t('loans.title')" add-label="" @add="open(null)" />
 
     <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-      <div v-for="loan in finance.loans" :key="loan.id" class="card space-y-2 text-xs">
+      <div
+        v-for="loan in finance.loans"
+        :id="`loan-${loan.id}`"
+        :key="loan.id"
+        class="card space-y-2 text-xs transition-all duration-500"
+        :class="{ 'ring-2 ring-accent bg-accent-soft/30': highlightedId === loan.id }"
+      >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
             <div class="truncate text-sm font-bold text-ink">{{ loan.name }}</div>

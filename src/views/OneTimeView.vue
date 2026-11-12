@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import type { OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
@@ -16,11 +17,33 @@ import MonthSelector from '@/components/MonthSelector.vue'
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
 const confirmDelete = useConfirmDelete()
+const route = useRoute()
 
 const formOpen = ref(false)
 const editing = ref<OneTimeExpense | null>(null)
 const selectedTagId = ref<string | null>(null)
 const showBreakdown = ref(false)
+const highlightedId = ref<string | null>(null)
+
+watch(
+  () => route.query.highlight,
+  (id) => {
+    if (!id || typeof id !== 'string') return
+    highlightedId.value = id
+    // Se un filtro tag attivo nasconderebbe l'elemento evidenziato, rimuoviamo il filtro tag
+    if (selectedTagId.value) {
+      const exp = finance.oneTimeFiltered.find((e) => e.id === id)
+      if (!exp || !exp.tagIds?.includes(selectedTagId.value)) {
+        selectedTagId.value = null
+      }
+    }
+    nextTick(() => {
+      const el = document.getElementById(`entry-${id}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  },
+  { immediate: true },
+)
 
 const selectedTag = computed(() => (selectedTagId.value ? finance.tag('tags', selectedTagId.value) : null))
 
@@ -270,11 +293,13 @@ function remove() {
     >
       <EntryRow
         v-for="e in displayedExpenses"
+        :id="`entry-${e.id}`"
         :key="e.id"
         :name="e.name"
         :amount="money(e.amount)"
         :subtitle="e.notes"
         duplicable
+        :class="{ 'ring-2 ring-accent rounded-xl bg-accent-soft/30 transition-all duration-500': highlightedId === e.id }"
         @edit="open(e)"
         @duplicate="duplicate(e)"
         @delete="confirmDelete(e.name, () => finance.deleteOneTime(e.id))"
