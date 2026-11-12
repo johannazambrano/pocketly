@@ -192,6 +192,8 @@ export default {
     until: 'fino al {date}',
     editPeriod: 'Le modifiche valgono solo per il periodo di «{name}» dal {from} al {to}. Gli altri periodi sono nello Storico.',
     editPeriodOpen: 'Le modifiche valgono per il periodo di «{name}» dal {from} in poi. Quelli prima sono nello Storico.',
+    moveHint: 'Puoi spostare il giorno dell’addebito tra il {min} e il {max}: da lì in poi gli addebiti cadono in quel giorno.',
+    moveOutOfRange: 'Scegli un primo addebito tra il {min} e il {max}: così non si salta e non si raddoppia nessun addebito.',
     history: 'Storico',
     historyOf: 'Storico di «{name}»',
     historyHint: 'Ogni riga è un periodo con lo stesso importo: nasce quando modifichi la spesa «da questo addebito in poi». Tocca un periodo per correggerlo.',

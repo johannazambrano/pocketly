@@ -194,6 +194,8 @@ const en: typeof it = {
     until: 'until {date}',
     editPeriod: 'Changes apply only to the period of “{name}” from {from} to {to}. The other periods are in the History.',
     editPeriodOpen: 'Changes apply to the period of “{name}” from {from} on. Earlier ones are in the History.',
+    moveHint: 'You can move the charge to any day from {min} to {max}: later charges fall on that day.',
+    moveOutOfRange: 'Pick a first charge from {min} to {max}, so no charge is skipped or doubled.',
     history: 'History',
     historyOf: 'History of “{name}”',
     historyHint: 'Each row is a period with the same amount: it starts when you change the expense “from this charge on”. Tap a period to correct it.',

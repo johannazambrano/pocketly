@@ -79,18 +79,46 @@ export function nextDueDate(r: RecurringExpense, from: IsoDate): IsoDate | null 
  * `from` deve essere una data di addebito successiva al primo: altrimenti non c'è niente da tenere e si modifica la serie
  * intera. Il giorno degli addebiti della nuova serie è quello di `from` (dopo un 31 accorciato a 30 resta il 30).
  * Le due parti restano collegate dallo stesso `seriesId` (quello della serie, o l'id della prima parte).
+ *
+ * `start` sposta l'addebito `from` a un altro giorno (es. dal 14 al 15): la nuova serie parte da `start` e prende quel
+ * giorno, la vecchia si ferma il giorno prima del primo dei due. Così nel mese del cambio c'è un addebito solo. `start`
+ * deve stare in `moveWindow(r, from)`, altrimenti si salterebbe o si raddoppierebbe un addebito.
  */
 export function splitRecurring(
   r: RecurringExpense,
   from: IsoDate,
   changes: Omit<RecurringExpense, 'id' | 'startDate' | 'seriesId'>,
+  start: IsoDate = from,
 ): { before: RecurringExpense; after: Omit<RecurringExpense, 'id'> } {
   if (from <= r.startDate) throw new Error('splitRecurring: la data deve essere successiva al primo addebito')
+  const window = moveWindow(r, from)
+  if (start < window.min || start > window.max) throw new Error('splitRecurring: il nuovo primo addebito salta o raddoppia un addebito')
   const seriesId = seriesKey(r)
   return {
-    before: { ...r, seriesId, endDate: addDays(from, -1) },
-    after: { ...changes, startDate: from, seriesId },
+    before: { ...r, seriesId, endDate: addDays(start < from ? start : from, -1) },
+    after: { ...changes, startDate: start, seriesId },
   }
+}
+
+/** Data dell'addebito `steps` periodi dopo (o prima, se negativo) il mese di `date`, con il giorno della serie. */
+function shiftDue(r: RecurringExpense, date: IsoDate, steps: number): IsoDate {
+  const d = parseIsoDate(date)
+  const abs = monthIndex(d.year, d.month) + steps * FREQUENCY_MONTHS[r.frequency]
+  const year = Math.floor(abs / 12)
+  const month = abs % 12
+  const day = Math.min(parseIsoDate(r.startDate).day, new Date(year, month + 1, 0).getDate())
+  return toIsoDate(year, month, day)
+}
+
+/**
+ * Dove si può spostare l'addebito `from` senza saltarne o raddoppiarne uno: dal giorno dopo l'addebito precedente al
+ * giorno prima del successivo (o alla fine della serie). Per una spesa mensile del 14 spostata a novembre: dal 15/10
+ * al 13/12.
+ */
+export function moveWindow(r: RecurringExpense, from: IsoDate): { min: IsoDate; max: IsoDate } {
+  const min = addDays(shiftDue(r, from, -1), 1)
+  const beforeNext = addDays(shiftDue(r, from, 1), -1)
+  return { min, max: r.endDate && r.endDate < beforeNext ? r.endDate : beforeNext }
 }
 
 /** Chiave della spesa a cui appartiene una parte: il `seriesId`, o l'id stesso per una spesa mai divisa. */

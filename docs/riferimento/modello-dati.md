@@ -99,7 +99,7 @@ export interface RecurringExpense {
 }
 ```
 
-`endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data; le due parti hanno lo stesso `seriesId` (l'id della prima parte), così l'app le mostra come una spesa sola. Il campo è facoltativo e non cambia lo `schemaVersion`: una spesa mai divisa non lo ha. Un dispositivo con una versione dell'app precedente lo scarta quando legge i dati (`parseBackup` tiene solo i campi che conosce): le cifre restano giuste, ma su quel dispositivo le parti tornano righe separate finché non si aggiorna l'app.
+`endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data (o dal giorno scelto, se l'addebito si sposta: allora la vecchia si ferma il giorno prima della prima delle due date); le due parti hanno lo stesso `seriesId` (l'id della prima parte), così l'app le mostra come una spesa sola. Il campo è facoltativo e non cambia lo `schemaVersion`: una spesa mai divisa non lo ha. Un dispositivo con una versione dell'app precedente lo scarta quando legge i dati (`parseBackup` tiene solo i campi che conosce): le cifre restano giuste, ma su quel dispositivo le parti tornano righe separate finché non si aggiorna l'app.
 
 ### `Income` (Entrata)
 ```ts
