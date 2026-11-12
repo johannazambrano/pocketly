@@ -184,7 +184,7 @@ Su Vercel il server non c'è: lì la sincronizzazione non compare.
 cd /opt/pocketly && deploy/proxmox/update.sh
 ```
 
-Non serve riavviare nginx: `update.sh` rileva se `nginx/pocketly.conf` è cambiato, aggiorna `/etc/nginx/sites-available/pocketly` e ricarica nginx automaticamente. Chi ha l'app aperta vede la richiesta di aggiornamento. Se il server di sincronizzazione è installato, `update.sh` lo riavvia con il codice nuovo (lancia `update.sh` come root per consentire l'allineamento di nginx e il riavvio del servizio).
+Non serve riavviare nginx: se `nginx/pocketly.conf` è cambiato, `update.sh` aggiorna `/etc/nginx/sites-available/pocketly` (la versione precedente resta come `.bak`) e ricarica nginx; se la nuova configurazione ha errori, rimette la precedente e lo scrive. Chi ha l'app aperta vede la richiesta di aggiornamento. Se il server di sincronizzazione è installato, `update.sh` lo riavvia con il codice nuovo (lancia `update.sh` come root per consentire l'allineamento di nginx e il riavvio del servizio).
 
 ## Se qualcosa non funziona
 
@@ -198,7 +198,7 @@ Non serve riavviare nginx: `update.sh` rileva se `nginx/pocketly.conf` è cambia
 | `git pull` o `update.sh` chiede credenziali | Repository privato: serve un token (punto 3). |
 | In *Impostazioni* la sincronizzazione dice che funziona solo dall'indirizzo di casa | Il server non risponde: `systemctl status pocketly-sync` e `curl -ks https://localhost/api/health`. |
 | La sincronizzazione dice "chiave del server non corretta" | Ricopia la chiave da `/etc/pocketly/sync.env` (senza `POCKETLY_SYNC_KEY=`). |
-| Dopo un aggiornamento l'app mostra ancora la versione vecchia | Accetta la richiesta di aggiornamento dell'app («È disponibile un aggiornamento»), oppure usa «Verifica aggiornamenti» o «Ricarica dal server» nelle Impostazioni dell'app (oppure `Ctrl+F5` su browser desktop). |
+| Dopo un aggiornamento l'app mostra ancora la versione vecchia | Accetta la richiesta di aggiornamento dell'app («È disponibile un aggiornamento»), oppure usa «Verifica aggiornamenti» o «Ricarica dal server» nella scheda *Aggiornamenti* delle Impostazioni (oppure `Ctrl+F5` su browser desktop). |
 
 ## Da sapere
 

@@ -23,25 +23,20 @@ rm -rf "$DEST.old"
 
 echo "Pubblicato in $DEST"
 
-# Se la configurazione di nginx è cambiata, la aggiorna e ricarica il web server.
+# Se la configurazione di nginx nel repository è cambiata, la copia (tenendo la precedente in .bak)
+# e ricarica nginx. Se la nuova non passa `nginx -t` rimette la precedente: nginx resta com'era.
 NGINX_CONF="/etc/nginx/sites-available/pocketly"
-if [ -f "$NGINX_CONF" ] && [ -f deploy/proxmox/nginx/pocketly.conf ]; then
-  if ! cmp -s deploy/proxmox/nginx/pocketly.conf "$NGINX_CONF" 2>/dev/null; then
-    if cp deploy/proxmox/nginx/pocketly.conf "$NGINX_CONF" 2>/dev/null; then
-      echo "Configurazione nginx aggiornata in $NGINX_CONF"
+if [ -f "$NGINX_CONF" ] && ! cmp -s deploy/proxmox/nginx/pocketly.conf "$NGINX_CONF"; then
+  if cp "$NGINX_CONF" "$NGINX_CONF.bak" 2>/dev/null && cp deploy/proxmox/nginx/pocketly.conf "$NGINX_CONF"; then
+    if nginx -t; then
+      systemctl reload nginx || echo "ATTENZIONE: ricarica di nginx non riuscita." >&2
+      echo "Configurazione di nginx aggiornata e ricaricata (la precedente è in $NGINX_CONF.bak)."
     else
-      echo "ATTENZIONE: impossibile aggiornare $NGINX_CONF (serve root?)" >&2
+      cp "$NGINX_CONF.bak" "$NGINX_CONF"
+      echo "ATTENZIONE: la nuova configurazione di nginx ha errori (vedi sopra): rimessa la precedente." >&2
     fi
-  fi
-fi
-
-if command -v nginx >/dev/null && nginx -t 2>/dev/null; then
-  if systemctl is-active --quiet nginx 2>/dev/null; then
-    if systemctl reload nginx 2>/dev/null; then
-      echo "Nginx ricaricato con successo"
-    else
-      echo "ATTENZIONE: ricarica di nginx non riuscita (serve root?)" >&2
-    fi
+  else
+    echo "ATTENZIONE: non posso aggiornare $NGINX_CONF: lancia update.sh come root." >&2
   fi
 fi
 
