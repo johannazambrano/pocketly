@@ -32,6 +32,8 @@ export default {
     discardKeep: 'Continua a modificare',
     delete: 'Elimina',
     edit: 'Modifica',
+    duplicate: 'Duplica',
+    frequent: 'Frequenti',
     close: 'Chiudi',
     total: 'Totale',
     name: 'Nome',
@@ -171,6 +173,7 @@ export default {
     clearFilter: 'Rimuovi filtro',
     newTagPlaceholder: 'Nuovo tag (es. Vacanza 2026)…',
     expensesCount: '{n} spesa | {n} spese',
+    duplicateAsNew: 'Duplica come nuova spesa',
   },
   recurring: {
     title: 'Spese ricorrenti',
@@ -211,6 +214,7 @@ export default {
     clearFilter: 'Rimuovi filtro',
     incomesCount: '{n} entrata | {n} entrate',
     creditedTo: 'Accredito su',
+    duplicateAsNew: 'Duplica come nuova entrata',
   },
   loans: {
     title: 'Prestiti',

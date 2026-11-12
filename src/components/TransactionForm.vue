@@ -4,6 +4,7 @@ import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Income, OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
+import { frequentTemplates, type FrequentTemplate } from '@/domain/calculations'
 import { toCents } from '@/utils/money'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
@@ -17,8 +18,10 @@ const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: On
 const emit = defineEmits<{ close: []; delete: [] }>()
 /** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
 const formId = useId()
-const { t, amountInput } = useFormat()
+const { t, amountInput, money } = useFormat()
 const finance = useFinanceStore()
+
+const isDuplicating = ref(false)
 
 const form = reactive({
   name: '',
@@ -33,16 +36,41 @@ const form = reactive({
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 
+const isEdit = computed(() => !!props.item && !!props.item.id && !isDuplicating.value)
+
 const title = computed(() => {
   const section = props.kind === 'expense' ? 'onetime' : 'income'
-  return t(`${section}.${props.item ? 'edit' : 'new'}`)
+  return t(`${section}.${isEdit.value ? 'edit' : 'new'}`)
 })
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
+
+const frequentList = computed(() => {
+  if (props.item || isDuplicating.value) return []
+  const items = props.kind === 'expense' ? finance.data.oneTimeExpenses : finance.data.incomes
+  return frequentTemplates(items, 5)
+})
+
+function applyTemplate(tpl: FrequentTemplate) {
+  form.name = tpl.name
+  form.amount = amountInput(tpl.amount)
+  form.categoryId = tpl.categoryId
+  form.paymentMethodId = tpl.paymentMethodId
+  form.tagIds = tpl.tagIds ? [...tpl.tagIds] : []
+  form.notes = tpl.notes ?? ''
+  form.date = todayIso()
+}
+
+function duplicateAsNew() {
+  isDuplicating.value = true
+  form.date = todayIso()
+  resetDirty()
+}
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return
+    isDuplicating.value = false
     const i = props.item
     error.value = ''
     Object.assign(form, {
@@ -66,7 +94,7 @@ function submit() {
     return
   }
   const base = {
-    id: props.item?.id,
+    id: isEdit.value ? props.item?.id : undefined,
     name: form.name.trim(),
     amount,
     date: form.date,
@@ -83,6 +111,25 @@ function submit() {
   <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
     <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
+      <!-- Chip Template Spese Frequenti -->
+      <div v-if="!isEdit && frequentList.length > 0" class="space-y-1 pb-1">
+        <span class="text-[11px] font-medium text-ink-4 flex items-center gap-1">
+          <i class="fa-solid fa-bolt text-accent-icon text-[10px]"></i> {{ t('common.frequent') }}
+        </span>
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            v-for="tpl in frequentList"
+            :key="tpl.name"
+            type="button"
+            class="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-2 shadow-2xs hover:bg-surface-2 active:bg-surface-3 transition-colors"
+            @click="applyTemplate(tpl)"
+          >
+            <span class="truncate max-w-[120px]">{{ tpl.name }}</span>
+            <span class="font-bold text-accent">{{ money(tpl.amount) }}</span>
+          </button>
+        </div>
+      </div>
+
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
         <input v-model="form.name" required maxlength="80" class="field" />
@@ -111,10 +158,23 @@ function submit() {
       </label>
       <TagInput v-model="form.tagIds" />
       <p v-if="error" class="text-xs text-negative">{{ error }}</p>
+
+      <!-- Azione secondaria: Duplica come nuova voce -->
+      <div v-if="isEdit" class="pt-1">
+        <button
+          type="button"
+          class="w-full flex items-center justify-center gap-1.5 rounded-xl border border-accent-line bg-accent-soft/60 py-2.5 text-xs font-semibold text-accent-strongest hover:bg-accent-soft transition-colors"
+          @click="duplicateAsNew"
+        >
+          <i class="fa-solid fa-copy"></i>
+          {{ kind === 'expense' ? t('onetime.duplicateAsNew') : t('income.duplicateAsNew') }}
+        </button>
+      </div>
+
       <div class="pt-2"><SubmitButton
           :label="t('common.save')"
           :cancel-label="t('common.cancel')"
-          :delete-label="deletable ? t('common.delete') : undefined"
+          :delete-label="isEdit && deletable ? t('common.delete') : undefined"
           @cancel="emit('close')"
           @delete="emit('delete')"
         /></div>

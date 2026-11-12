@@ -88,6 +88,7 @@ Le voci con data `<= today` sono escluse poiché già conteggiate nel consuntivo
 - `availableYears(data, currentYear)`: anni per cui esistono dati (spese, entrate, prestiti, simulazioni, inizio delle ricorrenze) più l'anno corrente, in ordine crescente.
 - `tagBreakdown(items)` (e alias `oneTimeTagBreakdown`): totale e conteggio delle voci (spese una tantum o entrate) per ciascun tag presente, ordinati per importo decrescente.
 - `searchFinance(data, query)`: motore di ricerca globale pura full-text tokenizzata per trovare corrispondenze tra spese una tantum, ricorrenti, entrate e prestiti (match su nome, note, categorie, metodi e tag).
+- `frequentTemplates(items, limit)`: estrae le voci più frequenti tra le transazioni passate ordinate per conteggio d'uso e recenza, per proporre template di precompilazione rapida.
 
 ---
 

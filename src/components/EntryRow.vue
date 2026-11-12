@@ -11,8 +11,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppearanceStore } from '@/stores/appearance'
 
-defineProps<{ name: string; amount: string; subtitle?: string; amountClass?: string }>()
-const emit = defineEmits<{ edit: []; delete: [] }>()
+defineProps<{ name: string; amount: string; subtitle?: string; amountClass?: string; duplicable?: boolean }>()
+const emit = defineEmits<{ edit: []; delete: []; duplicate: [] }>()
 const { t } = useI18n()
 const appearance = useAppearanceStore()
 const touch = computed(() => appearance.platform !== 'desktop')
@@ -51,6 +51,16 @@ const nameClass = {
       <div class="shrink-0 text-right text-sm font-semibold" :class="amountClass">{{ amount }}</div>
       <i v-if="appearance.platform === 'ios'" class="fa-solid fa-chevron-right shrink-0 text-xs text-ink-5" aria-hidden="true"></i>
       <div v-if="!touch" class="flex shrink-0">
+        <button
+          v-if="duplicable"
+          type="button"
+          class="icon-btn text-xs text-ink-3 hover:text-accent"
+          :aria-label="t('common.duplicate')"
+          :title="t('common.duplicate')"
+          @click="emit('duplicate')"
+        >
+          <i class="fa-solid fa-copy"></i>
+        </button>
         <button type="button" class="icon-btn text-xs text-recurring" :aria-label="t('common.edit')" @click="emit('edit')">
           <i class="fa-solid fa-pen"></i>
         </button>

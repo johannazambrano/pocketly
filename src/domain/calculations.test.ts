@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -504,5 +504,37 @@ describe('breakdownItems', () => {
     expect(items.every((i) => i.source === 'recurring')).toBe(true)
     expect(items[0]!.date).toBe('2026-11-01')
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length)
+  })
+})
+
+describe('frequentTemplates', () => {
+  it('restituisce array vuoto se non ci sono elementi', () => {
+    expect(frequentTemplates([])).toEqual([])
+  })
+
+  it('ordina per frequenza decrescente e prende i dati della versione più recente', () => {
+    const items = [
+      { name: 'Caffè', amount: 120, date: '2026-06-01', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Bar' },
+      { name: 'Caffè', amount: 130, date: '2026-06-05', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Prezzo aumentato' },
+      { name: 'Pranzo', amount: 1200, date: '2026-06-02', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 4500, date: '2026-06-03', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 5000, date: '2026-06-04', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 4800, date: '2026-06-06', categoryId: 'c1', paymentMethodId: 'p1', tagIds: ['spesa'] },
+    ]
+
+    const templates = frequentTemplates(items, 2)
+    expect(templates).toHaveLength(2)
+    // Supermercato (3 volte)
+    expect(templates[0]?.name).toBe('Supermercato')
+    expect(templates[0]?.count).toBe(3)
+    // Prende i dati dell'ultima occorrenza (2026-06-06)
+    expect(templates[0]?.amount).toBe(4800)
+    expect(templates[0]?.tagIds).toEqual(['spesa'])
+
+    // Caffè (2 volte)
+    expect(templates[1]?.name).toBe('Caffè')
+    expect(templates[1]?.count).toBe(2)
+    expect(templates[1]?.amount).toBe(130)
+    expect(templates[1]?.notes).toBe('Prezzo aumentato')
   })
 })

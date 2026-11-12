@@ -1,4 +1,4 @@
-import type { Cents, FinanceData, Id, Loan } from '@/types/models'
+import type { Cents, FinanceData, Id, IsoDate, Loan } from '@/types/models'
 import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
@@ -564,4 +564,64 @@ export function tagBreakdown(items: HasTagsAndAmount[]): TagSummaryItem[] {
 
 /** Per retrocompatibilità */
 export const oneTimeTagBreakdown = tagBreakdown
+
+export interface FrequentTemplateItem {
+  name: string
+  amount: Cents
+  date: IsoDate
+  categoryId: Id
+  paymentMethodId: Id
+  tagIds?: Id[]
+  notes?: string
+}
+
+export interface FrequentTemplate {
+  name: string
+  amount: Cents
+  categoryId: Id
+  paymentMethodId: Id
+  tagIds?: Id[]
+  notes?: string
+  count: number
+}
+
+/**
+ * Estrae le voci più frequenti tra le transazioni passate, ordinate per frequenza d'uso e recenza.
+ * Utile per proporre template di compilazione rapida nei moduli di inserimento.
+ */
+export function frequentTemplates<T extends FrequentTemplateItem>(items: T[], limit = 5): FrequentTemplate[] {
+  if (!items.length) return []
+
+  const groups = new Map<string, { latest: T; count: number }>()
+
+  // Ordina per data decrescente così il primo che incontriamo per ogni nome è il più recente
+  const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date))
+
+  for (const item of sorted) {
+    const key = item.name.trim().toLowerCase()
+    if (!key) continue
+    const existing = groups.get(key)
+    if (existing) {
+      existing.count++
+    } else {
+      groups.set(key, { latest: item, count: 1 })
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return b.latest.date.localeCompare(a.latest.date)
+    })
+    .slice(0, limit)
+    .map(({ latest, count }) => ({
+      name: latest.name,
+      amount: latest.amount,
+      categoryId: latest.categoryId,
+      paymentMethodId: latest.paymentMethodId,
+      tagIds: latest.tagIds ? [...latest.tagIds] : [],
+      notes: latest.notes,
+      count,
+    }))
+}
 

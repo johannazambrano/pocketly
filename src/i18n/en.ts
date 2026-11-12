@@ -34,6 +34,8 @@ const en: typeof it = {
     discardKeep: 'Keep editing',
     delete: 'Delete',
     edit: 'Edit',
+    duplicate: 'Duplicate',
+    frequent: 'Frequent',
     close: 'Close',
     total: 'Total',
     name: 'Name',
@@ -173,6 +175,7 @@ const en: typeof it = {
     clearFilter: 'Clear filter',
     newTagPlaceholder: 'New tag (e.g. Vacation 2026)…',
     expensesCount: '{n} expense | {n} expenses',
+    duplicateAsNew: 'Duplicate as new expense',
   },
   recurring: {
     title: 'Recurring expenses',
@@ -213,6 +216,7 @@ const en: typeof it = {
     clearFilter: 'Clear filter',
     incomesCount: '{n} income | {n} incomes',
     creditedTo: 'Credited to',
+    duplicateAsNew: 'Duplicate as new income',
   },
   loans: {
     title: 'Loans',

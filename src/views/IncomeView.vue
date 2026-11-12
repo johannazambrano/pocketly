@@ -5,6 +5,7 @@ import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import { tagBreakdown } from '@/domain/calculations'
+import { todayIso } from '@/utils/dates'
 import PageHeader from '@/components/PageHeader.vue'
 import EntryList from '@/components/EntryList.vue'
 import EntryRow from '@/components/EntryRow.vue'
@@ -93,6 +94,15 @@ const totalLabel = computed(() => {
 
 function open(item: Income | null) {
   editing.value = item
+  formOpen.value = true
+}
+
+function duplicate(item: Income) {
+  editing.value = {
+    ...item,
+    id: '',
+    date: todayIso(),
+  }
   formOpen.value = true
 }
 
@@ -265,7 +275,9 @@ function remove() {
         :amount="money(e.amount)"
         amount-class="text-accent"
         :subtitle="e.notes"
+        duplicable
         @edit="open(e)"
+        @duplicate="duplicate(e)"
         @delete="confirmDelete(e.name, () => finance.deleteIncome(e.id))"
       >
         <template #meta>
