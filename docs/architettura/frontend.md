@@ -84,6 +84,7 @@ Nello store [`finance.ts`](../../src/stores/finance.ts):
 - Tutte le proprietà riassuntive (come `summary`, `forecastRows`, `monthSummaryData`, `incomesOfYear`) sono definite come `computed` e delegano direttamente a funzioni del modulo `src/domain/calculations.ts`.
 - Le modifiche vengono salvate con salvataggio debounce (`scheduleSave`), che pianifica la scrittura su IndexedDB tramite l'interfaccia `DataStore` e, se la sync è attiva, invoca la sincronizzazione verso il server.
 - Il metodo `flush()` permette di forzare la scrittura immediata su disco evitando che modifiche in sospeso vadano perse prima di navigazioni o chiusure.
+- **Dati salvati che non si leggono:** se `dataStore.load()` lancia un errore (errore nel codice, dati di una versione più nuova dell'app, archivio rovinato), `init` imposta `loadError` e si ferma: niente dati di partenza, niente salvataggio (`flush()` non scrive con `loadError`) e, in `main.ts`, niente avvio di backup, sincronizzazione e promemoria. Prima l'app ripartiva vuota e salvava sopra, cancellando i dati veri. `App.vue` mostra al posto delle pagine [`LoadErrorScreen`](../../src/components/LoadErrorScreen.vue), con «Riprova» e «Scarica i dati salvati» (`readStoredDataRaw` di `storage.ts`, il JSON così com'è). Senza dati salvati l'avvio resta quello di prima: dati di serie, salvati subito.
 
 ---
 

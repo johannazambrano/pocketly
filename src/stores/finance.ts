@@ -48,6 +48,12 @@ export const useFinanceStore = defineStore('finance', () => {
   const data = ref<FinanceData>(createEmptyData())
   const ready = ref(false)
   const saveError = ref(false)
+  /**
+   * I dati salvati su questo dispositivo ci sono ma non si leggono (errore nel codice, dati di una versione più nuova
+   * dell'app, archivio rovinato). Allora l'app non salva e non sincronizza niente: ripartire vuota e salvare sopra
+   * cancellerebbe i dati veri. `LoadErrorScreen` lo dice e permette di scaricarli così come sono.
+   */
+  const loadError = ref(false)
   const selectedYear = ref(new Date().getFullYear())
   /**
    * All'apertura si guarda il mese di oggi: la domanda più frequente è "come va questo mese". La scelta non viene
@@ -65,6 +71,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function flush() {
     clearTimeout(saveTimer)
     saveTimer = undefined
+    if (loadError.value) return
     try {
       await dataStore.save(data.value)
       saveError.value = false
@@ -85,6 +92,10 @@ export const useFinanceStore = defineStore('finance', () => {
       loaded = await dataStore.load()
     } catch (e) {
       console.error('Caricamento non riuscito', e)
+      // Niente dati di partenza e niente salvataggio: quelli salvati restano intatti.
+      loadError.value = true
+      ready.value = true
+      return
     }
     data.value = loaded ?? createDefaultData(locale)
     if (!loaded) await flush()
@@ -395,6 +406,7 @@ export const useFinanceStore = defineStore('finance', () => {
     data,
     ready,
     saveError,
+    loadError,
     selectedYear,
     selectedMonth,
     isMonthFiltered,

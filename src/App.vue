@@ -10,6 +10,7 @@ import ConfirmHost from '@/components/ConfirmHost.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import UpdatePrompt from '@/components/UpdatePrompt.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
+import LoadErrorScreen from '@/components/LoadErrorScreen.vue'
 
 const { t } = useI18n()
 const finance = useFinanceStore()
@@ -30,6 +31,7 @@ const appearance = useAppearanceStore()
           :class="appearance.platform === 'android' ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'"
         >
           <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-4">{{ t('app.loading') }}</p>
+          <LoadErrorScreen v-else-if="finance.loadError" />
           <template v-else>
             <BackupReminder />
             <RouterView />

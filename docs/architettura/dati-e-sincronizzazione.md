@@ -36,7 +36,7 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):
 - L'interfaccia `DataStore` espone `load()` e `save(data: FinanceData)`.
-- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`).
+- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`). Se i dati ci sono ma `parseBackup` non li legge, `load()` lancia l'errore e lo store non scrive niente sopra (`finance.loadError`, vedi [frontend.md](./frontend.md)); `readStoredDataRaw()` li restituisce così come sono per scaricarli.
 - Gli store per preferenze locali del dispositivo utilizzano chiavi separate su `idb-keyval`: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). In questo modo la configurazione del dispositivo non si confonde con i dati finanziari condivisi.
 
 ---

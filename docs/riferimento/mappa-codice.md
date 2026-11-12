@@ -55,7 +55,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
-| [`src/stores/finance.ts`](../../src/stores/finance.ts) | Store centrale: gestione stato reattivo `FinanceData`, anno/mese correnti, computeds di bilancio e mutazioni CRUD | — | [frontend.md](../architettura/frontend.md) |
+| [`src/stores/finance.ts`](../../src/stores/finance.ts) | Store centrale: gestione stato reattivo `FinanceData`, anno/mese correnti, computeds di bilancio e mutazioni CRUD; `loadError` blocca salvataggio e sincronizzazione se i dati salvati non si leggono | [`src/stores/finance.test.ts`](../../src/stores/finance.test.ts) | [frontend.md](../architettura/frontend.md) |
 | [`src/stores/sync.ts`](../../src/stores/sync.ts) | Store di sincronizzazione: credenziali server, stato polling, avvio sync e gestione errori | `services/sync/engine.test.ts` | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/stores/notifications.ts`](../../src/stores/notifications.ts) | Store notifiche: permessi browser, sottoscrizione Web Push, scheduler locale e sync pianificazione push | [`src/stores/notifications.test.ts`](../../src/stores/notifications.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/stores/backup.ts`](../../src/stores/backup.ts) | Store promemoria backup: salva in IndexedDB (`'backup-meta'`) un `BackupMeta` con data e impronta dei dati dell'ultimo backup, e segnala modifiche non salvate | `services/backup.test.ts` | [frontend.md](../architettura/frontend.md) |
@@ -107,6 +107,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/components/TagInput.vue`](../../src/components/TagInput.vue) | Input autocomplete per selezionare e creare al volo nuovi tag | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/TagManager.vue`](../../src/components/TagManager.vue) | Gestore anagrafica categorie, metodi e tag con modale di modifica colore/nome | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/TagSelect.vue`](../../src/components/TagSelect.vue) | Menu a tendina standard per la selezione di una categoria o metodo di pagamento | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/LoadErrorScreen.vue`](../../src/components/LoadErrorScreen.vue) | Al posto delle pagine quando i dati salvati non si leggono: spiega che non è stato cancellato niente, «Riprova» e «Scarica i dati salvati» | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/ToastHost.vue`](../../src/components/ToastHost.vue) | Host overlay per visualizzare notifiche toast a scomparsa | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/TransactionForm.vue`](../../src/components/TransactionForm.vue) | Modulo versatile per inserimento/modifica spese una tantum o entrate | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) | Notifica non invasiva e gestione ciclo di vita aggiornamenti Service Worker e risvegli iOS | [frontend.md](../architettura/frontend.md) |
