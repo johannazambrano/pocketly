@@ -88,6 +88,7 @@ const en: typeof it = {
     explainExpenses: 'Expenses still to come',
     explainEstimate: 'The estimate is {amount} a month: the average of the last {n} months of income in {categories}.',
     explainChange: 'Change the estimate',
+    withoutEstimate: 'If the estimated income does not arrive:',
     countingEstimate: 'Counting {amount} of estimated income, not recorded yet',
     estimateStillToCome: '{amount} of estimated income still to come.',
     futureNoteRecorded: 'Counting income and expenses already recorded.',

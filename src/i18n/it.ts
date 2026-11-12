@@ -86,6 +86,7 @@ export default {
     explainExpenses: 'Uscite in arrivo',
     explainEstimate: 'La stima vale {amount} al mese: media degli ultimi {n} mesi delle entrate in {categories}.',
     explainChange: 'Cambia la stima',
+    withoutEstimate: 'Se le entrate stimate non arrivano:',
     countingEstimate: 'Contando {amount} di entrate stimate, non ancora registrate',
     estimateStillToCome: 'mancano ancora {amount} di entrate stimate.',
     futureNoteRecorded: 'Contando le entrate e le uscite già registrate.',
