@@ -147,11 +147,19 @@ function submit() {
     }
   } else if (item && splitDate.value && scope.value === 'all' && seriesParts.value.length > 1) {
     // "Tutta la serie" su una spesa già divisa: torna una serie sola, con i valori nuovi dal primo addebito.
+    // Gli addebiti cambiati da soli di tutte le parti restano (valgono solo se la serie ha ancora quegli addebiti).
+    const exceptions = seriesParts.value.flatMap((p) => p.exceptions ?? [])
     for (const p of seriesParts.value) if (p.id !== item.id) finance.deleteRecurring(p.id)
-    finance.saveRecurring({ id: item.id, startDate: form.startDate, ...values })
+    finance.saveRecurring({ id: item.id, startDate: form.startDate, ...values, ...(exceptions.length ? { exceptions } : {}) })
   } else {
-    // Il collegamento con le altre parti della spesa resta.
-    finance.saveRecurring({ id: item?.id, startDate: form.startDate, ...values, ...(item?.seriesId ? { seriesId: item.seriesId } : {}) })
+    // Il collegamento con le altre parti della spesa e gli addebiti cambiati da soli restano.
+    finance.saveRecurring({
+      id: item?.id,
+      startDate: form.startDate,
+      ...values,
+      ...(item?.seriesId ? { seriesId: item.seriesId } : {}),
+      ...(item?.exceptions?.length ? { exceptions: item.exceptions } : {}),
+    })
   }
   emit('close')
 }

@@ -1,6 +1,6 @@
 import type { Cents, FinanceData, Id, Loan, OneTimeExpense } from '@/types/models'
 import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
-import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent } from './recurrence'
+import { amountInMonth, chargeIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
 export interface TagTotal {
   id: Id
@@ -178,15 +178,15 @@ export function yearSummary(data: FinanceData, year: number, today: string = tod
   let recurringToDate = 0
   for (const r of data.recurringExpenses) {
     for (let m = start; m < 12; m++) {
-      const due = dueDateIn(r, year, m)
-      if (!due) continue
-      recurringInPeriod += r.amount
-      addTo(byCategory, r.categoryId, r.amount)
-      addTo(byPayment, r.paymentMethodId, r.amount)
-      if (due <= cutoff) {
-        recurringToDate += r.amount
-        addTo(byCategoryToDate, r.categoryId, r.amount)
-        addTo(byPaymentToDate, r.paymentMethodId, r.amount)
+      const charge = chargeIn(r, year, m)
+      if (!charge) continue
+      recurringInPeriod += charge.amount
+      addTo(byCategory, r.categoryId, charge.amount)
+      addTo(byPayment, r.paymentMethodId, charge.amount)
+      if (charge.date <= cutoff) {
+        recurringToDate += charge.amount
+        addTo(byCategoryToDate, r.categoryId, charge.amount)
+        addTo(byPaymentToDate, r.paymentMethodId, charge.amount)
       }
     }
   }
@@ -246,10 +246,10 @@ export function monthBreakdown(data: FinanceData, year: number, month: number, c
   }
 
   for (const r of data.recurringExpenses) {
-    const due = dueDateIn(r, year, month)
-    if (due && (!cutoff || due <= cutoff)) {
-      addTo(byCategory, r.categoryId, r.amount)
-      addTo(byPayment, r.paymentMethodId, r.amount)
+    const charge = chargeIn(r, year, month)
+    if (charge && (!cutoff || charge.date <= cutoff)) {
+      addTo(byCategory, r.categoryId, charge.amount)
+      addTo(byPayment, r.paymentMethodId, charge.amount)
     }
   }
 
@@ -270,6 +270,8 @@ export interface BreakdownItem {
   source: 'oneTime' | 'recurring'
   sourceId: Id
   date: string
+  /** Per un addebito ricorrente: la sua data secondo la serie, che lo identifica (vedi `RecurringException`). */
+  original?: string
   name: string
   amount: Cents
 }
@@ -314,9 +316,17 @@ export function breakdownItems(
   for (const r of data.recurringExpenses) {
     if (r[field] !== tagId) continue
     for (const m of months) {
-      const due = dueDateIn(r, year, m)
-      if (!due || due > cutoff) continue
-      items.push({ key: `r-${r.id}-${due}`, source: 'recurring', sourceId: r.id, date: due, name: r.name, amount: r.amount })
+      const charge = chargeIn(r, year, m)
+      if (!charge || charge.date > cutoff) continue
+      items.push({
+        key: `r-${r.id}-${charge.original}`,
+        source: 'recurring',
+        sourceId: r.id,
+        date: charge.date,
+        original: charge.original,
+        name: r.name,
+        amount: charge.amount,
+      })
     }
   }
   return items.sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name) : a.date < b.date ? 1 : -1))
@@ -485,6 +495,8 @@ export interface UpcomingCharge {
   name: string
   amount: Cents
   date: string
+  /** Per un addebito ricorrente: la sua data secondo la serie, che lo identifica (vedi `RecurringException`). */
+  original?: string
   daysLeft: number
 }
 
@@ -504,9 +516,18 @@ export function upcomingCharges(data: FinanceData, today: string, until: string)
   const result: UpcomingCharge[] = []
   for (const r of data.recurringExpenses) {
     for (let abs = monthIndex(t.year, t.month); abs <= monthIndex(u.year, u.month); abs++) {
-      const due = dueDateIn(r, Math.floor(abs / 12), abs % 12)
-      if (!due || due <= today || due > until) continue
-      result.push({ key: `r-${r.id}-${due}`, id: r.id, source: 'recurring', name: r.name, amount: r.amount, date: due, daysLeft: daysLeft(due) })
+      const charge = chargeIn(r, Math.floor(abs / 12), abs % 12)
+      if (!charge || charge.date <= today || charge.date > until) continue
+      result.push({
+        key: `r-${r.id}-${charge.original}`,
+        id: r.id,
+        source: 'recurring',
+        name: r.name,
+        amount: charge.amount,
+        date: charge.date,
+        original: charge.original,
+        daysLeft: daysLeft(charge.date),
+      })
     }
   }
   for (const e of data.oneTimeExpenses) {

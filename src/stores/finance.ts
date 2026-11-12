@@ -5,9 +5,11 @@ import type {
   ForecastSettings,
   Id,
   Income,
+  IsoDate,
   Loan,
   NotificationRule,
   OneTimeExpense,
+  RecurringException,
   RecurringExpense,
   Repayment,
   Simulation,
@@ -15,7 +17,7 @@ import type {
 } from '@/types/models'
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
-import { groupRecurringSeries, isActiveInYear, seriesKey } from '@/domain/recurrence'
+import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
@@ -224,6 +226,18 @@ export const useFinanceStore = defineStore('finance', () => {
   const deleteOneTime = (id: Id) => remove(data.value.oneTimeExpenses, id)
   const deleteIncome = (id: Id) => remove(data.value.incomes, id)
   const deleteRecurring = (id: Id) => remove(data.value.recurringExpenses, id)
+  /**
+   * Cambia un solo addebito di una spesa ricorrente («Solo questo addebito»): lo salta, o gli dà un importo o un giorno
+   * diverso. Un'eccezione che non cambia niente toglie quella che c'era (l'addebito torna quello della serie).
+   */
+  function saveRecurringException(item: RecurringExpense, exception: RecurringException) {
+    const current = data.value.recurringExpenses.find((r) => r.id === item.id) ?? item
+    upsert(data.value.recurringExpenses, withException(current, exception))
+  }
+  /** Ripristina un addebito cambiato da solo: torna quello della serie. */
+  function restoreRecurringCharge(item: RecurringExpense, original: IsoDate) {
+    saveRecurringException(item, { date: original })
+  }
   /** Elimina la spesa intera: tutte le parti collegate a `item` (o solo `item`, se non è mai stata divisa). */
   function deleteRecurringSeries(item: RecurringExpense) {
     const key = seriesKey(item)
@@ -397,6 +411,8 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteIncome,
     deleteRecurring,
     deleteRecurringSeries,
+    saveRecurringException,
+    restoreRecurringCharge,
     saveLoan,
     deleteLoan,
     addRepayment,

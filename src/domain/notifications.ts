@@ -1,5 +1,5 @@
 import type { Cents, Id, IsoDate, NotificationRule, RecurringExpense } from '@/types/models'
-import { nextDueDate } from '@/domain/recurrence'
+import { chargesBetween } from '@/domain/recurrence'
 import { parseIsoDate, toIsoDate } from '@/utils/dates'
 
 /** Scelte rapide di anticipo proposte nel selettore (in giorni prima della scadenza). */
@@ -98,17 +98,9 @@ export function reminderTriggerDate(dueDate: IsoDate, rule: NotificationRule): D
   return new Date(year, month, day - rule.daysBefore, hours, minutes, 0, 0)
 }
 
-/** Tutte le date di addebito di `r` comprese nell'intervallo `[fromIso, toIso]` (estremi inclusi). */
+/** Le date degli addebiti veri di `r` nell'intervallo `[fromIso, toIso]` (estremi inclusi), eccezioni comprese. */
 export function occurrencesBetween(r: RecurringExpense, fromIso: IsoDate, toIso: IsoDate): IsoDate[] {
-  const out: IsoDate[] = []
-  let cursor = fromIso
-  while (cursor <= toIso) {
-    const due = nextDueDate(r, cursor)
-    if (!due || due > toIso) break
-    out.push(due)
-    cursor = shiftIsoDate(due, 1)
-  }
-  return out
+  return chargesBetween(r, fromIso, toIso).map((c) => c.date)
 }
 
 export interface ScheduledReminder {
@@ -147,9 +139,8 @@ export function calculateUpcomingReminders(
     if (!rules.length) continue
     const maxLead = Math.max(...rules.map((rule) => rule.daysBefore))
     const lastDueToInspect = shiftIsoDate(today, horizonDays + maxLead + 1)
-    const dueDates = occurrencesBetween(r, today, lastDueToInspect)
-
-    for (const dueDate of dueDates) {
+    // Gli addebiti veri: niente promemoria per quelli saltati, giorno e importo delle eccezioni.
+    for (const { date: dueDate, amount } of chargesBetween(r, today, lastDueToInspect)) {
       for (const rule of rules) {
         const trigger = reminderTriggerDate(dueDate, rule)
         const fireAt = Math.floor(trigger.getTime() / 1000)
@@ -158,7 +149,7 @@ export function calculateUpcomingReminders(
             id: reminderId(r.id, dueDate, rule),
             expenseId: r.id,
             expenseName: r.name,
-            amount: r.amount,
+            amount,
             dueDate,
             daysBefore: rule.daysBefore,
             time: rule.time,
@@ -191,9 +182,8 @@ export function calculateDueLocalReminders(
     if (!rules.length) continue
     const maxLead = Math.max(...rules.map((rule) => rule.daysBefore))
     const lastDueToInspect = shiftIsoDate(today, maxLead + 2)
-    const dueDates = occurrencesBetween(r, today, lastDueToInspect)
-
-    for (const dueDate of dueDates) {
+    // Gli addebiti veri: niente promemoria per quelli saltati, giorno e importo delle eccezioni.
+    for (const { date: dueDate, amount } of chargesBetween(r, today, lastDueToInspect)) {
       for (const rule of rules) {
         const trigger = reminderTriggerDate(dueDate, rule)
         const fireAt = Math.floor(trigger.getTime() / 1000)
@@ -202,7 +192,7 @@ export function calculateDueLocalReminders(
             id: reminderId(r.id, dueDate, rule),
             expenseId: r.id,
             expenseName: r.name,
-            amount: r.amount,
+            amount,
             dueDate,
             daysBefore: rule.daysBefore,
             time: rule.time,

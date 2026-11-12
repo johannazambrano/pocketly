@@ -16,7 +16,7 @@ import type {
 import { CURRENT_SCHEMA_VERSION } from '@/types/models'
 import { defaultBudgetSettings, defaultForecastSettings } from '@/domain/defaults'
 import { normalizeNotifications } from '@/domain/notifications'
-import { FREQUENCIES } from '@/domain/recurrence'
+import { FREQUENCIES, normalizeExceptions } from '@/domain/recurrence'
 import { pickUniqueColor } from '@/utils/colors'
 import { isValidIsoDate, todayIso } from '@/utils/dates'
 import { newId } from '@/utils/id'
@@ -249,6 +249,7 @@ function normalizeV2(raw: Obj): FinanceData {
       const amount = cents(o.amount)
       if (amount === null || !isValidIsoDate(o.startDate)) return null
       const notifications = normalizeNotifications(o.notifications)
+      const exceptions = normalizeExceptions(o.exceptions)
       return {
         id: id(o.id),
         name: str(o.name),
@@ -259,6 +260,7 @@ function normalizeV2(raw: Obj): FinanceData {
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
         ...(typeof o.seriesId === 'string' && o.seriesId ? { seriesId: o.seriesId } : {}),
+        ...(exceptions.length ? { exceptions } : {}),
         ...(notifications.length ? { notifications } : {}),
       }
     }),

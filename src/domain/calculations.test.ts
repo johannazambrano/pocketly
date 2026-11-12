@@ -493,3 +493,18 @@ describe('breakdownItems', () => {
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length)
   })
 })
+
+describe('addebiti cambiati da soli nei calcoli', () => {
+  it('i prossimi addebiti e i totali usano importo e giorno dell eccezione, e saltano quello saltato', () => {
+    const data = sample()
+    data.recurringExpenses[0]!.exceptions = [
+      { date: '2026-12-01', amount: 75000, movedTo: '2026-12-03' },
+      { date: '2027-01-01', skipped: true },
+    ]
+    const list = upcomingCharges(data, '2026-11-20', '2027-01-31').filter((c) => c.id === 'r1')
+    expect(list.map((c) => [c.date, c.amount, c.original])).toEqual([['2026-12-03', 75000, '2026-12-01']])
+    const dec = monthSummary(data, 2026, 11, '2026-12-31')
+    expect(dec.recurringInMonth - monthSummary(sample(), 2026, 11, '2026-12-31').recurringInMonth).toBe(5000)
+    expect(monthSummary(data, 2027, 0, '2027-01-31').recurringInMonth).toBe(0)
+  })
+})

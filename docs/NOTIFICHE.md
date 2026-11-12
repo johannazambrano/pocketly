@@ -141,7 +141,7 @@ Apple supporta le Web Push su iOS a partire da **iOS 16.4**, con due requisiti t
 | File | Responsabilità |
 |---|---|
 | [`src/types/models.ts`](../src/types/models.ts) | Definizione interfaccia `NotificationRule` (`daysBefore: number`, `time: string`) e campo `RecurringExpense.notifications`. |
-| [`src/domain/notifications.ts`](../src/domain/notifications.ts) | Funzioni pure: normalizzazione regole, calcolo occorrenze, verifica promemoria scaduti, generazione testi e badge. |
+| [`src/domain/notifications.ts`](../src/domain/notifications.ts) | Funzioni pure: normalizzazione regole, calcolo occorrenze (addebiti veri da `chargesBetween`: niente promemoria per un addebito saltato, giorno e importo di quello cambiato da solo), verifica promemoria scaduti, generazione testi e badge. |
 | [`src/stores/notifications.ts`](../src/stores/notifications.ts) | Store Pinia: stato permessi, persistenza IndexedDB (con isolamento proxy reattivi), sincronizzazione schedulazione push, invio test con fallback locale. |
 | [`src/services/notifications/webpushCrypto.ts`](../src/services/notifications/webpushCrypto.ts) | Crittografia W3C RFC 8291 (`aes128gcm` tramite HKDF SHA-256 e Web Crypto API `crypto.subtle`). |
 | [`src/services/notifications/api.ts`](../src/services/notifications/api.ts) | Client REST per interagire con gli endpoint push del backend (`/api/push/*`). |
