@@ -137,6 +137,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
 | [`src/composables/useConfirmDelete.ts`](../../src/composables/useConfirmDelete.ts) | Composable per richiedere conferma utente prima di eliminare voci | — | [frontend.md](../architettura/frontend.md) |
+| [`src/composables/useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) | Stato condiviso degli aggiornamenti dell'app (`updateReady`, `reloadPending`) e regole: `checkForUpdate` aspetta l'installazione, `applyUpdate`, ricarica solo della finestra che l'ha chiesto | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useDirty.ts`](../../src/composables/useDirty.ts) | Tracciamento modifiche non salvate dei moduli (`useDirty`: `dirty`, `reset`), usato da `BaseModal` per chiedere conferma prima di chiudere | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Navigazione mensile sequenziale (avanti/indietro con cambio anno) e transizione da `'all'` a mese specifico | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua (`setLocale`) e composable helper `useFormat` (`money`, `amountInput`, `date`, `month`, `percent`) | — | [frontend.md](../architettura/frontend.md) |
@@ -180,5 +181,5 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`deploy/proxmox/make-cert.sh`](../../deploy/proxmox/make-cert.sh) | Generatore di CA e certificati TLS per server locale in rete domestica | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/pocketly-sync.service`](../../deploy/proxmox/pocketly-sync.service) | Definizione della systemd unit con parametri di sicurezza sandboxing | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/publish.sh`](../../deploy/proxmox/publish.sh) | Script per la compilazione frontend e rilascio locale su directory web | [deploy.md](../architettura/deploy.md) |
-| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git, build, allineamento Nginx e riavvio servizi | [deploy.md](../architettura/deploy.md) |
+| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git, build, allineamento Nginx (copia in `.bak`, ripristino se `nginx -t` fallisce) e riavvio servizi | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/nginx/pocketly.conf`](../../deploy/proxmox/nginx/pocketly.conf) | Configurazione Virtual Host Nginx per reverse proxy e caching PWA | [deploy.md](../architettura/deploy.md) |

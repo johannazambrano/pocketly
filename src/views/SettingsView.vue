@@ -4,6 +4,8 @@ import { useBackupStore } from '@/stores/backup'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore, type PlatformChoice, type ThemeChoice } from '@/stores/appearance'
+import { useNotificationsStore } from '@/stores/notifications'
+import { applyUpdate, checkForUpdate } from '@/composables/useAppUpdate'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
@@ -21,6 +23,7 @@ const finance = useFinanceStore()
 const backup = useBackupStore()
 const ui = useUiStore()
 const appearance = useAppearanceStore()
+const notifications = useNotificationsStore()
 /** Aspetto e tema: di serie automatici, si possono fissare a mano (preferenze di questo dispositivo). */
 const PLATFORM_CHOICES: PlatformChoice[] = ['auto', 'ios', 'android', 'desktop']
 const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
@@ -36,58 +39,52 @@ onMounted(async () => {
   }
 })
 
+// --- aggiornamenti dell'app -----------------------------------------------
+
 const checkingUpdate = ref(false)
 
+/** Cerca una versione nuova; se c'è la applica subito (questa finestra si ricarica). */
 async function checkAppUpdates() {
   if (checkingUpdate.value) return
-  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
-    ui.toast(t('settings.upToDate'))
-    return
-  }
   checkingUpdate.value = true
   try {
-    const reg = await navigator.serviceWorker.getRegistration()
-    if (!reg) {
-      ui.toast(t('settings.upToDate'))
-      return
-    }
-
-    if (reg.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' })
-      return
-    }
-
-    await reg.update()
-
-    const activeReg = await navigator.serviceWorker.getRegistration()
-    if (activeReg?.waiting) {
-      activeReg.waiting.postMessage({ type: 'SKIP_WAITING' })
+    const result = await checkForUpdate()
+    if (result === 'available') {
+      ui.toast(t('settings.updateFound'))
+      applyUpdate()
+    } else if (result === 'offline') {
+      ui.toast(t('settings.updateOffline'), 'error')
+    } else if (result === 'error') {
+      ui.toast(t('settings.updateCheckFailed'), 'error')
     } else {
       ui.toast(t('settings.upToDate'))
     }
-  } catch (error) {
-    console.warn('Verifica aggiornamenti fallita:', error)
-    ui.toast(t('settings.upToDate'))
   } finally {
     checkingUpdate.value = false
   }
 }
 
+/**
+ * Via d'uscita se l'app resta su una versione vecchia: toglie il service worker e svuota le sue cache.
+ * Togliere il worker cancella anche l'iscrizione alle notifiche push: la rifà la sincronizzazione successiva
+ * (notifications.runSyncPushSchedule), e il messaggio di conferma lo dice.
+ */
 async function forceReloadServer() {
+  const message = notifications.enabled
+    ? `${t('settings.forceReloadConfirm')} ${t('settings.forceReloadNotifications')}`
+    : t('settings.forceReloadConfirm')
   const confirmed = await ui.confirm({
     title: t('settings.forceReload'),
-    message: t('settings.forceReloadConfirm'),
+    message,
     confirmLabel: t('settings.forceReload'),
     danger: false,
   })
   if (!confirmed) return
 
   try {
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations()
-      for (const reg of registrations) {
-        await reg.unregister()
-      }
+      await Promise.all(registrations.map((reg) => reg.unregister()))
     }
     if (typeof caches !== 'undefined') {
       const keys = await caches.keys()
@@ -415,34 +412,31 @@ function changeLocale(code: LocaleCode) {
         </div>
       </div>
 
-      <div class="card space-y-3 text-xs text-ink-4">
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-arrows-rotate mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.updatesTitle') }}</h3>
+        <p class="text-xs text-ink-4">{{ t('settings.version', { version }) }}</p>
+        <button
+          type="button"
+          class="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+          :disabled="checkingUpdate"
+          @click="checkAppUpdates"
+        >
+          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': checkingUpdate }" aria-hidden="true"></i>
+          {{ checkingUpdate ? t('settings.checkingUpdates') : t('settings.checkUpdates') }}
+        </button>
+        <p class="text-xs text-ink-4">
+          {{ t('settings.forceReloadHint') }}
+          <button type="button" class="font-medium text-ink-2 underline underline-offset-2 hover:text-ink-1" @click="forceReloadServer">
+            {{ t('settings.forceReload') }}
+          </button>
+        </p>
+      </div>
+
+      <div class="card space-y-2 text-xs text-ink-4">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-shield-halved mr-1 text-ink-3"></i> {{ t('settings.privacyTitle') }}</h3>
         <p>{{ t('settings.privacyText') }}</p>
         <p v-if="persistent === true" class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
         <p v-else-if="persistent === false" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
-        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle pt-2 text-[11px] text-ink-4">
-          <span>{{ t('settings.version', { version }) }}</span>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
-              :disabled="checkingUpdate"
-              @click="checkAppUpdates"
-            >
-              <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': checkingUpdate }"></i>
-              <span>{{ checkingUpdate ? t('settings.checkingUpdates') : t('settings.checkUpdates') }}</span>
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink-1"
-              :title="t('settings.forceReloadConfirm')"
-              @click="forceReloadServer"
-            >
-              <i class="fa-solid fa-cloud-arrow-down"></i>
-              <span>{{ t('settings.forceReload') }}</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 

@@ -12,6 +12,7 @@ source-files:
   - src/composables/useMonthStep.ts
   - src/composables/useConfirmDelete.ts
   - src/composables/useDirty.ts
+  - src/composables/useAppUpdate.ts
   - src/components/BalancePanel.vue
   - src/components/BaseModal.vue
   - src/components/BottomNav.vue
@@ -122,11 +123,11 @@ La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramit
 - Modalità: `generateSW` con Workbox.
 - Pre-caching completo di asset statici, HTML, JS, CSS e font FontAwesome WOFF2.
 - Service worker dedicato per notifiche push: per le notifiche Web Push su browser Chromium/Firefox in background viene registrato il push listener capace di mostrare la notifica anche quando la pagina principale è chiusa.
-- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) gestisce il ciclo di vita dell'aggiornamento PWA in modo robusto e multipiattaforma:
-  - Ispezione diretta di `registration.waiting` e ascolto di `updatefound` per intercettare i worker già pronti o in installazione senza dipendere dai soli timeout di Workbox.
-  - Multi-trigger per risveglio su Safari iOS (Web Clip standalone) e browser desktop: oltre a `visibilitychange`, ascolta `pageshow`, `focus`, `online` e un heartbeat timer che rileva se il processo WebKit è stato congelato e risvegliato da iOS.
-  - Gestione di `controllerchange` per garantire il reload immediato e pulito all'attivazione del nuovo worker.
-- Nella vista [`SettingsView.vue`](../../src/views/SettingsView.vue) sono disponibili azioni manuali: «Verifica aggiornamenti» (per forzare il controllo via Service Worker) e «Ricarica dal server» (azione di emergenza che svuota la Cache Storage e deregistra i worker prima del reload, risolvendo eventuali blocchi di cache locale senza perdere i dati su IndexedDB).
+- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) registra il service worker e decide quando cercare una versione nuova; lo stato condiviso e le regole stanno in [`useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) (`updateReady`, `reloadPending`, `checkForUpdate`, `applyUpdate`, `onControllerChange`):
+  - **Quando si controlla:** all'avvio, al ritorno in primo piano (`visibilitychange`, `pageshow`, `focus`: su iPhone, con l'app aperta dalla Home, il solo `visibilitychange` non sempre arriva), al ritorno della rete, ogni 15 minuti e al risveglio dalla sospensione (battito ogni 2 s: un salto oltre 5 s vuol dire processo congelato). Solo con l'app in vista e al massimo una volta al minuto per i segnali di risveglio: al PC `focus` scatta di continuo, e i timer delle schede in sottofondo rallentati sembrerebbero sempre un risveglio.
+  - **Versione pronta:** `checkForUpdate` aspetta che il worker scaricato finisca l'installazione (`update()` si risolve prima) e conta come aggiornamento solo un worker in attesa con la pagina già controllata. Risponde `available`, `none`, `offline` o `error`.
+  - **Ricarica:** si ricarica da sola solo la finestra che ha chiesto l'aggiornamento (`applyUpdate` → `SKIP_WAITING`). Le altre finestre, su `controllerchange`, mostrano l'avviso e aspettano il tocco, così un modulo con modifiche non salvate non si perde. Anche il ricaricamento automatico di Workbox passa da qui (`onNeedReload`).
+- Nelle Impostazioni ([`SettingsView.vue`](../../src/views/SettingsView.vue)) la scheda «Aggiornamenti» mostra la versione e offre «Verifica aggiornamenti» (se trova una versione nuova la applica subito; offline o in errore lo dice, non risponde «già aggiornata») e, come via d'uscita, «Ricarica dal server»: toglie il service worker e svuota la Cache Storage, poi ricarica; i dati in IndexedDB restano. Togliere il worker cancella anche l'iscrizione alle notifiche push del dispositivo: la rifà la sincronizzazione successiva (`runSyncPushSchedule` vede che manca), e la conferma lo dice quando le notifiche sono attive. Su iPhone la nuova iscrizione senza un tocco dell'utente è da verificare.
 
 ---
 
