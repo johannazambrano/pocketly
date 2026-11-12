@@ -19,12 +19,12 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|---|
 | [`src/App.vue`](../../src/App.vue) | Radice dell'albero Vue: coordinamento header, layout, router view, bottom nav, toast, modali e dialoghi di conferma | — | [frontend.md](../architettura/frontend.md) |
 | [`src/main.ts`](../../src/main.ts) | Bootstrap dell'app: creazione istanza Vue, registrazione Pinia, Vue Router, vue-i18n e montaggio su `#app` | — | [frontend.md](../architettura/frontend.md) |
-| [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite | — | [frontend.md](../architettura/frontend.md) |
+| [`src/env.d.ts`](../../src/env.d.ts) | Dichiarazioni di tipo TypeScript per moduli `.vue` e client Vite, e delle costanti di build (`__APP_VERSION__`, `__APP_COMMIT__`, `__APP_BUILT_AT__`) | — | [frontend.md](../architettura/frontend.md) |
 | [`src/style.css`](../../src/style.css) | Foglio di stile globale basato su Tailwind CSS 4: gettoni di colore con nomi di significato (`bg-surface`, `text-ink-2`, `border-line`…, valori nelle variabili `--pk-*` che cambiano per `html[data-platform]` e `html[data-theme]`), safe-area scroll padding, classi utility | — | [frontend.md](../architettura/frontend.md) |
 | [`src/router/index.ts`](../../src/router/index.ts) | Definizione delle 9 rotte (8 principali e 1 di dettaglio), lazy loading viste e metadati dei tab (`TABS`) | — | [frontend.md](../architettura/frontend.md) |
 | [`public/push-worker.js`](../../public/push-worker.js) | Service worker Web Push: gestione ricezione eventi push, icona badge e navigazione su click | — | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`index.html`](../../index.html) | Entry point HTML dell'applicazione PWA, meta tag viewport, thema e aggancio mount Vue | — | [frontend.md](../architettura/frontend.md) |
-| [`vite.config.ts`](../../vite.config.ts) | Configurazione bundler Vite, integrazione Workbox PWA e proxy di sviluppo per `/api` verso porta 8787 | — | [deploy.md](../architettura/deploy.md) |
+| [`vite.config.ts`](../../vite.config.ts) | Configurazione bundler Vite, integrazione Workbox PWA, proxy di sviluppo per `/api` verso porta 8787 e costanti di build (versione, commit corto, ora della build) | — | [deploy.md](../architettura/deploy.md) |
 | [`pwa-assets.config.ts`](../../pwa-assets.config.ts) | Configurazione generazione automatica asset e icone PWA | — | [frontend.md](../architettura/frontend.md) |
 
 ---

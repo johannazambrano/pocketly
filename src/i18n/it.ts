@@ -350,7 +350,7 @@ export default {
     privacyText: 'Questa app non invia dati a nessun server: nessun account, nessun tracciamento. Tutto resta sul tuo dispositivo.',
     storagePersistent: 'Archiviazione persistente attiva',
     storageNotPersistent: 'Il browser potrebbe cancellare i dati se lo spazio scarseggia. Installare l’app nella schermata Home riduce questo rischio.',
-    version: 'Versione {version}',
+    version: 'Versione {version} del {build}',
     updatesTitle: 'Aggiornamenti',
     checkUpdates: 'Verifica aggiornamenti',
     checkingUpdates: 'Controllo in corso…',

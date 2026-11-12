@@ -352,7 +352,7 @@ const en: typeof it = {
     privacyText: 'This app sends no data to any server: no account, no tracking. Everything stays on your device.',
     storagePersistent: 'Persistent storage enabled',
     storageNotPersistent: 'The browser may clear data when space runs low. Installing the app on your Home screen reduces this risk.',
-    version: 'Version {version}',
+    version: 'Version {version}, built {build}',
     updatesTitle: 'Updates',
     checkUpdates: 'Check for updates',
     checkingUpdates: 'Checking…',

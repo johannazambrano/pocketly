@@ -29,6 +29,11 @@ const PLATFORM_CHOICES: PlatformChoice[] = ['auto', 'ios', 'android', 'desktop']
 const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
 const { t, locale } = useFormat()
 const version = __APP_VERSION__
+/** «del 12 nov 2026, 15:30 · 8a0e89d»: il numero di versione da solo non cambia tra un rilascio e l'altro. */
+const build = computed(() => {
+  const when = new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(__APP_BUILT_AT__))
+  return __APP_COMMIT__ ? `${when} · ${__APP_COMMIT__}` : when
+})
 
 const persistent = ref<boolean | null>(null)
 onMounted(async () => {
@@ -414,7 +419,7 @@ function changeLocale(code: LocaleCode) {
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-arrows-rotate mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.updatesTitle') }}</h3>
-        <p class="text-xs text-ink-4">{{ t('settings.version', { version }) }}</p>
+        <p class="text-xs text-ink-4">{{ t('settings.version', { version, build }) }}</p>
         <button
           type="button"
           class="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-60"

@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
@@ -23,9 +24,23 @@ function inlineAppleTouchIcon(): Plugin {
   }
 }
 
+/**
+ * Quale build gira su un dispositivo: il numero di versione resta lo stesso tra un rilascio e l'altro, il commit e
+ * l'ora della build no. Senza git (es. copia senza cartella .git) il commit resta vuoto.
+ */
+function gitCommit(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return ''
+  }
+}
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_COMMIT__: JSON.stringify(gitCommit()),
+    __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     inlineAppleTouchIcon(),
