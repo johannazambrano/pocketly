@@ -21,7 +21,7 @@ import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
-import { lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { addDays, lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export type TagKind = 'categories' | 'paymentMethods' | 'tags'
@@ -238,6 +238,24 @@ export const useFinanceStore = defineStore('finance', () => {
   function restoreRecurringCharge(item: RecurringExpense, original: IsoDate) {
     saveRecurringException(item, { date: original })
   }
+  /**
+   * «Elimina» da un addebito, «Da questo addebito in poi»: la spesa finisce il giorno prima di `from`. Le parti che
+   * partono da `from` in poi spariscono, quella in corso si ferma (con le sue eccezioni fino a lì).
+   */
+  function endRecurringSeriesFrom(item: RecurringExpense, from: IsoDate) {
+    const key = seriesKey(item)
+    const endDate = addDays(from, -1)
+    const out: RecurringExpense[] = []
+    for (const r of data.value.recurringExpenses) {
+      if (seriesKey(r) !== key || (r.endDate && r.endDate <= endDate)) out.push(r)
+      else if (r.startDate < from) {
+        const exceptions = (r.exceptions ?? []).filter((e) => e.date <= endDate)
+        const { exceptions: _old, ...rest } = r
+        out.push({ ...rest, endDate, ...(exceptions.length ? { exceptions } : {}) })
+      }
+    }
+    data.value.recurringExpenses = out
+  }
   /** Elimina la spesa intera: tutte le parti collegate a `item` (o solo `item`, se non è mai stata divisa). */
   function deleteRecurringSeries(item: RecurringExpense) {
     const key = seriesKey(item)
@@ -413,6 +431,7 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteRecurringSeries,
     saveRecurringException,
     restoreRecurringCharge,
+    endRecurringSeriesFrom,
     saveLoan,
     deleteLoan,
     addRepayment,

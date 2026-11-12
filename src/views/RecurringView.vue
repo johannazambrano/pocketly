@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { RecurringExpense } from '@/types/models'
+import type { RecurringException, RecurringExpense } from '@/types/models'
 import { monthlyEquivalent, type RecurringSeries } from '@/domain/recurrence'
 import { formatRulesSummary } from '@/domain/notifications'
 import { useFinanceStore } from '@/stores/finance'
@@ -48,13 +48,32 @@ function period(s: RecurringSeries) {
   return last.endDate ? `${since} ${t('recurring.until', { date: date(last.endDate) })}` : since
 }
 
-/** Storico di una spesa con più periodi (cambi «da questo addebito in poi»): si apre dall'etichetta nella riga. */
-const historyOf = ref<RecurringSeries | null>(null)
+/**
+ * Storico di una spesa con più periodi (cambi «da questo addebito in poi») o con addebiti cambiati o saltati da soli:
+ * si apre dall'etichetta nella riga. Si ricorda la chiave, non la spesa: dopo un «Ripristina» lo storico si aggiorna,
+ * e si chiude da solo quando non resta niente da raccontare.
+ */
+const historyKey = ref<string | null>(null)
+/** L'etichetta «Storico» compare solo quando c'è qualcosa da raccontare. */
+const hasHistory = (s: RecurringSeries) => s.parts.length > 1 || s.parts.some((p) => p.exceptions?.length)
+const historyOf = computed(() => {
+  const s = finance.recurringSeriesOfYear.find((x) => x.key === historyKey.value)
+  return s && hasHistory(s) ? s : null
+})
 
 /** Da qui si può correggere un periodo: lo storico si chiude e si apre il modulo su quella parte. */
 function openPart(part: RecurringExpense) {
-  historyOf.value = null
+  historyKey.value = null
   open(part)
+}
+
+/** Una riga per addebito cambiato da solo: saltato, o con importo (e giorno) diversi. */
+function exceptionText(p: RecurringExpense, e: RecurringException) {
+  if (e.skipped) return t('recurring.historySkipped', { date: date(e.date) })
+  const amount = money(e.amount ?? p.amount)
+  return e.movedTo
+    ? t('recurring.historyMoved', { date: date(e.date), amount, moved: date(e.movedTo) })
+    : t('recurring.historyChanged', { date: date(e.date), amount })
 }
 
 function partRange(p: RecurringExpense) {
@@ -98,10 +117,10 @@ function partState(s: RecurringSeries, p: RecurringExpense) {
             <span>{{ formatRulesSummary(s.current.notifications, t) }}</span>
           </span>
           <button
-            v-if="s.parts.length > 1"
+            v-if="hasHistory(s)"
             type="button"
             class="inline-flex items-center gap-1 rounded bg-surface-3 px-1.5 py-0.5 text-[11px] font-medium text-ink-2 hover:bg-surface-4 active:scale-95"
-            @click="historyOf = s"
+            @click="historyKey = s.key"
           >
             <i class="fa-solid fa-clock-rotate-left text-[10px]" aria-hidden="true"></i>
             {{ t('recurring.history') }}
@@ -109,7 +128,7 @@ function partState(s: RecurringSeries, p: RecurringExpense) {
         </template>
       </EntryRow>
     </EntryList>
-    <BaseModal :open="!!historyOf" :title="historyOf ? t('recurring.historyOf', { name: historyOf.current.name }) : ''" @close="historyOf = null">
+    <BaseModal :open="!!historyOf" :title="historyOf ? t('recurring.historyOf', { name: historyOf.current.name }) : ''" @close="historyKey = null">
       <div v-if="historyOf" class="space-y-3">
         <p class="text-xs text-ink-3">{{ t('recurring.historyHint') }}</p>
         <ul class="divide-y divide-line-soft overflow-hidden rounded-lg bg-surface-2">
@@ -124,6 +143,20 @@ function partState(s: RecurringSeries, p: RecurringExpense) {
               </span>
               <i class="fa-solid fa-chevron-right shrink-0 text-xs text-ink-4" aria-hidden="true"></i>
             </button>
+            <!-- Gli addebiti di questo periodo cambiati o saltati da soli, ognuno ripristinabile. -->
+            <ul v-if="p.exceptions?.length" class="space-y-1 px-3 pb-2">
+              <li v-for="e in p.exceptions" :key="e.date" class="flex items-center justify-between gap-3 rounded-md bg-surface px-2.5 py-1.5 text-xs text-ink-2">
+                <span :class="{ 'line-through decoration-ink-4': e.skipped }">{{ exceptionText(p, e) }}</span>
+                <button
+                  type="button"
+                  class="shrink-0 rounded px-2 py-1.5 font-medium text-accent hover:bg-surface-3"
+                  :aria-label="t('recurring.restoreLabel', { date: date(e.date) })"
+                  @click="finance.restoreRecurringCharge(p, e.date)"
+                >
+                  {{ t('recurring.restore') }}
+                </button>
+              </li>
+            </ul>
           </li>
         </ul>
       </div>

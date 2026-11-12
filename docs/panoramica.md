@@ -49,6 +49,7 @@ Dedicata a tutte le spese cicliche (bollette, mutui, canoni di abbonamento, assi
 - Calcolo del **costo equivalente mensile**, fondamentale per il budget e per capire il peso costante delle uscite periodiche.
 - Sistema di promemoria avanzato stile Google Calendar: ogni spesa ricorrente può definire più regole di notifica (es. 3 giorni prima alle 09:00, 1 giorno prima alle 18:00).
 - Modifica senza riscrivere il passato: se la serie ha già avuto addebiti, si sceglie se la modifica vale "Da questo addebito in poi" (di serie: la serie viene divisa e gli addebiti precedenti restano com'erano; si può anche spostare il giorno dell'addebito, per esempio dal 14 al 15, con un solo addebito nel mese del cambio) o per "Tutta la serie". Le parti nate dai cambi restano una spesa sola: in Ricorrenti è una riga, con l'etichetta «Storico» che elenca i periodi e i loro importi.
+- Un solo addebito: toccando un prossimo addebito sulla dashboard (o nel dettaglio di una categoria) si sceglie, come nei calendari, «Solo questo addebito» (importo o giorno diversi, oppure saltarlo), «Da questo addebito in poi» o «Tutta la spesa»; «Elimina…» offre le stesse tre scelte. Gli addebiti cambiati o saltati compaiono nello Storico e si ripristinano da lì.
 
 ### 4. Entrate (`/entrate`)
 Gestione dei flussi positivi di denaro (stipendi, rimborsi, vendite, regali). Ogni entrata è associata a data, nome, importo, categoria e metodo di accredito.

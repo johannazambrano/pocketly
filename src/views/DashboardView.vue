@@ -433,7 +433,7 @@ function editCharge(c: UpcomingCharge) {
   if (c.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === c.id) ?? null
   else {
     editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === c.id) ?? null
-    editingOccurrence.value = c.date
+    editingOccurrence.value = c.original ?? c.date
   }
 }
 async function closeChargeForm() {
