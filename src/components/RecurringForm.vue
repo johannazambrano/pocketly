@@ -6,13 +6,14 @@ import { FREQUENCIES, exceptionOn, moveWindow, nextDueDate, seriesKey, splitRecu
 import { useFinanceStore } from '@/stores/finance'
 import { useNotificationsStore } from '@/stores/notifications'
 import { useUiStore } from '@/stores/ui'
-import { toCents } from '@/utils/money'
 import { lastDayOfMonth, parseIsoDate, toIsoDate } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import NotificationRulesEditor from './NotificationRulesEditor.vue'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 /**
  * `occurrence` è l'addebito da cui si è aperta la modifica (una riga di "Prossimi addebiti" o del dettaglio), con la
@@ -45,7 +46,9 @@ const form = reactive({
 })
 /** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+/** Gli errori stanno sotto i campi; alla conferma il cursore torna sul primo da sistemare. */
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
 
 /** Aperto da un addebito preciso: si può cambiare anche solo quello. */
 const fromCharge = computed(() => !!props.item && !!props.occurrence)
@@ -111,7 +114,8 @@ watch(
   (open) => {
     if (!open) return
     const i = props.item
-    error.value = ''
+    fe.clear()
+    const last = finance.lastUsedTags('recurring')
     scope.value = fromCharge.value ? 'one' : 'from'
     const initialNotifications = i
       ? (i.notifications ? [...i.notifications] : [])
@@ -125,8 +129,8 @@ watch(
       // Di default la ricorrenza parte da gennaio dell'anno selezionato.
       startDate: (i && splitDate.value) || i?.startDate || toIsoDate(finance.selectedYear, 0, 1),
       endDate: i?.endDate ?? '',
-      categoryId: i?.categoryId ?? finance.data.categories[0]?.id ?? '',
-      paymentMethodId: i?.paymentMethodId ?? finance.data.paymentMethods[0]?.id ?? '',
+      categoryId: i?.categoryId ?? last.categoryId,
+      paymentMethodId: i?.paymentMethodId ?? last.paymentMethodId,
       notifications: initialNotifications,
       chargeAmount: i ? amountInput(exception?.amount ?? i.amount) : '',
       chargeDate: exception?.movedTo ?? props.occurrence ?? '',
@@ -138,14 +142,14 @@ watch(
 
 /** «Solo questo addebito»: salva importo e giorno di quell'addebito come eccezione; gli altri restano com'erano. */
 function submitCharge(item: RecurringExpense, original: string) {
-  const amount = toCents(form.chargeAmount)
-  if (amount === null || amount <= 0) {
-    error.value = t('common.invalidAmount')
-    return
-  }
+  fe.clear()
+  const amount = fe.amount('chargeAmount', form.chargeAmount)
   const range = chargeRange.value
-  if (range && (form.chargeDate < range.min || form.chargeDate > range.max)) {
-    error.value = t('recurring.chargeDayOutOfRange', { month: range.month })
+  if (fe.required('chargeDate', form.chargeDate, t('form.dateEmpty')) && range && (form.chargeDate < range.min || form.chargeDate > range.max)) {
+    fe.set('chargeDate', t('recurring.chargeDayOutOfRange', { month: range.month }))
+  }
+  if (amount === null || fe.hasErrors()) {
+    fe.focusFirst(formEl.value)
     return
   }
   finance.saveRecurringException(item, { date: original, amount, movedTo: form.chargeDate })
@@ -158,17 +162,18 @@ function submit() {
     submitCharge(item, props.occurrence)
     return
   }
-  const amount = toCents(form.amount)
-  if (amount === null || amount <= 0) {
-    error.value = t('common.invalidAmount')
-    return
+  fe.clear()
+  const amount = fe.amount('amount', form.amount)
+  fe.required('name', form.name, t('form.nameEmpty'))
+  if (fe.required('startDate', form.startDate, t('form.dateEmpty'))) {
+    if (moveRange.value && (form.startDate < moveRange.value.min || form.startDate > moveRange.value.max)) {
+      fe.set('startDate', t('recurring.moveOutOfRange', { min: date(moveRange.value.min), max: date(moveRange.value.max) }))
+    } else if (form.endDate && form.endDate < form.startDate) {
+      fe.set('endDate', t('recurring.endBeforeStart'))
+    }
   }
-  if (moveRange.value && (form.startDate < moveRange.value.min || form.startDate > moveRange.value.max)) {
-    error.value = t('recurring.moveOutOfRange', { min: date(moveRange.value.min), max: date(moveRange.value.max) })
-    return
-  }
-  if (form.endDate && form.endDate < form.startDate) {
-    error.value = t('recurring.endBeforeStart')
+  if (amount === null || fe.hasErrors()) {
+    fe.focusFirst(formEl.value)
     return
   }
   const values = {
@@ -263,9 +268,9 @@ const chargeAmountLabel = computed(() => {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="t(item ? 'recurring.edit' : 'recurring.new')" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="t(item ? 'recurring.edit' : 'recurring.new')" :initial-focus="item ? undefined : '[data-field=amount]'" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
-    <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
+    <form v-else :id="formId" ref="formEl" novalidate class="space-y-3" @submit.prevent="submit">
       <!--
         Modificare una spesa ricorrente non deve riscrivere i mesi già passati senza volerlo. Aperto da un addebito, si
         sceglie come nei calendari: solo quello, da lì in poi, o tutta la spesa. Dalla pagina Ricorrenti: da qui in poi
@@ -310,25 +315,24 @@ const chargeAmountLabel = computed(() => {
         <div class="grid grid-cols-2 gap-2">
           <label class="block">
             <span class="field-label">{{ t('recurring.chargeAmount') }}</span>
-            <input v-model="form.chargeAmount" required inputmode="decimal" class="field" placeholder="0,00" />
+            <input v-model="form.chargeAmount" v-bind="fe.attrs('chargeAmount')" inputmode="decimal" autocomplete="off" class="field" placeholder="0,00" />
+            <FieldError :id="fe.errorId('chargeAmount')" :message="fe.errors.chargeAmount" />
           </label>
           <label class="block">
             <span class="field-label">{{ t('recurring.chargeDay') }}</span>
-            <input v-model="form.chargeDate" type="date" required class="field" :min="chargeRange.min" :max="chargeRange.max" />
+            <input v-model="form.chargeDate" v-bind="fe.attrs('chargeDate')" type="date" class="field" :min="chargeRange.min" :max="chargeRange.max" />
+            <FieldError :id="fe.errorId('chargeDate')" :message="fe.errors.chargeDate" />
           </label>
         </div>
         <p class="text-xs text-ink-3">{{ t('recurring.chargeOnlyNote', { name: item?.name ?? '', month: chargeRange.month.toLocaleLowerCase() }) }}</p>
       </template>
 
       <template v-else>
-        <label class="block">
-          <span class="field-label">{{ t('common.name') }}</span>
-          <input v-model="form.name" required maxlength="80" class="field" />
-        </label>
         <div class="grid grid-cols-2 gap-2">
           <label class="block">
             <span class="field-label">{{ t('common.amount') }}</span>
-            <input v-model="form.amount" required inputmode="decimal" class="field" placeholder="0,00" />
+            <input v-model="form.amount" v-bind="fe.attrs('amount')" inputmode="decimal" autocomplete="off" class="field" placeholder="0,00" />
+            <FieldError :id="fe.errorId('amount')" :message="fe.errors.amount" />
           </label>
           <label class="block">
             <span class="field-label">{{ t('recurring.frequency') }}</span>
@@ -337,14 +341,29 @@ const chargeAmountLabel = computed(() => {
             </select>
           </label>
         </div>
+        <label class="block">
+          <span class="field-label">{{ t('common.name') }}</span>
+          <input v-model="form.name" v-bind="fe.attrs('name')" maxlength="80" class="field" />
+          <FieldError :id="fe.errorId('name')" :message="fe.errors.name" />
+        </label>
         <div class="grid grid-cols-2 gap-2">
           <label class="block">
             <span class="field-label">{{ t('recurring.startDate') }}</span>
-            <input v-model="form.startDate" type="date" required class="field" :min="moveRange?.min" :max="moveRange?.max" :aria-describedby="moveRange ? `${formId}-move` : undefined" />
+            <input
+              v-model="form.startDate"
+              v-bind="fe.attrs('startDate')"
+              type="date"
+              class="field"
+              :min="moveRange?.min"
+              :max="moveRange?.max"
+              :aria-describedby="fe.errors.startDate ? fe.errorId('startDate') : moveRange ? `${formId}-move` : undefined"
+            />
+            <FieldError :id="fe.errorId('startDate')" :message="fe.errors.startDate" />
           </label>
           <label class="block">
             <span class="field-label">{{ t('recurring.endDate') }}</span>
-            <input v-model="form.endDate" type="date" :min="form.startDate" class="field" />
+            <input v-model="form.endDate" v-bind="fe.attrs('endDate')" type="date" :min="form.startDate" class="field" />
+            <FieldError :id="fe.errorId('endDate')" :message="fe.errors.endDate" />
           </label>
         </div>
         <p v-if="moveRange" :id="`${formId}-move`" class="-mt-1 text-xs text-ink-3">
@@ -363,7 +382,6 @@ const chargeAmountLabel = computed(() => {
           />
         </div>
       </template>
-      <p v-if="error" class="text-xs text-negative" role="alert">{{ error }}</p>
       <div class="pt-2"><SubmitButton
           :label="t('common.save')"
           :cancel-label="t('common.cancel')"

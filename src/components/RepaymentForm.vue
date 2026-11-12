@@ -9,6 +9,8 @@ import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 const props = defineProps<{ open: boolean; loan: Loan | null }>()
 const emit = defineEmits<{ close: [] }>()
@@ -20,7 +22,8 @@ const finance = useFinanceStore()
 const form = reactive({ amount: '', date: '' })
 /** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
 const remaining = computed(() => (props.loan ? loanStatus(props.loan).remaining : 0))
 const exceeds = computed(() => {
   const amount = toCents(form.amount)
@@ -31,7 +34,7 @@ watch(
   () => props.open,
   (open) => {
     if (!open) return
-    error.value = ''
+    fe.clear()
     form.amount = remaining.value > 0 ? amountInput(remaining.value) : ''
     form.date = todayIso()
     resetDirty()
@@ -40,10 +43,12 @@ watch(
 )
 
 function submit() {
-  const amount = toCents(form.amount)
   if (!props.loan) return
-  if (amount === null || amount <= 0) {
-    error.value = t('common.invalidAmount')
+  fe.clear()
+  const amount = fe.amount('amount', form.amount)
+  fe.required('date', form.date, t('form.dateEmpty'))
+  if (amount === null || fe.hasErrors()) {
+    fe.focusFirst(formEl.value)
     return
   }
   finance.addRepayment(props.loan.id, { amount, date: form.date })
@@ -53,19 +58,20 @@ function submit() {
 
 <template>
   <BaseModal :open="open" :dirty="dirty" :form-id="formId" :title="`${t('loans.newRepayment')} · ${loan?.name ?? ''}`" @close="emit('close')">
-    <form :id="formId" class="space-y-3" @submit.prevent="submit">
+    <form :id="formId" ref="formEl" novalidate class="space-y-3" @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('common.amount') }}</span>
-          <input v-model="form.amount" required inputmode="decimal" class="field" placeholder="0,00" />
+          <input v-model="form.amount" v-bind="fe.attrs('amount')" inputmode="decimal" autocomplete="off" class="field" placeholder="0,00" />
+          <FieldError :id="fe.errorId('amount')" :message="fe.errors.amount" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('common.date') }}</span>
-          <input v-model="form.date" type="date" required class="field" />
+          <input v-model="form.date" v-bind="fe.attrs('date')" type="date" class="field" />
+          <FieldError :id="fe.errorId('date')" :message="fe.errors.date" />
         </label>
       </div>
       <p v-if="exceeds" class="text-xs text-caution">{{ t('loans.exceedsRemaining', { amount: money(remaining) }) }}</p>
-      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2"><SubmitButton :label="t('common.save')" :cancel-label="t('common.cancel')" @cancel="emit('close')" /></div>
     </form>
   </BaseModal>
