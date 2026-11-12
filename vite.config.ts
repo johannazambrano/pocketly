@@ -24,10 +24,10 @@ function inlineAppleTouchIcon(): Plugin {
   }
 }
 
-/** Uscita di un comando git, o '' senza git (es. copia senza cartella .git). */
-function git(args: string): string {
+/** Uscita di un comando git, o '' senza git (es. copia senza cartella .git) o se il comando fallisce. */
+function git(args: string, timeout = 10_000): string {
   try {
-    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'], timeout }).toString().trim()
   } catch {
     return ''
   }
@@ -35,11 +35,13 @@ function git(args: string): string {
 
 /**
  * Numero di versione: le prime due cifre da package.json (si alzano a mano per i passaggi grandi), l'ultima è il numero
- * di commit e cresce da sola a ogni rilascio (es. 0.1.315). In una copia parziale del repository (clone «shallow»,
- * come su Vercel) il conteggio sarebbe sbagliato: allora resta «0.1» e la build si riconosce da commit e ora.
+ * di commit e cresce da sola a ogni rilascio (es. 0.1.315). Vercel scarica una copia parziale del repository (clone
+ * «shallow»), dove il conteggio sarebbe sbagliato: lì si prova a scaricare la storia completa. Se non riesce, o in
+ * un'altra copia parziale, resta «0.1» e la build si riconosce da commit e ora.
  */
 function appVersion(): string {
   const [major = '0', minor = '0'] = pkg.version.split('.')
+  if (process.env.VERCEL && git('rev-parse --is-shallow-repository') === 'true') git('fetch --unshallow --quiet', 60_000)
   const count = git('rev-parse --is-shallow-repository') === 'false' ? git('rev-list --count HEAD') : ''
   return count ? `${major}.${minor}.${count}` : `${major}.${minor}`
 }
