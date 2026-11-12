@@ -15,8 +15,10 @@ export const TABS = [
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'dashboard', component: DashboardView },
-    { path: '/una-tantum', name: 'onetime', component: () => import('@/views/OneTimeView.vue') },
+    // `periodInPage`: la pagina ha il selettore del periodo (MonthSelector), che contiene anche l'anno; la barra in alto
+    // allora non mostra il suo menu dell'anno, così il periodo si sceglie da un posto solo.
+    { path: '/', name: 'dashboard', component: DashboardView, meta: { periodInPage: true } },
+    { path: '/una-tantum', name: 'onetime', component: () => import('@/views/OneTimeView.vue'), meta: { periodInPage: true } },
     { path: '/ricorrenti', name: 'recurring', component: () => import('@/views/RecurringView.vue') },
     { path: '/entrate', name: 'income', component: () => import('@/views/IncomeView.vue') },
     { path: '/budget', name: 'budget', component: () => import('@/views/BudgetView.vue') },
@@ -29,7 +31,7 @@ export const router = createRouter({
       name: 'detail',
       component: () => import('@/views/BreakdownDetailView.vue'),
       // Nel menu resta evidenziata la dashboard: il dettaglio è un suo approfondimento.
-      meta: { navParent: 'dashboard' },
+      meta: { navParent: 'dashboard', periodInPage: true },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

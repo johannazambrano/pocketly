@@ -57,7 +57,7 @@ graph TD
    Moduli riutilizzabili per form (`TransactionForm`, `LoanForm`, `RecurringForm`), modali (`BaseModal`), badge di tag (`TagBadge`), grafici a barre (`BudgetBar`), selettori mese (`MonthSelector`), gestione notifiche e toast.
 3. **Composables (`src/composables/`):**
    Funzioni di logica reattiva condivisa:
-   - `useMonthStep.ts`: il mese prima o dopo quello scelto, con passaggio all'anno vicino solo se compare nel menu dell'anno. È condiviso tra le frecce ‹ › e i tasti ←/→ di `MonthSelector.vue` e lo swipe sul riquadro principale, gestito in `DashboardView.vue`. Da "Tutto l'anno" (`'all'`) le frecce entrano nei mesi: nell'anno in corso ‹ porta al mese prima di oggi e › a quello dopo (se quel mese cade in un anno assente dal menu, al mese di oggi); in un altro anno ‹ porta a dicembre e › a gennaio. Al mese di oggi porta il pulsante "Questo mese" di `MonthSelector`.
+   - `useMonthStep.ts`: il periodo prima o dopo quello scelto. Su un mese, il mese prima o dopo (da dicembre a gennaio dell'anno dopo e viceversa); sull'anno intero (`'all'`), l'anno prima o dopo, sempre intero. Si passa solo ad anni presenti in `finance.years`. È condiviso tra le frecce ‹ › e i tasti ←/→ di `MonthSelector.vue` e lo swipe sul riquadro principale, gestito in `DashboardView.vue`. Al mese di oggi porta il pulsante "Oggi" di `MonthSelector`.
    - `useDirty.ts`: dice se i campi di un modulo sono cambiati dall'apertura (`dirty`, azzerato da `reset()` dopo aver riempito i campi). Lo usano i quattro moduli per passare `dirty` a `BaseModal`.
    - `useConfirmDelete.ts`: incapsula la richiesta di conferma prima di azioni distruttive tramite dialogo modale (`ui.confirm`).
 4. **Stores (`src/stores/`):**

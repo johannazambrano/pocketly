@@ -55,12 +55,14 @@ const selectedMonthName = computed(() => {
 })
 const monthArgs = computed(() => ({ month: selectedMonthName.value }))
 
-/** Il titolo del periodo: il mese ("Novembre", con l'anno sul PC) o l'anno intero ("Anno 2026"). */
+/**
+ * Il titolo del periodo, sempre con l'anno ("Novembre 2026", "Tutto il 2026"): la barra in alto non mostra più l'anno
+ * sulla dashboard, il periodo intero si legge qui.
+ */
 const periodTitle = computed(() => {
   const year = finance.selectedYear
   if (finance.selectedMonth === 'all') return t('dashboard.yearTitle', { year })
-  const name = month(finance.selectedMonth)
-  return appearance.platform === 'ios' && year === currentYear.value ? name : `${name} ${year}`
+  return `${month(finance.selectedMonth)} ${year}`
 })
 const periodTitleClass = computed(() => {
   switch (appearance.platform) {

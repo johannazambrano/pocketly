@@ -70,7 +70,8 @@ const yearSelect = computed(() => {
         {{ pageTitle }}
       </p>
 
-      <select v-model.number="finance.selectedYear" :aria-label="t('app.year')" :class="yearSelect">
+      <!-- Sulle pagine con il selettore del periodo l'anno sta lì dentro: qui solo dove l'anno è l'unico filtro. -->
+      <select v-if="!route.meta.periodInPage" v-model.number="finance.selectedYear" :aria-label="t('app.year')" :class="yearSelect">
         <option v-for="y in finance.years" :key="y" :value="y">{{ y }}</option>
       </select>
 
