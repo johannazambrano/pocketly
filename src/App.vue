@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -10,11 +11,27 @@ import ConfirmHost from '@/components/ConfirmHost.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import UpdatePrompt from '@/components/UpdatePrompt.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
+import SearchModal from '@/components/SearchModal.vue'
 
 const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
 const appearance = useAppearanceStore()
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    ui.searchOpen = !ui.searchOpen
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <template>
@@ -40,6 +57,7 @@ const appearance = useAppearanceStore()
     </div>
   </div>
   <TransactionForm :open="ui.quickAddOpen" kind="expense" @close="ui.quickAddOpen = false" />
+  <SearchModal />
   <ConfirmHost />
   <ToastHost />
   <UpdatePrompt />

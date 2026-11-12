@@ -506,6 +506,19 @@ const en: typeof it = {
       bodyInDays: 'Scheduled charge of {amount} in {days} days ({date}).',
     },
   },
+  search: {
+    title: 'Search',
+    placeholder: 'Search by name, note, category or tag…',
+    noResults: 'No results for “{query}”',
+    emptyHint: 'Type at least one word to start searching.',
+    resultsCount: '{n} result | {n} results',
+    kinds: {
+      onetime: 'Variable',
+      recurring: 'Recurring',
+      income: 'Income',
+      loan: 'Loan',
+    },
+  },
 }
 
 export default en

@@ -7,6 +7,7 @@ source-files:
   - src/domain/notifications.ts
   - src/domain/backupReminder.ts
   - src/domain/defaults.ts
+  - src/domain/search.ts
 verified: 2026-11-12
 ---
 
@@ -86,6 +87,7 @@ Le voci con data `<= today` sono escluse poiché già conteggiate nel consuntivo
 - `loanStatus(loan)`: restituisce `{ repaid, remaining }`, cioè la somma dei rimborsi e il residuo del prestito.
 - `availableYears(data, currentYear)`: anni per cui esistono dati (spese, entrate, prestiti, simulazioni, inizio delle ricorrenze) più l'anno corrente, in ordine crescente.
 - `tagBreakdown(items)` (e alias `oneTimeTagBreakdown`): totale e conteggio delle voci (spese una tantum o entrate) per ciascun tag presente, ordinati per importo decrescente.
+- `searchFinance(data, query)`: motore di ricerca globale pura full-text tokenizzata per trovare corrispondenze tra spese una tantum, ricorrenti, entrate e prestiti (match su nome, note, categorie, metodi e tag).
 
 ---
 

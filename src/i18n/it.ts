@@ -504,4 +504,17 @@ export default {
       bodyInDays: 'Tra {days} giorni ({date}) addebito previsto di {amount}.',
     },
   },
+  search: {
+    title: 'Cerca',
+    placeholder: 'Cerca per nome, nota, categoria o tag…',
+    noResults: 'Nessun risultato per «{query}»',
+    emptyHint: 'Digita almeno una parola per iniziare la ricerca.',
+    resultsCount: '{n} risultato | {n} risultati',
+    kinds: {
+      onetime: 'Variabile',
+      recurring: 'Ricorrente',
+      income: 'Entrata',
+      loan: 'Prestito',
+    },
+  },
 }

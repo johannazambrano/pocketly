@@ -88,6 +88,39 @@ const yearSelect = computed(() => {
         <i v-else class="fa-solid fa-cloud" :class="sync.status === 'synced' ? 'text-sync' : 'text-ink-4'"></i>
       </RouterLink>
 
+      <!-- Pulsante Cerca Omnisearch per piattaforma -->
+      <button
+        v-if="appearance.platform === 'ios'"
+        type="button"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent"
+        :aria-label="t('search.title')"
+        @click="ui.openSearch()"
+      >
+        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft" aria-hidden="true">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+      </button>
+      <button
+        v-else-if="appearance.platform === 'android'"
+        type="button"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-surface-3"
+        :aria-label="t('search.title')"
+        @click="ui.openSearch()"
+      >
+        <i class="fa-solid fa-magnifying-glass text-lg" aria-hidden="true"></i>
+      </button>
+      <button
+        v-else
+        type="button"
+        class="inline-flex h-9 items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink-3 shadow-2xs hover:bg-surface-2 transition-colors"
+        :aria-label="t('search.title')"
+        @click="ui.openSearch()"
+      >
+        <i class="fa-solid fa-magnifying-glass text-ink-4" aria-hidden="true"></i>
+        <span class="hidden sm:inline">{{ t('search.title') }}</span>
+        <kbd class="hidden sm:inline-flex items-center rounded border border-line bg-surface-2 px-1.5 py-0.5 text-[10px] font-mono text-ink-4">Ctrl K</kbd>
+      </button>
+
       <!-- iPhone: "+" tondo nella tinta. PC (e Android su schermi larghi): pulsante con il nome dell'azione. -->
       <button
         v-if="appearance.platform === 'ios'"

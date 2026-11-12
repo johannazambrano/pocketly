@@ -35,6 +35,7 @@ source-files:
   - src/components/NotificationRulesEditor.vue
   - src/components/SyncSettings.vue
   - src/components/BaseModal.vue
+  - src/components/SearchModal.vue
   - src/components/ConfirmHost.vue
   - src/components/ToastHost.vue
   - src/components/SubmitButton.vue
@@ -131,6 +132,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ### Moduli e Form
 Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di scartare modifiche non salvate), mostrano "Annulla" accanto a "Salva" (su iPhone "Annulla" e "Fine" stanno nella barra del foglio: il modulo ha un id da `useId()` passato a `BaseModal` come `formId`) e precompilano l'importo con il separatore decimale della lingua (`useFormat().amountInput`).
 - **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (`kind`; importo, data, nome, categoria, metodo, tag, note).
+- **`SearchModal.vue`**: Finestra modale di ricerca globale Omnisearch (apribile con `Ctrl+K` / `Cmd+K` o pulsante lente nella testata) basata su `searchFinance`: input live con autofocus su desktop, conteggio risultati, anteprima con badge tipologia, navigazione contestuale e impostazione di anno/mese sulla voce selezionata.
 - **`RecurringForm.vue`**: Modulo per spese ricorrenti con scelta di frequenza, date inizio/fine e configurazione regole promemoria. Prop `occurrence`: l'addebito da cui si è aperta la modifica (senza, il prossimo da oggi). Modificando una serie che ha un addebito successivo al primo, si sceglie "Da questo addebito in poi" (di serie: divide la serie con `splitRecurring`, e la data di inizio diventa di sola lettura) o "Tutta la serie"; altrimenti un avviso dice che la modifica vale per tutta la serie.
 - **`LoanForm.vue`**: Modulo per prestiti (nome contatto, tipo dato/ricevuto, importo, data, note).
 - **`RepaymentForm.vue`**: Modulo per registrare una tranche di rimborso a un prestito esistente.

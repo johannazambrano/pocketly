@@ -20,6 +20,8 @@ export interface Toast {
 export const useUiStore = defineStore('ui', () => {
   /** Apertura del modulo "nuova spesa" dal pulsante + dell'header. */
   const quickAddOpen = ref(false)
+  /** Apertura della finestra di ricerca globale Omnisearch. */
+  const searchOpen = ref(false)
   const confirmRequest = ref<ConfirmRequest | null>(null)
   const toasts = ref<Toast[]>([])
   let toastSeq = 0
@@ -50,5 +52,13 @@ export const useUiStore = defineStore('ui', () => {
     toasts.value = toasts.value.filter((t) => t.id !== id)
   }
 
-  return { quickAddOpen, confirmRequest, toasts, confirm, answerConfirm, toast, dismissToast }
+  function openSearch() {
+    searchOpen.value = true
+  }
+
+  function closeSearch() {
+    searchOpen.value = false
+  }
+
+  return { quickAddOpen, searchOpen, openSearch, closeSearch, confirmRequest, toasts, confirm, answerConfirm, toast, dismissToast }
 })
