@@ -517,4 +517,16 @@ export default {
       loan: 'Prestito',
     },
   },
+  csvExport: {
+    title: 'Esportazione CSV / Excel',
+    hint: 'Scarica l’elenco completo di spese, entrate e prestiti in formato CSV compatibile con Microsoft Excel, Apple Numbers e Google Fogli.',
+    period: 'Periodo da esportare',
+    selectedYear: 'Anno selezionato ({year})',
+    allYears: 'Tutti gli anni',
+    download: 'Scarica CSV',
+    share: 'Condividi CSV',
+    downloaded: 'File CSV scaricato con successo.',
+    shared: 'File CSV condiviso.',
+    error: 'Impossibile esportare il file CSV.',
+  },
 }

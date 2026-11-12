@@ -6,6 +6,7 @@ import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore, type PlatformChoice, type ThemeChoice } from '@/stores/appearance'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
+import { downloadOrShareCsv, generateCsv } from '@/services/csvExport'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
 import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
 import { parseBackup } from '@/services/migration'
@@ -86,6 +87,32 @@ async function doExport(mode: ExportMode) {
     ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.exportError'), 'error')
   } finally {
     busy.value = false
+  }
+}
+
+// --- esportazione CSV -----------------------------------------------------
+
+const csvYear = ref<number | 'all'>(finance.selectedYear)
+const csvBusy = ref(false)
+
+async function doExportCsv(mode: 'download' | 'share') {
+  if (csvBusy.value) return
+  csvBusy.value = true
+  try {
+    const content = generateCsv(finance.data, {
+      year: csvYear.value,
+      locale: locale.value,
+    })
+    const dateStr = finance.today
+    const suffix = csvYear.value === 'all' ? 'tutti-gli-anni' : String(csvYear.value)
+    const filename = `pocketly-movimenti-${suffix}-${dateStr}.csv`
+    const result = await downloadOrShareCsv(content, filename, mode)
+    if (result === 'cancelled') return
+    ui.toast(t(result === 'shared' ? 'csvExport.shared' : 'csvExport.downloaded'))
+  } catch {
+    ui.toast(t('csvExport.error'), 'error')
+  } finally {
+    csvBusy.value = false
   }
 }
 
@@ -278,6 +305,41 @@ function changeLocale(code: LocaleCode) {
             @change="pickExcel"
           />
         </label>
+      </div>
+
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-ink-2">
+          <i class="fa-solid fa-file-csv mr-1 text-accent-icon"></i> {{ t('csvExport.title') }}
+        </h3>
+        <p class="text-xs text-ink-4">{{ t('csvExport.hint') }}</p>
+
+        <label class="block">
+          <span class="field-label">{{ t('csvExport.period') }}</span>
+          <select v-model="csvYear" class="field">
+            <option :value="finance.selectedYear">{{ t('csvExport.selectedYear', { year: finance.selectedYear }) }}</option>
+            <option value="all">{{ t('csvExport.allYears') }}</option>
+          </select>
+        </label>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="btn-primary min-w-40 flex-1"
+            :disabled="csvBusy"
+            @click="doExportCsv(shareable ? 'share' : 'download')"
+          >
+            {{ shareable ? t('csvExport.share') : t('csvExport.download') }}
+          </button>
+          <button
+            v-if="shareable"
+            type="button"
+            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
+            :disabled="csvBusy"
+            @click="doExportCsv('download')"
+          >
+            {{ t('csvExport.download') }}
+          </button>
+        </div>
       </div>
 
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />

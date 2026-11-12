@@ -519,6 +519,18 @@ const en: typeof it = {
       loan: 'Loan',
     },
   },
+  csvExport: {
+    title: 'CSV / Excel Export',
+    hint: 'Download a complete list of expenses, income, and loans in CSV format compatible with Microsoft Excel, Apple Numbers, and Google Sheets.',
+    period: 'Period to export',
+    selectedYear: 'Selected year ({year})',
+    allYears: 'All years',
+    download: 'Download CSV',
+    share: 'Share CSV',
+    downloaded: 'CSV file downloaded successfully.',
+    shared: 'CSV file shared.',
+    error: 'Could not export CSV file.',
+  },
 }
 
 export default en

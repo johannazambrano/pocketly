@@ -6,9 +6,10 @@ source-files:
   - src/services/backupCrypto.ts
   - src/services/sync/api.ts
   - src/services/sync/engine.ts
+  - src/services/csvExport.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -126,3 +127,9 @@ L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è
 
 ### Perché i Tombstone non sono necessari?
 Nei sistemi di sincronizzazione a due vie, per distinguere un elemento "cancellato" da uno "ancora da ricevere" è necessario memorizzare un record fantasma (tombstone). In Pocketly il client memorizza sempre l'ultima **base** sincronizzata. Questo rende la tripla `(base, local, remote)` sufficiente per dedurre con certezza matematica se un'assenza è frutto di una cancellazione o di una mancata creazione, rendendo superflui i tombstone sia nel client che nel server.
+
+---
+
+## 5. Esportazione Dati CSV / Foglio Elettronico
+
+Il modulo [`src/services/csvExport.ts`](../../src/services/csvExport.ts) (`generateCsv`, `downloadOrShareCsv`) genera un file CSV compatibile con Microsoft Excel contenente l'elenco cronologico di tutte le transazioni (spese una tantum, occorrenze delle spese ricorrenti con la rispettiva data di addebito, entrate, prestiti e rimborsi). Include il BOM UTF-8 (`\uFEFF`) iniziale e adatta automaticamente delimitatori e separatori decimali in base alla lingua (`it` usa `;` e `,`, `en` usa `,` e `.`).
