@@ -36,6 +36,70 @@ onMounted(async () => {
   }
 })
 
+const checkingUpdate = ref(false)
+
+async function checkAppUpdates() {
+  if (checkingUpdate.value) return
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    ui.toast(t('settings.upToDate'))
+    return
+  }
+  checkingUpdate.value = true
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg) {
+      ui.toast(t('settings.upToDate'))
+      return
+    }
+
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+      return
+    }
+
+    await reg.update()
+
+    const activeReg = await navigator.serviceWorker.getRegistration()
+    if (activeReg?.waiting) {
+      activeReg.waiting.postMessage({ type: 'SKIP_WAITING' })
+    } else {
+      ui.toast(t('settings.upToDate'))
+    }
+  } catch (error) {
+    console.warn('Verifica aggiornamenti fallita:', error)
+    ui.toast(t('settings.upToDate'))
+  } finally {
+    checkingUpdate.value = false
+  }
+}
+
+async function forceReloadServer() {
+  const confirmed = await ui.confirm({
+    title: t('settings.forceReload'),
+    message: t('settings.forceReloadConfirm'),
+    confirmLabel: t('settings.forceReload'),
+    danger: false,
+  })
+  if (!confirmed) return
+
+  try {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      for (const reg of registrations) {
+        await reg.unregister()
+      }
+    }
+    if (typeof caches !== 'undefined') {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+  } catch (error) {
+    console.warn('Errore durante la pulizia delle cache PWA:', error)
+  }
+
+  window.location.reload()
+}
+
 // --- esportazione ---------------------------------------------------------
 
 const shareable = canShareBackup()
@@ -351,12 +415,34 @@ function changeLocale(code: LocaleCode) {
         </div>
       </div>
 
-      <div class="card space-y-2 text-xs text-ink-4">
+      <div class="card space-y-3 text-xs text-ink-4">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-shield-halved mr-1 text-ink-3"></i> {{ t('settings.privacyTitle') }}</h3>
         <p>{{ t('settings.privacyText') }}</p>
         <p v-if="persistent === true" class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
         <p v-else-if="persistent === false" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
-        <p class="pt-2 text-[11px] text-ink-4">{{ t('settings.version', { version }) }}</p>
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle pt-2 text-[11px] text-ink-4">
+          <span>{{ t('settings.version', { version }) }}</span>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
+              :disabled="checkingUpdate"
+              @click="checkAppUpdates"
+            >
+              <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': checkingUpdate }"></i>
+              <span>{{ checkingUpdate ? t('settings.checkingUpdates') : t('settings.checkUpdates') }}</span>
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-ink-3 hover:bg-surface-2 hover:text-ink-1"
+              :title="t('settings.forceReloadConfirm')"
+              @click="forceReloadServer"
+            >
+              <i class="fa-solid fa-cloud-arrow-down"></i>
+              <span>{{ t('settings.forceReload') }}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -353,6 +353,11 @@ const en: typeof it = {
     storagePersistent: 'Persistent storage enabled',
     storageNotPersistent: 'The browser may clear data when space runs low. Installing the app on your Home screen reduces this risk.',
     version: 'Version {version}',
+    checkUpdates: 'Check for updates',
+    checkingUpdates: 'Checking for updates...',
+    upToDate: 'The app is already up to date',
+    forceReload: 'Reload from server',
+    forceReloadConfirm: 'Do you want to clear the local cache and reload the app directly from the server? Your saved financial data will not be affected.',
   },
   excelImport: {
     title: 'Import from Excel',

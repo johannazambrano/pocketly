@@ -17,11 +17,13 @@ source-files:
   - src/components/BottomNav.vue
   - src/components/MonthSelector.vue
   - src/components/SubmitButton.vue
+  - src/components/UpdatePrompt.vue
   - src/views/BreakdownDetailView.vue
   - src/views/DashboardView.vue
+  - src/views/SettingsView.vue
   - src/i18n/index.ts
   - vite.config.ts
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Architettura Frontend
@@ -120,7 +122,11 @@ La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramit
 - Modalità: `generateSW` con Workbox.
 - Pre-caching completo di asset statici, HTML, JS, CSS e font FontAwesome WOFF2.
 - Service worker dedicato per notifiche push: per le notifiche Web Push su browser Chromium/Firefox in background viene registrato il push listener capace di mostrare la notifica anche quando la pagina principale è chiusa.
-- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) ascolta l'evento di rilascio di una nuova versione del service worker e mostra all'utente un banner discreto per ricaricare l'app senza perdere sessioni o dati in corso di digitazione.
+- Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) gestisce il ciclo di vita dell'aggiornamento PWA in modo robusto e multipiattaforma:
+  - Ispezione diretta di `registration.waiting` e ascolto di `updatefound` per intercettare i worker già pronti o in installazione senza dipendere dai soli timeout di Workbox.
+  - Multi-trigger per risveglio su Safari iOS (Web Clip standalone) e browser desktop: oltre a `visibilitychange`, ascolta `pageshow`, `focus`, `online` e un heartbeat timer che rileva se il processo WebKit è stato congelato e risvegliato da iOS.
+  - Gestione di `controllerchange` per garantire il reload immediato e pulito all'attivazione del nuovo worker.
+- Nella vista [`SettingsView.vue`](../../src/views/SettingsView.vue) sono disponibili azioni manuali: «Verifica aggiornamenti» (per forzare il controllo via Service Worker) e «Ricarica dal server» (azione di emergenza che svuota la Cache Storage e deregistra i worker prima del reload, risolvendo eventuali blocchi di cache locale senza perdere i dati su IndexedDB).
 
 ---
 

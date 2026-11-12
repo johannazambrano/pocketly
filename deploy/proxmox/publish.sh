@@ -18,6 +18,9 @@ tar -C dist -cf - . | ssh "$TARGET" "set -e
   tar -C '$DEST.new' -xf -
   if [ -d '$DEST' ]; then mv '$DEST' '$DEST.old'; fi
   mv '$DEST.new' '$DEST'
-  rm -rf '$DEST.old'"
+  rm -rf '$DEST.old'
+  if command -v nginx >/dev/null && nginx -t 2>/dev/null; then
+    systemctl reload nginx 2>/dev/null || true
+  fi"
 
 echo "Pubblicato su $TARGET:$DEST"

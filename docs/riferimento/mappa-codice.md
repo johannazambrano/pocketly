@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-11
+verified: 2026-11-12
 ---
 
 # Mappa del Codice
@@ -75,7 +75,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/views/BudgetView.vue`](../../src/views/BudgetView.vue) | Vista budget (`/budget`): gestione limiti per categoria, monitoraggio ritmo giornaliero e barre di avanzamento | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/LoansView.vue`](../../src/views/LoansView.vue) | Vista prestiti (`/prestiti`): tracciamento crediti e debiti, storico rimborsi parziali e saldo residuo | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/ForecastView.vue`](../../src/views/ForecastView.vue) | Vista previsioni (`/previsioni`): proiezione fino a dicembre, simulazioni d'acquisto, stima automatica/manuale | — | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/views/SettingsView.vue`](../../src/views/SettingsView.vue) | Vista impostazioni (`/impostazioni`): anagrafiche (categorie, metodi, tag), backup AES-GCM, sync e Web Push | — | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/views/SettingsView.vue`](../../src/views/SettingsView.vue) | Vista impostazioni (`/impostazioni`): anagrafiche, backup AES-GCM, sync, Web Push, verifica aggiornamenti e ricarica server | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/views/BreakdownDetailView.vue`](../../src/views/BreakdownDetailView.vue) | Dettaglio ripartizioni (`/dettaglio/:kind/:id`): voci analitiche modificabili con i moduli, stato "non trovato", a11y focus heading, ritorno alla dashboard | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 
 ---
@@ -109,7 +109,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/components/TagSelect.vue`](../../src/components/TagSelect.vue) | Menu a tendina standard per la selezione di una categoria o metodo di pagamento | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/ToastHost.vue`](../../src/components/ToastHost.vue) | Host overlay per visualizzare notifiche toast a scomparsa | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/TransactionForm.vue`](../../src/components/TransactionForm.vue) | Modulo versatile per inserimento/modifica spese una tantum o entrate | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) | Notifica non invasiva quando è disponibile un nuovo aggiornamento del service worker | [frontend.md](../architettura/frontend.md) |
+| [`src/components/UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) | Notifica non invasiva e gestione ciclo di vita aggiornamenti Service Worker e risvegli iOS | [frontend.md](../architettura/frontend.md) |
 | [`src/components/WelcomePanel.vue`](../../src/components/WelcomePanel.vue) | Pannello di primo benvenuto mostrato quando non ci sono ancora dati inseriti | [componenti-e-viste.md](./componenti-e-viste.md) |
 
 ---
@@ -180,5 +180,5 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`deploy/proxmox/make-cert.sh`](../../deploy/proxmox/make-cert.sh) | Generatore di CA e certificati TLS per server locale in rete domestica | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/pocketly-sync.service`](../../deploy/proxmox/pocketly-sync.service) | Definizione della systemd unit con parametri di sicurezza sandboxing | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/publish.sh`](../../deploy/proxmox/publish.sh) | Script per la compilazione frontend e rilascio locale su directory web | [deploy.md](../architettura/deploy.md) |
-| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git rapido con riavvio del servizio | [deploy.md](../architettura/deploy.md) |
+| [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git, build, allineamento Nginx e riavvio servizi | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/nginx/pocketly.conf`](../../deploy/proxmox/nginx/pocketly.conf) | Configurazione Virtual Host Nginx per reverse proxy e caching PWA | [deploy.md](../architettura/deploy.md) |

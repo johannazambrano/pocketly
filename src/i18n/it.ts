@@ -351,6 +351,11 @@ export default {
     storagePersistent: 'Archiviazione persistente attiva',
     storageNotPersistent: 'Il browser potrebbe cancellare i dati se lo spazio scarseggia. Installare l’app nella schermata Home riduce questo rischio.',
     version: 'Versione {version}',
+    checkUpdates: 'Verifica aggiornamenti',
+    checkingUpdates: 'Controllo in corso...',
+    upToDate: 'L’app è già aggiornata',
+    forceReload: 'Ricarica dal server',
+    forceReloadConfirm: 'Vuoi svuotare la cache locale e ricaricare l’app direttamente dal server? I tuoi dati finanziari salvati non verranno toccati.',
   },
   excelImport: {
     title: 'Importa da Excel',
