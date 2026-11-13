@@ -9,6 +9,7 @@ import type {
   Loan,
   NotificationRule,
   OneTimeExpense,
+  QuickExpense,
   RecurringException,
   RecurringExpense,
   Repayment,
@@ -183,6 +184,7 @@ export const useFinanceStore = defineStore('finance', () => {
     data.value.simulations.filter((s) => s.year === selectedYear.value).sort((a, b) => a.month - b.month),
   )
   const loans = computed(() => [...data.value.loans].sort(byDateDesc))
+  const quickExpenses = computed(() => data.value.quickExpenses)
 
   const tagMaps = computed(() => ({
     categories: new Map(data.value.categories.map((t) => [t.id, t])),
@@ -196,9 +198,54 @@ export const useFinanceStore = defineStore('finance', () => {
 
   // --- movimenti ---------------------------------------------------------
 
-  function saveOneTime(item: WithOptionalId<OneTimeExpense>) {
-    upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
+  function saveOneTime(item: WithOptionalId<OneTimeExpense>): OneTimeExpense {
+    const saved = upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
     selectedYear.value = yearOf(item.date)
+    return saved
+  }
+
+  function saveQuickExpense(item: WithOptionalId<QuickExpense>): QuickExpense {
+    const { amount, ...rest } = item
+    const normalizedAmount = typeof amount === 'number' && Number.isInteger(amount) && amount > 0 ? amount : undefined
+    return upsert(data.value.quickExpenses, {
+      ...rest,
+      name: item.name.trim(),
+      notes: item.notes.trim(),
+      tagIds: item.tagIds ?? [],
+      ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),
+    })
+  }
+
+  const deleteQuickExpense = (id: Id) => remove(data.value.quickExpenses, id)
+
+  function moveQuickExpense(id: Id, direction: -1 | 1) {
+    const list = data.value.quickExpenses
+    const index = list.findIndex((q) => q.id === id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= list.length) return
+    const [item] = list.splice(index, 1)
+    if (item) list.splice(target, 0, item)
+  }
+
+  /**
+   * Registra subito una spesa variabile a partire da un inserimento rapido con importo fisso.
+   * Restituisce null se il rapido non ha importo o se mancano categoria/metodo utilizzabili.
+   */
+  function triggerQuickExpense(preset: QuickExpense, date: IsoDate = today.value): OneTimeExpense | null {
+    if (!preset.amount || preset.amount <= 0) return null
+    const categoryId = tag('categories', preset.categoryId)?.id ?? data.value.categories[0]?.id
+    const paymentMethodId = tag('paymentMethods', preset.paymentMethodId)?.id ?? data.value.paymentMethods[0]?.id
+    if (!categoryId || !paymentMethodId) return null
+    const tagIds = (preset.tagIds ?? []).filter((id) => !!tag('tags', id))
+    return saveOneTime({
+      name: preset.name,
+      amount: preset.amount,
+      date,
+      categoryId,
+      paymentMethodId,
+      notes: preset.notes,
+      tagIds,
+    })
   }
 
   function saveIncome(item: WithOptionalId<Income>) {
@@ -366,18 +413,18 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function tagUsage(kind: TagKind, id: Id): number {
     if (kind === 'tags') {
-      return data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length
+      return [...data.value.oneTimeExpenses, ...data.value.quickExpenses].filter((x) => x.tagIds?.includes(id)).length
     }
     const field = REF_FIELD[kind]
     const d = data.value
-    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes].filter((x) => x[field] === id).length
+    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses].filter((x) => x[field] === id).length
   }
 
   /** Elimina una categoria/metodo/tag spostando le voci che lo usano su `reassignTo`. */
   function deleteTag(kind: TagKind, id: Id, reassignTo?: Id) {
     const d = data.value
     if (kind === 'tags') {
-      for (const x of d.oneTimeExpenses) {
+      for (const x of [...d.oneTimeExpenses, ...d.quickExpenses]) {
         if (x.tagIds?.includes(id)) {
           x.tagIds = x.tagIds.filter((t) => t !== id)
           if (reassignTo && !x.tagIds.includes(reassignTo)) {
@@ -390,7 +437,7 @@ export const useFinanceStore = defineStore('finance', () => {
     }
     const field = REF_FIELD[kind]
     if (reassignTo) {
-      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes]) {
+      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses]) {
         if (x[field] === id) x[field] = reassignTo
       }
     }
@@ -432,8 +479,13 @@ export const useFinanceStore = defineStore('finance', () => {
     recurringSeriesOfYear,
     simulationsOfYear,
     loans,
+    quickExpenses,
     tag,
     saveOneTime,
+    saveQuickExpense,
+    deleteQuickExpense,
+    moveQuickExpense,
+    triggerQuickExpense,
     saveIncome,
     saveRecurring,
     applyNotificationsToRecurring,

@@ -330,6 +330,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: { limits: {} },
+    quickExpenses: [],
   }
 
   return {

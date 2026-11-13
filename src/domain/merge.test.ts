@@ -18,6 +18,7 @@ function data(overrides: Partial<FinanceData> = {}): FinanceData {
     simulations: [],
     forecast: { estimateIncome: false, incomeCategoryIds: [] },
     budget: { limits: {} },
+    quickExpenses: [],
     ...overrides,
   }
 }
@@ -180,6 +181,33 @@ describe('mergeFinanceData', () => {
     const merged = mergeFinanceData(base, local, remote)
     expect(merged.recurringExpenses.find((r) => r.id === 'r1')?.notifications).toBeUndefined()
     expect(merged.recurringExpenses.find((r) => r.id === 'r2')?.notifications).toEqual([{ daysBefore: 3, time: '10:00' }])
+  })
+
+  it('unisce gli inserimenti rapidi tra dispositivi e funziona anche su basi senza il campo', () => {
+    const baseWithout = data()
+    delete (baseWithout as Partial<FinanceData>).quickExpenses
+    const remoteWithout = clone(baseWithout)
+    const caffe = { id: 'q1', name: 'Caffè', amount: 150, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] }
+    const pranzo = { id: 'q2', name: 'Pranzo', categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: 'mensa', tagIds: [] }
+
+    // Solo locale ha quickExpenses: non viene perso
+    expect(mergeFinanceData(baseWithout, data({ quickExpenses: [caffe] }), remoteWithout).quickExpenses).toEqual([caffe])
+
+    // Aggiunte concorrenti su entrambi i dispositivi
+    const base = data({ quickExpenses: [caffe] })
+    const local = data({ quickExpenses: [{ ...caffe, amount: 180 }] })
+    const remote = data({ quickExpenses: [caffe, pranzo] })
+    expect(mergeFinanceData(base, local, remote).quickExpenses).toEqual([{ ...caffe, amount: 180 }, pranzo])
+  })
+
+  it('ripristina categoria o metodo cancellato sull’altro dispositivo se usato da un inserimento rapido', () => {
+    const base = data()
+    const local = data({
+      quickExpenses: [{ id: 'q1', name: 'Caffè', amount: 150, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] }],
+    })
+    const remote = data({ categories: [{ id: 'cat-home', name: 'Casa', color: '#3b82f6' }] })
+    const merged = mergeFinanceData(base, local, remote)
+    expect(merged.categories.some((c) => c.id === 'cat-food')).toBe(true)
   })
 })
 

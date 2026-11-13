@@ -44,3 +44,73 @@ describe('avvio con dati salvati che non si leggono', () => {
     expect(writes).toEqual(['finance-data'])
   })
 })
+
+describe('inserimenti rapidi', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', { addEventListener: () => {}, visibilityState: 'visible' })
+    setActivePinia(createPinia())
+    stored.clear()
+    writes.length = 0
+  })
+
+  it('crea, riordina, elimina e registra spese variabili in 1-tap solo con importo fisso', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+    const cat1 = finance.data.categories[0]!.id
+    const cat2 = finance.data.categories[1]!.id
+    const pm1 = finance.data.paymentMethods[0]!.id
+    finance.addTag('tags', 'Lavoro')
+    const tagId = finance.data.tags[0]!.id
+
+    const caffe = finance.saveQuickExpense({
+      name: '  Caffè  ',
+      amount: 150,
+      categoryId: cat1,
+      paymentMethodId: pm1,
+      notes: ' bar ',
+      tagIds: [tagId],
+    })
+    const pranzo = finance.saveQuickExpense({
+      name: 'Pranzo',
+      categoryId: cat2,
+      paymentMethodId: pm1,
+      notes: '',
+      tagIds: [],
+    })
+
+    expect(finance.quickExpenses.map((q) => q.name)).toEqual(['Caffè', 'Pranzo'])
+    expect('amount' in pranzo).toBe(false)
+
+    // Riordino
+    finance.moveQuickExpense(pranzo.id, -1)
+    expect(finance.quickExpenses.map((q) => q.id)).toEqual([pranzo.id, caffe.id])
+
+    // Il rapido senza importo non registra direttamente
+    expect(finance.triggerQuickExpense(pranzo, '2026-11-13')).toBeNull()
+
+    // Il rapido con importo fisso crea una spesa variabile con data indicata
+    const created = finance.triggerQuickExpense(caffe, '2026-11-13')
+    expect(created).not.toBeNull()
+    expect(created).toMatchObject({
+      name: 'Caffè',
+      amount: 150,
+      date: '2026-11-13',
+      categoryId: cat1,
+      paymentMethodId: pm1,
+      notes: 'bar',
+      tagIds: [tagId],
+    })
+    expect(finance.data.oneTimeExpenses).toHaveLength(1)
+
+    // tagUsage e deleteTag includono gli inserimenti rapidi
+    expect(finance.tagUsage('tags', tagId)).toBe(2)
+    expect(finance.tagUsage('categories', cat1)).toBe(2)
+    finance.deleteTag('categories', cat1, cat2)
+    expect(finance.quickExpenses.find((q) => q.id === caffe.id)?.categoryId).toBe(cat2)
+    finance.deleteTag('tags', tagId)
+    expect(finance.quickExpenses.find((q) => q.id === caffe.id)?.tagIds).toEqual([])
+
+    finance.deleteQuickExpense(caffe.id)
+    expect(finance.quickExpenses.map((q) => q.id)).toEqual([pranzo.id])
+  })
+})

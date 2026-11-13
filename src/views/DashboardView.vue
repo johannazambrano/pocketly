@@ -12,6 +12,7 @@ import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
+import QuickExpenseBar from '@/components/QuickExpenseBar.vue'
 import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
@@ -484,6 +485,8 @@ const showUpcoming = computed(
         :split="expensesSplit"
         :explain="explain"
       />
+
+      <QuickExpenseBar manage-link />
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">

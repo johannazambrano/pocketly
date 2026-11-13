@@ -8,7 +8,7 @@ source-files:
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -75,6 +75,21 @@ export interface OneTimeExpense {
   tagIds?: Id[] // Array opzionale di ID di tag applicati
 }
 ```
+
+### `QuickExpense` (Inserimento Rapido di Spesa Variabile)
+```ts
+export interface QuickExpense {
+  id: Id
+  name: string
+  amount?: Cents // Importo fisso in centesimi, oppure assente se varia ogni volta
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+```
+
+Un `QuickExpense` con `amount` definito registra una `OneTimeExpense` in un solo tocco alla data corrente (`finance.triggerQuickExpense`); senza `amount` precompila il modulo di inserimento lasciando l'importo da scrivere. È facoltativo rispetto ai backup v2 precedenti (`normalizeV2` usa `[]` se assente) senza aumentare lo `schemaVersion`.
 
 ### `NotificationRule` e `RecurringExpense` (Spesa Ricorrente)
 ```ts
@@ -188,6 +203,7 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  quickExpenses: QuickExpense[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

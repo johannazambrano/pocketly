@@ -545,6 +545,28 @@ const en: typeof it = {
       bodyInDays: 'Scheduled charge of {amount} in {days} days ({date}).',
     },
   },
+  quickExpenses: {
+    title: 'Quick entries',
+    hint: 'Shortcuts for frequent expenses: fixed-amount ones record in one tap, variable ones open the prefilled form.',
+    new: 'New quick entry',
+    edit: 'Edit quick entry',
+    empty: 'No quick entries yet. You can create one here or check “Also save as quick entry” when adding an expense.',
+    manage: 'Manage',
+    namePlaceholder: 'e.g. Coffee, Work lunch…',
+    amountOptional: 'Fixed amount (€, optional)',
+    amountPlaceholder: 'Leave empty if it varies',
+    amountHint: 'With a fixed amount it records the expense in one tap; if empty it opens the form ready for the amount.',
+    variableAmount: 'Variable amount',
+    saveAsQuick: 'Also save as quick entry',
+    keepAmount: 'Also remember the amount',
+    savedToast: 'Quick entry “{name}” saved.',
+    recordedToast: 'Recorded “{name}” ({amount}).',
+    undoneToast: 'Expense “{name}” undone.',
+    undo: 'Undo',
+    prefillLabel: 'Edit “{name}” before saving',
+    moveUp: 'Move {name} up',
+    moveDown: 'Move {name} down',
+  },
 }
 
 export default en

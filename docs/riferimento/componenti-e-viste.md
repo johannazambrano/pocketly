@@ -11,11 +11,15 @@ source-files:
   - src/views/SettingsView.vue
   - src/composables/useMonthStep.ts
   - src/composables/useDirty.ts
+  - src/composables/useQuickExpenseTrigger.ts
   - src/stores/ui.ts
   - src/domain/backupReminder.ts
   - src/components/AppHeader.vue
   - src/components/BottomNav.vue
   - src/components/PageHeader.vue
+  - src/components/QuickExpenseBar.vue
+  - src/components/QuickExpenseForm.vue
+  - src/components/QuickExpenseManager.vue
   - src/components/EntryList.vue
   - src/components/EntryRow.vue
   - src/components/TransactionForm.vue
@@ -40,12 +44,12 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/UpdatePrompt.vue
   - src/components/WelcomePanel.vue
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Riferimento: Componenti e Viste
 
-Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 27 componenti UI di Pocketly.
+Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 30 componenti UI di Pocketly.
 
 ---
 
@@ -68,7 +72,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
   - Navigazione del periodo (mese, o anno sull'anno intero): tasti ← e → gestiti da [`MonthSelector`](../../src/components/MonthSelector.vue); swipe orizzontale (almeno 60px, prevalentemente orizzontale) sul riquadro principale gestito qui (`onTouchStart`/`onTouchEnd` con `useMonthStep`).
   - Annuncio per screen reader (`aria-live="polite"`) sul cambio di periodo.
   - Ritorno dal dettaglio: in `onMounted`, se `router.options.history.state.forward` è un indirizzo `/dettaglio/…`, il focus torna sulla riga della ripartizione da cui si era entrati (`preventScroll`, la posizione la ripristina il router).
-- **Componenti inclusi:** [`BalancePanel`](../../src/components/BalancePanel.vue), [`BreakdownList`](../../src/components/BreakdownList.vue), [`MonthSelector`](../../src/components/MonthSelector.vue), [`WelcomePanel`](../../src/components/WelcomePanel.vue), [`TransactionForm`](../../src/components/TransactionForm.vue), [`RecurringForm`](../../src/components/RecurringForm.vue). `AppHeader` e `BackupReminder` stanno in `App.vue`, fuori dalla vista.
+- **Componenti inclusi:** [`BalancePanel`](../../src/components/BalancePanel.vue), [`QuickExpenseBar`](../../src/components/QuickExpenseBar.vue) (mostrata sotto il saldo quando esistono inserimenti rapidi configurati), [`BreakdownList`](../../src/components/BreakdownList.vue), [`MonthSelector`](../../src/components/MonthSelector.vue), [`WelcomePanel`](../../src/components/WelcomePanel.vue), [`TransactionForm`](../../src/components/TransactionForm.vue), [`RecurringForm`](../../src/components/RecurringForm.vue). `AppHeader` e `BackupReminder` stanno in `App.vue`, fuori dalla vista.
 
 ### `BreakdownDetailView.vue` (`/dettaglio/:kind(categoria|metodo)/:id`)
 - **Ruolo:** Vista di dettaglio analitico di una riga delle ripartizioni della Dashboard.
@@ -82,7 +86,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `OneTimeView.vue` (`/una-tantum`)
 - **Ruolo:** Gestione transazioni puntuali.
-- **Funzionalità:** Filtro per mese tramite [`MonthSelector`](../../src/components/MonthSelector.vue). Filtro per singolo tag e pulsante per visualizzare il riquadro a comparsa dello spaccato per tag ([`BreakdownList`](../../src/components/BreakdownList.vue)). Creazione e modifica con [`TransactionForm`](../../src/components/TransactionForm.vue).
+- **Funzionalità:** Filtro per mese tramite [`MonthSelector`](../../src/components/MonthSelector.vue). Se presenti, mostra gli inserimenti rapidi configurati tramite [`QuickExpenseBar`](../../src/components/QuickExpenseBar.vue). Filtro per singolo tag e pulsante per visualizzare il riquadro a comparsa dello spaccato per tag ([`BreakdownList`](../../src/components/BreakdownList.vue)). Creazione e modifica con [`TransactionForm`](../../src/components/TransactionForm.vue).
 
 ### `RecurringView.vue` (`/ricorrenti`)
 - **Ruolo:** Gestione delle spese periodiche.
@@ -110,7 +114,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `SettingsView.vue` (`/impostazioni`)
 - **Ruolo:** Amministrazione dati, preferenze e collegamenti.
-- **Funzionalità:** Selettore lingua (IT/EN), "Riarmonizza i colori" (con conferma, `finance.harmonizeColors`: colori in equilibrio per categorie, metodi e tag, grigio per "Altro"), aspetto ("Stile": automatico / iPhone / Android / PC, con la piattaforma riconosciuta; "Tema": sistema / chiaro / scuro, store `appearance`), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)), scheda «Aggiornamenti» con la versione e l'ora della build (per capire quale build gira sul dispositivo), «Verifica aggiornamenti» (applica subito la versione trovata; dice se si è offline o se il controllo non riesce) e «Ricarica dal server» come via d'uscita (toglie il service worker e svuota le cache senza toccare IndexedDB; avvisa che le notifiche si riattivano alla sincronizzazione successiva). Logica in [`useAppUpdate`](../../src/composables/useAppUpdate.ts).
+- **Funzionalità:** Selettore lingua (IT/EN), "Riarmonizza i colori" (con conferma, `finance.harmonizeColors`: colori in equilibrio per categorie, metodi e tag, grigio per "Altro"), aspetto ("Stile": automatico / iPhone / Android / PC, con la piattaforma riconosciuta; "Tema": sistema / chiaro / scuro, store `appearance`), anagrafica categorie/metodi/tag tramite [`TagManager`](../../src/components/TagManager.vue), gestione degli inserimenti rapidi tramite [`QuickExpenseManager`](../../src/components/QuickExpenseManager.vue), esportazione ed importazione backup (con o senza password AES-GCM), sincronizzazione cloud privata ([`SyncSettings`](../../src/components/SyncSettings.vue)), configurazione notifiche e Web Push ([`NotificationSettings`](../../src/components/NotificationSettings.vue)), scheda «Aggiornamenti» con la versione e l'ora della build (per capire quale build gira sul dispositivo), «Verifica aggiornamenti» (applica subito la versione trovata; dice se si è offline o se il controllo non riesce) e «Ricarica dal server» come via d'uscita (toglie il service worker e svuota le cache senza toccare IndexedDB; avvisa che le notifiche si riattivano alla sincronizzazione successiva). Logica in [`useAppUpdate`](../../src/composables/useAppUpdate.ts).
 
 ---
 
@@ -131,7 +135,10 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### Moduli e Form
 Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di scartare modifiche non salvate), mostrano "Annulla" accanto a "Salva" (su iPhone "Annulla" e "Fine" stanno nella barra del foglio: il modulo ha un id da `useId()` passato a `BaseModal` come `formId`) e precompilano l'importo con il separatore decimale della lingua (`useFormat().amountInput`).
-- **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (`kind`; importo, data, nome, categoria, metodo, tag, note).
+- **`TransactionForm.vue`**: Modulo riutilizzabile per inserimento e modifica di spese una tantum o entrate (`kind`; importo, data, nome, categoria, metodo, tag, note). In modalità `expense` accetta una prop `preset` (`QuickExpense`), mostra in cima [`QuickExpenseBar`](../../src/components/QuickExpenseBar.vue) compatta per registrare o precompilare al volo quando si crea una nuova spesa, e offre il salvataggio contestuale come inserimento rapido (con importo ricordato o lasciato variabile).
+- **`QuickExpenseBar.vue`**: Barra/riquadro degli inserimenti rapidi (`QuickExpense`), condivisa tra Dashboard, Spese variabili e `TransactionForm` tramite [`useQuickExpenseTrigger`](../../src/composables/useQuickExpenseTrigger.ts). Per i rapidi con importo fisso registra la spesa alla data odierna in un tocco mostrando il toast con «Modifica» e «Annulla» (con pulsante secondario `✎` per modificare prima di salvare); per quelli senza importo apre o precompila `TransactionForm`.
+- **`QuickExpenseForm.vue`**: Modulo modale (`BaseModal`, `useDirty`, `SubmitButton`) per creare o modificare un inserimento rapido (`QuickExpense`) con importo fisso facoltativo.
+- **`QuickExpenseManager.vue`**: Card nelle Impostazioni (`#inserimenti-rapidi`) per creare, modificare, riordinare ed eliminare gli inserimenti rapidi.
 - **`RecurringForm.vue`**: Modulo per spese ricorrenti con scelta di frequenza, date inizio/fine e configurazione regole promemoria. Prop `occurrence`: la data secondo la serie dell'addebito da cui si è aperta la modifica (dashboard e dettaglio); senza (pagina Ricorrenti) si usa il prossimo addebito da oggi. **Aperto da un addebito** si sceglie come nei calendari: «Solo questo addebito» (di serie: solo importo e giorno di quell'addebito, il giorno dentro il suo mese; salva un'eccezione con `finance.saveRecurringException`; l'azione rossa è «Salta questo addebito»), «Da questo addebito in poi» o «Tutta la spesa» (solo se prima ci sono altri addebiti); con queste due l'azione rossa è «Elimina…», che chiede quali addebiti togliere: solo quello (saltato), da quello in poi (`finance.endRecurringSeriesFrom`: la spesa finisce il giorno prima, le parti successive spariscono) o tutta la spesa (`deleteRecurringSeries`). **Dalla pagina Ricorrenti**: Modificando una serie che ha un addebito successivo al primo, si sceglie "Da questo addebito in poi" (di serie: divide la serie con `splitRecurring`; il «Primo addebito» parte da quell'addebito e si può spostare entro `moveWindow`, cioè tra l'addebito precedente e il successivo, per cambiare il giorno da lì in poi senza saltare né raddoppiare un addebito; fuori dai limiti il modulo non salva) o "Tutta la serie"; altrimenti un avviso dice che la modifica vale per tutta la serie (o, per una spesa già divisa, solo per quel periodo). Su una spesa già divisa «Tutta la serie» parte dal primo addebito della spesa e la riunisce in una parte sola (le altre parti vengono eliminate); le modifiche normali conservano `seriesId` ed eccezioni.
 - **`LoanForm.vue`**: Modulo per prestiti (nome contatto, tipo dato/ricevuto, importo, data, note).
 - **`RepaymentForm.vue`**: Modulo per registrare una tranche di rimborso a un prestito esistente.
@@ -153,6 +160,6 @@ Tutti e quattro i moduli usano `useDirty` (la finestra chiede conferma prima di 
 - **`BaseModal.vue`**: Dialogo modale accessibile. All'apertura il focus va sul titolo e alla chiusura torna all'elemento che l'ha aperto; finché è aperto `#app` è `inert`. Una pila di finestre a livello di modulo dà a ogni finestra uno `z-index` crescente e solo quella in cima risponde a Esc e al Tab, che resta intrappolato dentro. Con la prop `dirty`, chiudere con Esc, ✕ o clic sullo sfondo chiede prima "Scartare le modifiche?" tramite `ui.confirm` (con `cancelLabel` "Continua a modificare"); "Annulla" nel modulo chiude subito. Ha la forma della piattaforma (classe `sheet`): sul telefono foglio dal basso con la maniglia; su iPhone fondo grigio e, con la prop `formId`, barra "Annulla · titolo · Fine" dove Fine invia il modulo con quell'id; su Android angoli di 28 px, titolo grande a sinistra e niente ✕ quando contiene un modulo; sul PC finestra con ✕.
 - **`ConfirmHost.vue`**: Host globale dei dialoghi di conferma richiesti con `ui.confirm` (anche tramite `useConfirmDelete`); usa `cancelLabel` se indicato, altrimenti "Annulla".
 - **`LoadErrorScreen.vue`**: Mostrato da `App.vue` al posto delle pagine quando `finance.loadError` (i dati salvati ci sono ma non si leggono). Dice che non è stato cancellato niente e che l'app non salva né sincronizza finché non li legge; «Riprova» ricarica la pagina, «Scarica i dati salvati» scarica il JSON così com'è (`readStoredDataRaw`).
-- **`ToastHost.vue`**: Host per notifiche a comparsa temporanee gestite tramite `useUiStore().toast(...)`. Gli errori (`kind: 'error'`) restano 10 secondi invece di 3,5, hanno `role="alert"` e si chiudono con la ✕ (`dismissToast`).
+- **`ToastHost.vue`**: Host per notifiche a comparsa temporanee gestite tramite `useUiStore().toast(...)`. Supporta pulsanti di azione interattivi (`actions`, es. «Modifica» e «Annulla» dopo un inserimento rapido 1-tap, con `pointer-events-auto`); gli errori (`kind: 'error'`) restano 10 secondi invece di 3,5, hanno `role="alert"` e si chiudono con la ✕ (`dismissToast`).
 - **`UpdatePrompt.vue`**: Banner per notificare la disponibilità di una nuova versione PWA scaricata dal service worker. Cerca gli aggiornamenti all'avvio, al ritorno in primo piano (`visibilitychange`, `pageshow`, `focus`, battito che riconosce il risveglio su iPhone), al ritorno della rete e ogni 15 minuti, solo con l'app in vista. Stato e regole in [`useAppUpdate`](../../src/composables/useAppUpdate.ts): si ricarica da sola solo la finestra che ha chiesto l'aggiornamento, le altre mostrano l'avviso.
 - **`WelcomePanel.vue`**: Schermata introduttiva visualizzata al primo avvio su database completamente vuoto.

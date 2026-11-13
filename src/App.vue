@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore } from '@/stores/appearance'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import AppHeader from '@/components/AppHeader.vue'
 import BackupReminder from '@/components/BackupReminder.vue'
 import BottomNav from '@/components/BottomNav.vue'
@@ -16,6 +17,16 @@ const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
 const appearance = useAppearanceStore()
+const confirmDelete = useConfirmDelete()
+
+function removeQuickEdit() {
+  const item = ui.quickEditExpense
+  if (!item) return
+  void confirmDelete(item.name, () => {
+    finance.deleteOneTime(item.id)
+    ui.closeQuickAdd()
+  })
+}
 </script>
 
 <template>
@@ -41,7 +52,15 @@ const appearance = useAppearanceStore()
       </div>
     </div>
   </div>
-  <TransactionForm :open="ui.quickAddOpen" kind="expense" @close="ui.quickAddOpen = false" />
+  <TransactionForm
+    :open="ui.quickAddOpen"
+    kind="expense"
+    :item="ui.quickEditExpense"
+    :preset="ui.quickAddPreset"
+    :deletable="!!ui.quickEditExpense"
+    @close="ui.closeQuickAdd()"
+    @delete="removeQuickEdit"
+  />
   <ConfirmHost />
   <ToastHost />
   <UpdatePrompt />

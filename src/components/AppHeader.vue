@@ -95,7 +95,7 @@ const yearSelect = computed(() => {
         type="button"
         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent"
         :aria-label="t('onetime.new')"
-        @click="ui.quickAddOpen = true"
+        @click="ui.openQuickAdd()"
       >
         <span class="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
       </button>
@@ -104,7 +104,7 @@ const yearSelect = computed(() => {
         type="button"
         class="btn-primary shrink-0 gap-2"
         :class="{ 'max-md:hidden': appearance.platform === 'android' }"
-        @click="ui.quickAddOpen = true"
+        @click="ui.openQuickAdd()"
       >
         <i class="fa-solid fa-plus" aria-hidden="true"></i>{{ t('app.newExpense') }}
       </button>

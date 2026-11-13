@@ -81,7 +81,7 @@ const isActive = (name: string) => route.name === name || isParent(name)
       type="button"
       class="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft-2 text-accent-strongest shadow-lg transition hover:brightness-95 md:hidden"
       :aria-label="t('onetime.new')"
-      @click="ui.quickAddOpen = true"
+      @click="ui.openQuickAdd()"
     >
       <i class="fa-solid fa-plus text-xl" aria-hidden="true"></i>
     </button>

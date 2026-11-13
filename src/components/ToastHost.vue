@@ -13,11 +13,25 @@ const { t } = useI18n()
       <div
         v-for="toast in ui.toasts"
         :key="toast.id"
-        class="flex max-w-md items-start gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-on-color shadow-lg"
-        :class="toast.kind === 'error' ? 'pointer-events-auto bg-negative-fill-strong' : 'bg-chrome'"
+        class="flex max-w-md flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg px-4 py-2.5 text-sm font-medium text-on-color shadow-lg"
+        :class="[
+          toast.kind === 'error' ? 'pointer-events-auto bg-negative-fill-strong' : 'bg-chrome',
+          toast.actions?.length ? 'pointer-events-auto' : '',
+        ]"
         :role="toast.kind === 'error' ? 'alert' : undefined"
       >
-        <span>{{ toast.message }}</span>
+        <span class="min-w-0 flex-1">{{ toast.message }}</span>
+        <div v-if="toast.actions?.length" class="flex shrink-0 items-center gap-1.5">
+          <button
+            v-for="action in toast.actions"
+            :key="action.label"
+            type="button"
+            class="min-h-8 rounded-md bg-on-color/15 px-2.5 py-1 text-xs font-semibold text-on-color transition hover:bg-on-color/25"
+            @click="action.onClick(); ui.dismissToast(toast.id)"
+          >
+            {{ action.label }}
+          </button>
+        </div>
         <button
           v-if="toast.kind === 'error'"
           type="button"

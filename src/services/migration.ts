@@ -8,6 +8,7 @@ import type {
   IsoDate,
   Loan,
   OneTimeExpense,
+  QuickExpense,
   RecurringExpense,
   Repayment,
   Simulation,
@@ -102,6 +103,7 @@ export function migrateV1(raw: Obj): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    quickExpenses: [],
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -301,6 +303,25 @@ function normalizeV2(raw: Obj): FinanceData {
     }),
     forecast: normalizeForecast(raw.forecast),
     budget: normalizeBudget(raw.budget, categories),
+    quickExpenses: valid<QuickExpense>(raw.quickExpenses, (o) => {
+      const name = str(o.name).trim()
+      if (!name) return null
+      let amount: number | undefined
+      if (o.amount !== undefined && o.amount !== null) {
+        const parsed = cents(o.amount)
+        if (parsed === null || parsed <= 0) return null
+        amount = parsed
+      }
+      return {
+        id: id(o.id),
+        name,
+        ...(amount !== undefined ? { amount } : {}),
+        categoryId: str(o.categoryId),
+        paymentMethodId: str(o.paymentMethodId),
+        notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
+      }
+    }),
   }
 }
 

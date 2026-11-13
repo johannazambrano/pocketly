@@ -35,6 +35,18 @@ export interface OneTimeExpense {
   tagIds?: Id[]
 }
 
+/** Scorciatoia per spese variabili frequenti (es. caffè con importo fisso, pranzo con importo libero). */
+export interface QuickExpense {
+  id: Id
+  name: string
+  /** Importo fisso in centesimi, oppure assente se cambia ogni volta. */
+  amount?: Cents
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+
 export interface NotificationRule {
   /** Giorni prima dell'addebito: 0 = il giorno stesso, 1 = il giorno prima, ecc. (0..365). */
   daysBefore: number
@@ -152,6 +164,7 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  quickExpenses: QuickExpense[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

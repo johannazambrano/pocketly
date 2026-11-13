@@ -214,6 +214,28 @@ describe('parseBackup – schema v2', () => {
     expect(withTags.tags).toEqual([{ id: 't1', name: 'Vacanza', color: '#123456' }])
     expect(withTags.oneTimeExpenses[0]!.tagIds).toEqual(['t1'])
   })
+
+  it('gestisce gli inserimenti rapidi con retrocompatibilità e validazione difensiva', () => {
+    expect(parseBackup({ schemaVersion: 2 }).quickExpenses).toEqual([])
+    expect(parseBackup(prototypeBackup).quickExpenses).toEqual([])
+
+    const parsed = parseBackup({
+      schemaVersion: 2,
+      quickExpenses: [
+        { id: 'q1', name: '  Caffè  ', amount: 150, categoryId: 'c1', paymentMethodId: 'p1', notes: 'bar', tagIds: ['t1', 5] },
+        { id: 'q2', name: 'Pranzo', categoryId: 'c1', paymentMethodId: 'p1' },
+        { id: 'q3', name: '   ', amount: 100 },
+        { id: 'q4', name: 'Decimale', amount: 1.5 },
+        { id: 'q5', name: 'Zero', amount: 0 },
+      ],
+    })
+    expect(parsed.quickExpenses).toEqual([
+      { id: 'q1', name: 'Caffè', amount: 150, categoryId: 'c1', paymentMethodId: 'p1', notes: 'bar', tagIds: ['t1'] },
+      { id: 'q2', name: 'Pranzo', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: [] },
+    ])
+    expect('amount' in parsed.quickExpenses[1]!).toBe(false)
+    expect(parseBackup(JSON.parse(JSON.stringify(parsed)))).toEqual(parsed)
+  })
 })
 
 describe('dati di una versione più nuova', () => {

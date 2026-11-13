@@ -17,6 +17,7 @@ import BaseModal from '@/components/BaseModal.vue'
 import SyncSettings from '@/components/SyncSettings.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import TagManager from '@/components/TagManager.vue'
+import QuickExpenseManager from '@/components/QuickExpenseManager.vue'
 import PageHeader from '@/components/PageHeader.vue'
 
 const finance = useFinanceStore()
@@ -348,6 +349,7 @@ function changeLocale(code: LocaleCode) {
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
       <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
+      <QuickExpenseManager />
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.colorsTitle') }}</h3>

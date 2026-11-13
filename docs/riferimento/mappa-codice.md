@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Mappa del Codice
@@ -33,7 +33,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
-| [`src/types/models.ts`](../../src/types/models.ts) | Modello dati TypeScript (schema v2): `FinanceData`, `Cents`, `IsoDate`, `Id`, `OneTimeExpense`, `RecurringExpense`, `Income`, `Loan`, `Repayment`, `Simulation`, `ForecastSettings`, `BudgetSettings` | `services/migration.test.ts` | [modello-dati.md](./modello-dati.md) |
+| [`src/types/models.ts`](../../src/types/models.ts) | Modello dati TypeScript (schema v2): `FinanceData`, `Cents`, `IsoDate`, `Id`, `OneTimeExpense`, `QuickExpense`, `RecurringExpense`, `Income`, `Loan`, `Repayment`, `Simulation`, `ForecastSettings`, `BudgetSettings` | `services/migration.test.ts` | [modello-dati.md](./modello-dati.md) |
 
 ---
 
@@ -60,7 +60,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/stores/notifications.ts`](../../src/stores/notifications.ts) | Store notifiche: permessi browser, sottoscrizione Web Push, scheduler locale e sync pianificazione push | [`src/stores/notifications.test.ts`](../../src/stores/notifications.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/stores/backup.ts`](../../src/stores/backup.ts) | Store promemoria backup: salva in IndexedDB (`'backup-meta'`) un `BackupMeta` con data e impronta dei dati dell'ultimo backup, e segnala modifiche non salvate | `services/backup.test.ts` | [frontend.md](../architettura/frontend.md) |
 | [`src/stores/appearance.ts`](../../src/stores/appearance.ts) | Aspetto dell'app: piattaforma (automatica o scelta: iPhone, Android, PC) e tema (sistema, chiaro, scuro), salvati in `localStorage` (`'appearance-platform'`, `'appearance-theme'`) e applicati a `<html>` come `data-platform` e `data-theme` | — | [frontend.md](../architettura/frontend.md) |
-| [`src/stores/ui.ts`](../../src/stores/ui.ts) | Store interfaccia utente: toast temporanei (gli errori restano 10 secondi e si chiudono con `dismissToast`), apertura del modulo rapido (`quickAddOpen`) e richieste di conferma (`confirm`, con `cancelLabel` facoltativo) | — | [frontend.md](../architettura/frontend.md) |
+| [`src/stores/ui.ts`](../../src/stores/ui.ts) | Store interfaccia utente: toast temporanei (con eventuali pulsanti di azione; gli errori restano 10 secondi e si chiudono con `dismissToast`), apertura del modulo rapido (`quickAddOpen`, `quickAddPreset`, `quickEditExpense`) e richieste di conferma (`confirm`, con `cancelLabel` facoltativo) | — | [frontend.md](../architettura/frontend.md) |
 
 ---
 
@@ -99,6 +99,9 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/components/NotificationRulesEditor.vue`](../../src/components/NotificationRulesEditor.vue) | Editor multi-regola di promemoria (giorni prima e orario) per spese ricorrenti | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/components/NotificationSettings.vue`](../../src/components/NotificationSettings.vue) | Pannello impostazioni notifiche: permessi browser, Web Push e test notifica | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/components/PageHeader.vue`](../../src/components/PageHeader.vue) | Intestazione di ciascuna vista: titolo grande su iPhone, solo per lettori di schermo su Android (il nome sta nella barra in alto), medio sul PC; pulsante "Aggiungi" (`page-add`) pieno sul PC, tenue a pillola sul telefono | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/QuickExpenseBar.vue`](../../src/components/QuickExpenseBar.vue) | Barra/riquadro degli inserimenti rapidi di spese variabili (1-tap per importo fisso con toast Modifica/Annulla, apertura/precompilazione modulo per importo libero o `✎`) | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/QuickExpenseForm.vue`](../../src/components/QuickExpenseForm.vue) | Modulo modale di creazione e modifica di un inserimento rapido (`QuickExpense`, importo fisso facoltativo) | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/QuickExpenseManager.vue`](../../src/components/QuickExpenseManager.vue) | Scheda di gestione inserimenti rapidi nelle Impostazioni (aggiunta, modifica, riordino ed eliminazione) | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/RecurringForm.vue`](../../src/components/RecurringForm.vue) | Modulo di inserimento/modifica spesa ricorrente, frequenze e promemoria; aperto da un addebito sceglie tra «Solo questo addebito» (eccezione: importo, giorno o salto), «Da questo addebito in poi» (`splitRecurring`) e «Tutta la spesa», con «Elimina…» a tre scelte | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/RepaymentForm.vue`](../../src/components/RepaymentForm.vue) | Modulo per aggiungere un rimborso parziale a un prestito esistente | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/SubmitButton.vue`](../../src/components/SubmitButton.vue) | Pulsante submit uniforme; con `cancelLabel` affianca un pulsante "Annulla" esplicito; forma per piattaforma (su iPhone nessuno: sono nella barra del foglio) | [componenti-e-viste.md](./componenti-e-viste.md) |
@@ -141,6 +144,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/composables/useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) | Stato condiviso degli aggiornamenti dell'app (`updateReady`, `reloadPending`) e regole: `checkForUpdate` aspetta l'installazione, `applyUpdate`, ricarica solo della finestra che l'ha chiesto | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useDirty.ts`](../../src/composables/useDirty.ts) | Tracciamento modifiche non salvate dei moduli (`useDirty`: `dirty`, `reset`), usato da `BaseModal` per chiedere conferma prima di chiudere | — | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Periodo prima e dopo: mese per mese (con cambio d'anno), o anno per anno sull'anno intero | — | [frontend.md](../architettura/frontend.md) |
+| [`src/composables/useQuickExpenseTrigger.ts`](../../src/composables/useQuickExpenseTrigger.ts) | Azione condivisa degli inserimenti rapidi: 1-tap con toast Modifica/Annulla se importo fisso, apertura/precompilazione modulo altrimenti | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua (`setLocale`) e composable helper `useFormat` (`money`, `amountInput`, `date`, `month`, `percent`) | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/it.ts`](../../src/i18n/it.ts) | Traduzioni in lingua italiana | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/en.ts`](../../src/i18n/en.ts) | Traduzioni in lingua inglese | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |

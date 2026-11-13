@@ -11,6 +11,7 @@ import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
+import QuickExpenseBar from '@/components/QuickExpenseBar.vue'
 
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
@@ -116,6 +117,8 @@ function remove() {
         </button>
       </div>
     </PageHeader>
+
+    <QuickExpenseBar manage-link />
 
     <!-- Barra Filtri per Tag (visibile se ci sono tag con spese nell'anno) -->
     <div v-if="activeYearTags.length > 0" class="space-y-2">
