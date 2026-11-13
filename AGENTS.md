@@ -54,6 +54,7 @@ npm run docs:check      # node scripts/docs-check.mjs
 > 1. [Mappa del Codice](docs/riferimento/mappa-codice.md): per individuare file, responsabilità, dipendenze e test associati.
 > 2. La pagina di documentazione collegata al modulo in esame in `docs/`.
 > 3. L'indice generale della documentazione in [docs/README.md](docs/README.md).
+> 4. Il [Backlog del Progetto](docs/backlog.md) se stai cercando attività aperte o stai lavorando su un task tracciato (`PKT-XX`).
 
 ---
 
@@ -106,6 +107,7 @@ Quando esegui una modifica nel repository, attieniti scrupolosamente a questo ci
    Non dare mai per scontato che un bug sia stato risolto o che un componente funzioni in un certo modo. Esegui i test o controlla il codice direttamente.
 6. **Checklist finale di completamento:**
    Prima di considerare terminato un task:
+   - Se il lavoro riguarda un task in [docs/backlog.md](docs/backlog.md), aggiornane lo stato (`In corso` -> `Completati recenti`) e i riferimenti
    - `npm run test` (test Vitest verdi)
    - `npm run typecheck` (zero errori TypeScript)
    - `npm run test:server` (test Python server verdi)
