@@ -628,4 +628,67 @@ describe('tagTrends', () => {
     expect(info?.previousAverage).toBe(5000)
     expect(info?.verdict).toBe('above')
   })
+
+  it('include le spese ricorrenti nella media dei mesi precedenti', () => {
+    const d = createEmptyData()
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Affitto',
+      amount: 50000,
+      frequency: 'monthly',
+      startDate: '2026-01-01',
+      endDate: null,
+      categoryId: 'rent',
+      paymentMethodId: 'bank',
+    })
+    // Gennaio (0) e Febbraio (1) hanno l'addebito ricorrente di 50000 ciascuno.
+    // A Marzo (2) c'è una spesa una tantum imprevista di 10000 oltre all'affitto (totale 60000).
+    const totals = [{ id: 'rent', total: 60000 }]
+    const trends = tagTrends(d, 2026, 2, 'categoryId', totals, '2026-06-01')
+    const info = trends.get('rent')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(50000)
+    expect(info?.verdict).toBe('above')
+    expect(info?.diffPercent).toBe(20)
+  })
+
+  it('calcola la media corretta quando il primo movimento dell’anno è successivo a gennaio', () => {
+    const d = createEmptyData()
+    // Primo movimento in assoluto nel 2026 a Marzo (mese 2)
+    d.oneTimeExpenses.push({
+      id: 'o1',
+      name: 'Spesa',
+      amount: 6000,
+      date: '2026-03-15',
+      categoryId: 'c1',
+      paymentMethodId: 'p1',
+      notes: '',
+    })
+    // Ad Aprile (mese 3), i mesi precedenti considerati sono solo Marzo (monthsCount = 3 - 2 = 1)
+    const trends = tagTrends(d, 2026, 3, 'categoryId', [{ id: 'c1', total: 6000 }], '2026-06-01')
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(6000)
+    expect(info?.verdict).toBe('inline')
+    expect(info?.diffPercent).toBe(0)
+  })
+
+  it('gestisce correttamente il caso con totale a 0 rispetto alla media precedente', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({
+      id: 'o1',
+      name: 'Spesa',
+      amount: 10000,
+      date: '2026-01-15',
+      categoryId: 'c1',
+      paymentMethodId: 'p1',
+      notes: '',
+    })
+    const trends = tagTrends(d, 2026, 1, 'categoryId', [{ id: 'c1', total: 0 }], '2026-06-01')
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(10000)
+    expect(info?.verdict).toBe('below')
+    expect(info?.diffPercent).toBe(-100)
+  })
 })

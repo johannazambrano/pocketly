@@ -119,6 +119,7 @@ const en: typeof it = {
     byCategory: 'Expenses by category',
     byPayment: 'Expenses by payment method',
     breakdownRowLabel: '{name}, {amount}, {percent} of expenses: see the entries',
+    breakdownRowLabelWithTrend: '{name}, {amount}, {percent} of expenses, {trend}: see the entries',
     empty: 'No expenses recorded.',
     emptyMonth: 'No expenses recorded in {month}.',
     yearTitle: 'All of {year}',
@@ -166,7 +167,6 @@ const en: typeof it = {
     notFoundMethod: 'This payment method no longer exists: it may have been deleted. The expenses that used it are still on their pages.',
     manageTags: 'Manage categories and methods',
     editRow: 'Edit {name}, {date}, {type}, {amount}',
-    trendComparison: 'Compared to previous months: {trend}',
   },
   onetime: {
     title: 'Variable expenses',

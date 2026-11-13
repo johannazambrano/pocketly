@@ -117,6 +117,7 @@ export default {
     byCategory: 'Spese per categoria',
     byPayment: 'Spese per metodo di pagamento',
     breakdownRowLabel: '{name}, {amount}, {percent} delle uscite: vedi le voci',
+    breakdownRowLabelWithTrend: '{name}, {amount}, {percent} delle uscite, {trend}: vedi le voci',
     empty: 'Nessuna spesa registrata.',
     emptyMonth: 'Nessuna spesa registrata a {month}.',
     yearTitle: 'Tutto il {year}',
@@ -164,7 +165,6 @@ export default {
     notFoundMethod: 'Questo metodo di pagamento non esiste più: forse è stato eliminato. Le spese che lo usavano restano nelle loro pagine.',
     manageTags: 'Gestisci categorie e metodi',
     editRow: 'Modifica {name}, {date}, {type}, {amount}',
-    trendComparison: 'Rispetto ai mesi precedenti: {trend}',
   },
   onetime: {
     title: 'Spese variabili',

@@ -194,7 +194,7 @@ function back(e: MouseEvent) {
           :class="trendClass(trend.verdict)"
         >
           <i :class="trendIcon(trend.verdict)" aria-hidden="true"></i>
-          <span>{{ t('detail.trendComparison', { trend: trendNote }) }}</span>
+          <span>{{ trendNote }}</span>
         </div>
         <ul v-if="items.length" class="divide-y divide-line-soft">
           <li v-for="item in items" :key="item.key">

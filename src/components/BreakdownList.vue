@@ -41,19 +41,27 @@ function trendClass(verdict: Verdict): string {
 }
 
 /**
- * Il nome del link letto da un lettore di schermo: nome, importo e quota separati e la destinazione detta, invece del
- * testo attaccato della riga ("Altro857,70 € (60%)"). Se presente, include il confronto con la media precedente.
+ * Il nome del link letto da un lettore di schermo: nome, importo, quota e l'eventuale trend, con la destinazione
+ * ("vedi le voci") sempre al termine della frase.
  */
 const rowLabel = (row: TagTotal) => {
   const trend = props.trends?.get(row.id)
-  const trendText = trend ? `, ${trendLabel(trend)}` : ''
-  return (
-    t('dashboard.breakdownRowLabel', {
-      name: finance.tag(props.kind, row.id)?.name ?? t('common.unknown'),
-      amount: money(row.total),
-      percent: percent(row.total / props.grandTotal),
-    }) + trendText
-  )
+  const name = finance.tag(props.kind, row.id)?.name ?? t('common.unknown')
+  const amount = money(row.total)
+  const percentStr = percent(row.total / props.grandTotal)
+  if (trend) {
+    return t('dashboard.breakdownRowLabelWithTrend', {
+      name,
+      amount,
+      percent: percentStr,
+      trend: trendLabel(trend),
+    })
+  }
+  return t('dashboard.breakdownRowLabel', {
+    name,
+    amount,
+    percent: percentStr,
+  })
 }
 </script>
 
@@ -73,6 +81,7 @@ const rowLabel = (row: TagTotal) => {
           <span class="truncate font-medium">{{ finance.tag(kind, row.id)?.name ?? t('common.unknown') }}</span>
           <span
             v-if="trends?.get(row.id)"
+            role="img"
             class="inline-flex shrink-0 items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-none"
             :class="trendClass(trends.get(row.id)!.verdict)"
             :title="trendLabel(trends.get(row.id)!)"
