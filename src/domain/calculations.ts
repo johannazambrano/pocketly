@@ -1,5 +1,5 @@
 import type { Cents, FinanceData, Id, IsoDate, Loan } from '@/types/models'
-import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { lastDayOfMonth, monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { amountInMonth, dueDateIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
 export interface TagTotal {
@@ -475,6 +475,88 @@ export function averageBalanceBefore(data: FinanceData, year: number, month: num
   const balances: Cents[] = []
   for (let m = periodStartMonth(data, year); m < month; m++) balances.push(monthSummary(data, year, m, today).balance)
   return balances.length ? Math.round(sum(balances) / balances.length) : null
+}
+
+export interface TagTrendInfo {
+  /** La media mensile dei mesi precedenti dello stesso anno. */
+  previousAverage: Cents
+  /**
+   * Il valore di riferimento per il confronto: per il mese in corso è il ritmo atteso a oggi
+   * (`pace`), per un mese passato è l'intera media precedente (`previousAverage`).
+   */
+  baseline: Cents
+  /** Il verdetto: 'above' (speso più del solito), 'inline' (in linea, ±10%), 'below' (speso meno del solito). */
+  verdict: Verdict
+  /** Differenza percentuale rispetto al riferimento. */
+  diffPercent: number
+  /** True se il confronto è sul ritmo del mese in corso (proporzionato al giorno di oggi). */
+  isPace: boolean
+}
+
+/**
+ * Calcola per ciascun tag (categoria o metodo) il confronto tra l'importo del mese e la media dei mesi precedenti.
+ * - Per i mesi passati: confronta l'importo totale del mese con la media mensile precedente.
+ * - Per il mese in corso: confronta l'importo a oggi con il ritmo atteso a oggi (`pace`).
+ * - Per mesi futuri o se non ci sono mesi precedenti: restituisce una mappa vuota.
+ */
+export function tagTrends(
+  data: FinanceData,
+  year: number,
+  month: number | 'all',
+  field: 'categoryId' | 'paymentMethodId',
+  totals: TagTotal[],
+  today: IsoDate,
+): Map<Id, TagTrendInfo> {
+  const result = new Map<Id, TagTrendInfo>()
+  if (month === 'all' || totals.length === 0) return result
+
+  const t = parseIsoDate(today)
+  const key = year * 12 + month
+  const now = t.year * 12 + t.month
+  if (key > now) return result
+
+  const start = periodStartMonth(data, year)
+  if (month <= start) return result
+
+  const monthsCount = month - start
+  const prevTotals = new Map<Id, Cents>()
+
+  for (let m = start; m < month; m++) {
+    const b = monthBreakdown(data, year, m)
+    const list = field === 'categoryId' ? b.byCategory : b.byPaymentMethod
+    for (const item of list) {
+      prevTotals.set(item.id, (prevTotals.get(item.id) ?? 0) + item.total)
+    }
+  }
+
+  const isCurrentMonth = key === now
+  let paceFraction = 1
+  if (isCurrentMonth) {
+    const daysInMonth = parseIsoDate(lastDayOfMonth(t.year, t.month)).day
+    paceFraction = Math.min(t.day, daysInMonth) / daysInMonth
+  }
+
+  for (const row of totals) {
+    const prevSum = prevTotals.get(row.id) ?? 0
+    if (prevSum <= 0) continue
+
+    const previousAverage = Math.round(prevSum / monthsCount)
+    if (previousAverage <= 0) continue
+
+    const baseline = isCurrentMonth ? Math.max(1, Math.round(previousAverage * paceFraction)) : previousAverage
+    const verdict = compareToAverage(row.total, baseline)
+    const diffPercent = Math.round(((row.total - baseline) / baseline) * 100)
+
+    result.set(row.id, {
+      previousAverage,
+      baseline,
+      verdict,
+      diffPercent,
+      isPace: isCurrentMonth,
+    })
+  }
+
+  return result
 }
 
 export interface UpcomingCharge {

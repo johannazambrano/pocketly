@@ -7,7 +7,7 @@ source-files:
   - src/views/BreakdownDetailView.vue
   - src/components/RecurringForm.vue
   - src/domain/budget.ts
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Panoramica Generale dell'Applicazione
@@ -34,7 +34,7 @@ Pocketly è una Progressive Web App (PWA) moderna, veloce e orientata alla priva
 La navigazione principale avviene tramite la barra di navigazione inferiore ([`BottomNav.vue`](../src/components/BottomNav.vue)), con accesso immediato a tutte le aree funzionali:
 
 ### 1. Dashboard (`/`)
-La vista di riepilogo globale. Si apre sul mese corrente e permette di scorrere i mesi con i tasti freccia (← e →) o tramite swipe touch sul riquadro principale. La cifra grande è il "Risultato previsto" a fine mese o anno (per i periodi passati il risultato finale); sotto compaiono il risultato da inizio periodo a oggi e, se il previsto conta su entrate stimate, quanto ne pesa la stima (in quel caso, se la cifra è positiva solo grazie alla stima, resta in colore neutro). "Come si arriva a questa cifra" apre il conto dietro il previsto. Seguono entrate e uscite del periodo e la divisione delle uscite tra ricorrenti e variabili, con il confronto rispetto alla media sempre visibile. La sezione "Prossimi addebiti", mostrata solo sull'anno o sul mese in corso, elenca le uscite programmate (ricorrenti e variabili con data futura) fino a fine mese, o nei prossimi 30 giorni sulla vista annuale (lì con il totale); ogni addebito si apre per la modifica. Le righe delle ripartizioni per categoria e metodo conducono al rispettivo dettaglio analitico.
+La vista di riepilogo globale. Si apre sul mese corrente e permette di scorrere i mesi con i tasti freccia (← e →) o tramite swipe touch sul riquadro principale. La cifra grande è il "Risultato previsto" a fine mese o anno (per i periodi passati il risultato finale); sotto compaiono il risultato da inizio periodo a oggi e, se il previsto conta su entrate stimate, quanto ne pesa la stima (in quel caso, se la cifra è positiva solo grazie alla stima, resta in colore neutro). "Come si arriva a questa cifra" apre il conto dietro il previsto. Seguono entrate e uscite del periodo e la divisione delle uscite tra ricorrenti e variabili, con il confronto rispetto alla media sempre visibile. Le sezioni "Prossimi addebiti", mostrata solo sull'anno o sul mese in corso, elenca le uscite programmate (ricorrenti e variabili con data futura) fino a fine mese, o nei prossimi 30 giorni sulla vista annuale (lì con il totale); ogni addebito si apre per la modifica. Le righe delle ripartizioni per categoria e metodo mostrano indicatori discreti di confronto rispetto alla media dei mesi precedenti e conducono al rispettivo dettaglio analitico.
 
 ### 2. Spese Una Tantum (`/una-tantum`)
 Permette di registrare uscite singole (data, nome, importo, categoria, metodo di pagamento, note facoltative). Offre:

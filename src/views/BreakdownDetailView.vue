@@ -3,12 +3,11 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { breakdownItems } from '@/domain/calculations'
+import { breakdownItems, tagTrends, type BreakdownItem, type Verdict } from '@/domain/calculations'
 import { monthIndex, parseIsoDate } from '@/utils/dates'
 import MonthSelector from '@/components/MonthSelector.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
-import type { BreakdownItem } from '@/domain/calculations'
 import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 
 /**
@@ -30,6 +29,44 @@ const items = computed(() =>
   breakdownItems(finance.data, finance.selectedYear, finance.selectedMonth, field.value, id.value, finance.today),
 )
 const total = computed(() => items.value.reduce((acc, i) => acc + i.amount, 0))
+
+const trend = computed(() => {
+  if (finance.selectedMonth === 'all') return null
+  const trendsMap = tagTrends(
+    finance.data,
+    finance.selectedYear,
+    finance.selectedMonth,
+    field.value,
+    [{ id: id.value, total: total.value }],
+    finance.today,
+  )
+  return trendsMap.get(id.value) ?? null
+})
+
+const trendNote = computed(() => {
+  if (!trend.value) return null
+  const avg = money(trend.value.previousAverage)
+  if (trend.value.isPace) {
+    if (trend.value.verdict === 'above') return t('dashboard.trendPaceAbove', { average: avg })
+    if (trend.value.verdict === 'below') return t('dashboard.trendPaceBelow', { average: avg })
+    return t('dashboard.trendPaceInline', { average: avg })
+  }
+  if (trend.value.verdict === 'above') return t('dashboard.trendAbove', { average: avg })
+  if (trend.value.verdict === 'below') return t('dashboard.trendBelow', { average: avg })
+  return t('dashboard.trendInline', { average: avg })
+})
+
+function trendIcon(verdict: Verdict): string {
+  if (verdict === 'above') return 'fa-solid fa-arrow-trend-up'
+  if (verdict === 'below') return 'fa-solid fa-arrow-trend-down'
+  return 'fa-solid fa-minus'
+}
+
+function trendClass(verdict: Verdict): string {
+  if (verdict === 'above') return 'bg-caution-soft text-caution'
+  if (verdict === 'below') return 'bg-accent-soft text-accent'
+  return 'bg-surface-2 text-ink-3'
+}
 
 /** Il periodo detto per esteso, con la stessa regola della dashboard: fino a oggi, tutto avvenuto o solo programmato. */
 const periodLabel = computed(() => {
@@ -150,6 +187,14 @@ function back(e: MouseEvent) {
         <div class="flex items-baseline justify-between gap-3 border-b border-line-soft px-4 py-3">
           <p class="text-xs font-medium text-ink-4">{{ periodLabel }}</p>
           <p class="text-lg font-bold whitespace-nowrap text-ink">{{ money(total) }}</p>
+        </div>
+        <div
+          v-if="trendNote && trend"
+          class="flex items-center gap-2 border-b border-line-soft px-4 py-2 text-xs font-medium"
+          :class="trendClass(trend.verdict)"
+        >
+          <i :class="trendIcon(trend.verdict)" aria-hidden="true"></i>
+          <span>{{ t('detail.trendComparison', { trend: trendNote }) }}</span>
         </div>
         <ul v-if="items.length" class="divide-y divide-line-soft">
           <li v-for="item in items" :key="item.key">

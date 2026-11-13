@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Mappa del Codice
@@ -41,7 +41,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
-| [`src/domain/calculations.ts`](../../src/domain/calculations.ts) | Calcoli finanziari: `yearSummary`, `monthSummary`, `monthBreakdown`, `forecast`, `estimateCategoryIds`, `estimateMonthlyIncome`, `periodStartMonth`, `variableSpending`, `compareToAverage` (verdetto sopra/in linea/sotto la media), `averageBalanceBefore`, `breakdownItems`, `upcomingCharges`, `loanStatus`, `availableYears`, `oneTimeTagBreakdown` | [`src/domain/calculations.test.ts`](../../src/domain/calculations.test.ts) | [domain.md](./domain.md) |
+| [`src/domain/calculations.ts`](../../src/domain/calculations.ts) | Calcoli finanziari: `yearSummary`, `monthSummary`, `monthBreakdown`, `forecast`, `estimateCategoryIds`, `estimateMonthlyIncome`, `periodStartMonth`, `variableSpending`, `compareToAverage` (verdetto sopra/in linea/sotto la media), `averageBalanceBefore`, `tagTrends` (confronto periodi e trend per categoria/metodo), `breakdownItems`, `upcomingCharges`, `loanStatus`, `availableYears`, `oneTimeTagBreakdown` | [`src/domain/calculations.test.ts`](../../src/domain/calculations.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/recurrence.ts`](../../src/domain/recurrence.ts) | Regole temporali ricorrenze: `monthlyEquivalent`, `occursIn`, `dueDateIn`, `nextDueDate`, `amountInMonth`, `splitRecurring` (divide una serie da un addebito in poi, collegando le parti con `seriesId`), `moveWindow` (dove si può spostare il giorno di un addebito), `seriesKey`, `groupRecurringSeries` (una spesa per riga), `isActiveInYear` | [`src/domain/recurrence.test.ts`](../../src/domain/recurrence.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/budget.ts`](../../src/domain/budget.ts) | Logica budget mensile (`budgetMonth`): consumato, programmato, stato con soglia `BUDGET_WARNING_RATIO`, proiezione a fine mese; suggeritore limiti (`suggestLimits`) | [`src/domain/budget.test.ts`](../../src/domain/budget.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/merge.ts`](../../src/domain/merge.ts) | Algoritmo deterministico di merge a 3 vie: `mergeFinanceData`, `deepEqual` (unione per ID interna) | [`src/domain/merge.test.ts`](../../src/domain/merge.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
@@ -91,7 +91,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/components/BalancePanel.vue`](../../src/components/BalancePanel.vue) | Pannello saldo: una sola cifra grande (previsto o saldo finale) con il saldo di oggi in una frase e la riga della stima; colore neutro se è positiva solo grazie alla stima, rosso solo sotto zero; entrate e uscite con i verdetti rispetto alla media e il conto "Come si arriva a questa cifra" | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BaseModal.vue`](../../src/components/BaseModal.vue) | Modale generica accessibile: focus sul titolo e ritorno all'origine, resto dell'app `inert`, pila di finestre sovrapposte, conferma prima di chiudere se `dirty`; foglio con la forma della piattaforma, su iPhone barra "Annulla · titolo · Fine" con `formId` | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BottomNav.vue`](../../src/components/BottomNav.vue) | Barra di navigazione inferiore/laterale per piattaforma (iPhone traslucida; Android con pillola sulla voce attiva e "+" flottante), evidenziazione della voce anche per viste figlie (`navParent`) | [componenti-e-viste.md](./componenti-e-viste.md) |
-| [`src/components/BreakdownList.vue`](../../src/components/BreakdownList.vue) | Ripartizione percentuale delle spese per categoria o per metodo di pagamento | [componenti-e-viste.md](./componenti-e-viste.md) |
+| [`src/components/BreakdownList.vue`](../../src/components/BreakdownList.vue) | Ripartizione percentuale delle spese per categoria o per metodo di pagamento con indicatori discreti di trend | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/BudgetBar.vue`](../../src/components/BudgetBar.vue) | Barra progressiva colorata per il monitoraggio visivo dei limiti di spesa | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/ConfirmHost.vue`](../../src/components/ConfirmHost.vue) | Host globale per i dialoghi di conferma dello store `ui` (es. eliminazione), con etichetta di rinuncia personalizzabile | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/components/EntryList.vue`](../../src/components/EntryList.vue) | Contenitore standard per liste di transazioni con stato vuoto e totale in fondo | [componenti-e-viste.md](./componenti-e-viste.md) |

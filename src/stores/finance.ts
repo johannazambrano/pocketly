@@ -15,7 +15,7 @@ import type {
   Simulation,
   Tag,
 } from '@/types/models'
-import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
+import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, tagTrends, type TagTrendInfo, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey } from '@/domain/recurrence'
 import { savingsSummary, sortSavingsGoals } from '@/domain/savings'
@@ -143,6 +143,18 @@ export const useFinanceStore = defineStore('finance', () => {
   const monthSummaryData = computed(() => {
     if (selectedMonth.value === 'all') return null
     return monthSummary(data.value, selectedYear.value, selectedMonth.value, today.value)
+  })
+  const categoryTrends = computed(() => {
+    const ms = monthSummaryData.value
+    if (!ms || selectedMonth.value === 'all') return new Map<Id, TagTrendInfo>()
+    const totals = ms.timing === 'current' ? ms.byCategoryToDate : ms.byCategory
+    return tagTrends(data.value, selectedYear.value, selectedMonth.value, 'categoryId', totals, today.value)
+  })
+  const paymentMethodTrends = computed(() => {
+    const ms = monthSummaryData.value
+    if (!ms || selectedMonth.value === 'all') return new Map<Id, TagTrendInfo>()
+    const totals = ms.timing === 'current' ? ms.byPaymentMethodToDate : ms.byPaymentMethod
+    return tagTrends(data.value, selectedYear.value, selectedMonth.value, 'paymentMethodId', totals, today.value)
   })
   const oneTimeFiltered = computed(() => {
     if (selectedMonth.value === 'all') return oneTimeOfYear.value
@@ -419,6 +431,8 @@ export const useFinanceStore = defineStore('finance', () => {
     forecastRows,
     estimatedMonthlyIncome,
     estimateCategories,
+    categoryTrends,
+    paymentMethodTrends,
     variableThisMonth,
     variableOfSelectedMonth,
     setForecastSettings,

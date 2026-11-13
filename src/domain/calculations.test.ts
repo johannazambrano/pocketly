@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -536,5 +536,96 @@ describe('frequentTemplates', () => {
     expect(templates[1]?.count).toBe(2)
     expect(templates[1]?.amount).toBe(130)
     expect(templates[1]?.notes).toBe('Prezzo aumentato')
+  })
+})
+
+describe('tagTrends', () => {
+  it('restituisce mappa vuota per mese all o totals vuoto', () => {
+    const d = createEmptyData()
+    expect(tagTrends(d, 2026, 'all', 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+    expect(tagTrends(d, 2026, 5, 'categoryId', [], '2026-06-15').size).toBe(0)
+  })
+
+  it('restituisce mappa vuota per mesi futuri o se non ci sono mesi precedenti', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({ id: 'o1', name: 'Spesa', amount: 5000, date: '2026-03-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' })
+    // Mese 2 (marzo) è il primo mese con movimenti: nessun mese precedente
+    expect(tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+    // Mese 7 (agosto) è futuro rispetto a oggi (2026-06-15)
+    expect(tagTrends(d, 2026, 7, 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+  })
+
+  it('calcola la media dei mesi passati e assegna i verdetti correttamente', () => {
+    const d = createEmptyData()
+    // Gennaio (mese 0): c1 = 10000, c2 = 4000
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 10000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'B', amount: 4000, date: '2026-01-12', categoryId: 'c2', paymentMethodId: 'p1', notes: '' },
+    )
+    // Febbraio (mese 1): c1 = 10000
+    d.oneTimeExpenses.push(
+      { id: 'o3', name: 'C', amount: 10000, date: '2026-02-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+    )
+    // Marzo (mese 2): mese passato rispetto a TODAY = '2026-06-15'
+    // Media c1 su gen-feb (2 mesi): (10000 + 10000) / 2 = 10000
+    // Media c2 su gen-feb (2 mesi): (4000 + 0) / 2 = 2000
+
+    // Caso 1: c1 con 12000 (> 10000 + 10%) -> above
+    const res1 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 12000 }], '2026-06-15')
+    const t1 = res1.get('c1')
+    expect(t1).toBeDefined()
+    expect(t1?.previousAverage).toBe(10000)
+    expect(t1?.baseline).toBe(10000)
+    expect(t1?.verdict).toBe('above')
+    expect(t1?.diffPercent).toBe(20)
+    expect(t1?.isPace).toBe(false)
+
+    // Caso 2: c1 con 10500 (entro 10%) -> inline
+    const res2 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 10500 }], '2026-06-15')
+    expect(res2.get('c1')?.verdict).toBe('inline')
+    expect(res2.get('c1')?.diffPercent).toBe(5)
+
+    // Caso 3: c1 con 8000 (< 10000 - 10%) -> below
+    const res3 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 8000 }], '2026-06-15')
+    expect(res3.get('c1')?.verdict).toBe('below')
+    expect(res3.get('c1')?.diffPercent).toBe(-20)
+
+    // Categoria mai usata prima (c3) non ha media precedente e viene ignorata
+    const res4 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c3', total: 5000 }], '2026-06-15')
+    expect(res4.has('c3')).toBe(false)
+  })
+
+  it('per il mese in corso proietta la media precedente al ritmo atteso (pace)', () => {
+    const d = createEmptyData()
+    // Gennaio e Febbraio: spesa c1 di 31000 centesimi (310 €) ciascuno
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 31000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'B', amount: 31000, date: '2026-02-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+    )
+    // Oggi è 10 marzo 2026 (marzo ha 31 giorni).
+    // Media precedente: 31000. Ritmo al giorno 10: Math.round(31000 * 10 / 31) = 10000.
+    const today = '2026-03-10'
+    const totals = [{ id: 'c1', total: 10000 }]
+    const trends = tagTrends(d, 2026, 2, 'categoryId', totals, today)
+
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(31000)
+    expect(info?.baseline).toBe(10000)
+    expect(info?.verdict).toBe('inline')
+    expect(info?.isPace).toBe(true)
+    expect(info?.diffPercent).toBe(0)
+  })
+
+  it('funziona allo stesso modo per i metodi di pagamento', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 5000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'card', notes: '' },
+    )
+    const trends = tagTrends(d, 2026, 1, 'paymentMethodId', [{ id: 'card', total: 6000 }], '2026-03-01')
+    const info = trends.get('card')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(5000)
+    expect(info?.verdict).toBe('above')
   })
 })

@@ -9,7 +9,7 @@ source-files:
   - src/domain/defaults.ts
   - src/domain/savings.ts
   - src/domain/search.ts
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Riferimento: Logica di Dominio
@@ -70,6 +70,14 @@ Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'i
 
 ### `averageBalanceBefore(data, year, month, today): Cents | null`
 Media del saldo (entrate meno uscite, da `monthSummary`) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+
+### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
+Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno (dal mese di inizio del periodo attivo):
+- Per i mesi passati: confronta l'importo totale del mese con la media mensile precedente.
+- Per il mese in corso: confronta l'importo a oggi con il ritmo medio atteso a oggi (`pace`).
+- Per l'intero anno (`month = 'all'`), per mesi futuri o per il primo mese del periodo attivo: restituisce una mappa vuota poiché non c'è una serie storica precedente su cui calcolare lo scostamento.
+- Se un tag non ha spese nei mesi precedenti, viene omesso dalla mappa per evitare falsi allarmi o indicatori rumorosi.
+- Restituisce per ciascun tag presente un oggetto `TagTrendInfo` contenente: `previousAverage`, `baseline` (ritmo o media intera), `verdict` (`'above'` | `'inline'` | `'below'`), `diffPercent` e `isPace`.
 
 ### `breakdownItems(data, year, month, field, tagId, today = todayIso()): BreakdownItem[]`
 Estrae le singole voci (spese variabili e addebiti ricorrenti) che compongono una riga di "Spese per categoria" o "Spese per metodo di pagamento", con le medesime regole di consolidamento della dashboard (ordinate dalla più recente):
