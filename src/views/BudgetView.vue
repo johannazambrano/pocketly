@@ -58,7 +58,12 @@ watch(
 
 function switchTab(tab: TabKey) {
   activeTab.value = tab
-  void router.replace({ query: { ...route.query, tab } })
+  const nextQuery: Record<string, any> = { ...route.query, tab }
+  if (tab === 'budget') {
+    delete nextQuery.highlight
+    highlightedId.value = null
+  }
+  void router.replace({ query: nextQuery })
 }
 
 // --- logica budget mensile ------------------------------------------------
@@ -105,24 +110,26 @@ function suggest() {
 
 // --- logica salvadanai e obiettivi di risparmio ----------------------------
 const formOpen = ref(false)
-const editingGoal = ref<SavingsGoal | null>(null)
+const editingGoalId = ref<string | null>(null)
+const editingGoal = computed(() => finance.savingsGoals.find((g) => g.id === editingGoalId.value) ?? null)
 const depositModalOpen = ref(false)
-const selectedGoalForDeposit = ref<SavingsGoal | null>(null)
+const selectedGoalId = ref<string | null>(null)
+const selectedGoalForDeposit = computed(() => finance.savingsGoals.find((g) => g.id === selectedGoalId.value) ?? null)
 
 const summary = computed(() => finance.savingsSummaryData)
 
 function openNewGoal() {
-  editingGoal.value = null
+  editingGoalId.value = null
   formOpen.value = true
 }
 
 function openEditGoal(goal: SavingsGoal) {
-  editingGoal.value = goal
+  editingGoalId.value = goal.id
   formOpen.value = true
 }
 
 function openDepositModal(goal: SavingsGoal) {
-  selectedGoalForDeposit.value = goal
+  selectedGoalId.value = goal.id
   depositModalOpen.value = true
 }
 
@@ -151,7 +158,7 @@ function onDeleteFromForm() {
 <template>
   <section class="space-y-4">
     <!-- Intestazione pagina con selettore mese o pulsante nuovo salvadanaio -->
-    <PageHeader :title="t('budget.title')">
+    <PageHeader :title="activeTab === 'savings' ? t('savings.title') : t('budget.title')">
       <!-- Azioni per tab Budget Mensile -->
       <div v-if="activeTab === 'budget'" class="flex items-center gap-1">
         <button
@@ -177,16 +184,18 @@ function onDeleteFromForm() {
 
       <!-- Azioni per tab Salvadanai -->
       <div v-else class="flex items-center gap-2">
-        <button type="button" class="btn-primary" @click="openNewGoal">
+        <button type="button" class="btn-primary page-add" @click="openNewGoal">
           <i class="fa-solid fa-plus mr-1.5"></i>{{ t('savings.new') }}
         </button>
       </div>
     </PageHeader>
 
     <!-- Selettore Navigazione a Schede (Tabs) -->
-    <div class="flex items-center gap-1 rounded-xl bg-surface-3 p-1 w-fit">
+    <div class="flex items-center gap-1 rounded-xl bg-surface-3 p-1 w-fit" role="tablist" :aria-label="t('budget.title')">
       <button
         type="button"
+        role="tab"
+        :aria-selected="activeTab === 'budget'"
         class="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors"
         :class="activeTab === 'budget' ? 'bg-surface text-ink-strong shadow-xs' : 'text-ink-4 hover:text-ink-2'"
         @click="switchTab('budget')"
@@ -197,6 +206,8 @@ function onDeleteFromForm() {
 
       <button
         type="button"
+        role="tab"
+        :aria-selected="activeTab === 'savings'"
         class="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors"
         :class="activeTab === 'savings' ? 'bg-surface text-ink-strong shadow-xs' : 'text-ink-4 hover:text-ink-2'"
         @click="switchTab('savings')"
@@ -205,7 +216,7 @@ function onDeleteFromForm() {
         <span>{{ t('budget.tabs.savings') }}</span>
         <span
           v-if="finance.savingsGoals.length"
-          class="ml-1 rounded-full px-1.5 py-0.2 text-[11px] font-bold"
+          class="ml-1 rounded-full px-1.5 py-0.5 text-[11px] font-bold"
           :class="activeTab === 'savings' ? 'bg-surface-3 text-ink-2' : 'bg-surface text-ink-3'"
         >
           {{ finance.savingsGoals.length }}
@@ -410,7 +421,7 @@ function onDeleteFromForm() {
           <p class="max-w-md mx-auto text-xs text-ink-4">{{ t('savings.emptyHint') }}</p>
         </div>
         <div class="pt-2">
-          <button type="button" class="btn-primary" @click="openNewGoal">
+          <button type="button" class="btn-primary page-add" @click="openNewGoal">
             <i class="fa-solid fa-plus mr-1.5"></i>{{ t('savings.createFirst') }}
           </button>
         </div>
@@ -424,7 +435,7 @@ function onDeleteFromForm() {
           :key="goal.id"
           class="card space-y-3 transition-all"
           :class="{
-            'ring-2 ring-accent ring-offset-2': highlightedId === goal.id,
+            'ring-2 ring-accent bg-accent-soft/30': highlightedId === goal.id,
             'opacity-90': goalStatus(goal, finance.today) === 'completed',
           }"
         >
@@ -488,7 +499,7 @@ function onDeleteFromForm() {
                 class="h-full rounded-full transition-all duration-300"
                 :style="{
                   width: `${Math.round(calculateGoalProgress(goal) * 100)}%`,
-                  backgroundColor: goal.color || 'var(--pk-accent-bright)',
+                  backgroundColor: goal.color || 'var(--pk-accent)',
                 }"
               ></div>
             </div>
@@ -507,7 +518,7 @@ function onDeleteFromForm() {
             <div v-else class="flex flex-wrap items-baseline justify-between gap-1 text-ink-2">
               <span>
                 {{ t('savings.recommendedQuota') }}:
-                <strong class="text-ink-strong">{{ money(calculateSavingsQuota(goal, finance.today)) }}</strong> / mese
+                <strong class="text-ink-strong">{{ t('savings.quotaPerMonth', { amount: money(calculateSavingsQuota(goal, finance.today)) }) }}</strong>
               </span>
               <span class="text-ink-4">
                 ({{ t('savings.monthsLeft', { n: calculateMonthsRemaining(finance.today, goal.targetDate) }, calculateMonthsRemaining(finance.today, goal.targetDate)) }})

@@ -2,6 +2,7 @@
 source-files:
   - src/types/models.ts
   - src/domain/merge.ts
+  - src/domain/savings.ts
   - src/services/storage.ts
   - src/services/backupCrypto.ts
   - src/services/sync/api.ts
@@ -36,6 +37,7 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 - `simulations`: lista di [`Simulation`](../../src/types/models.ts).
 - `forecast`: configurazione [`ForecastSettings`](../../src/types/models.ts).
 - `budget`: impostazioni limiti [`BudgetSettings`](../../src/types/models.ts).
+- `savingsGoals`: lista di [`SavingsGoal`](../../src/types/models.ts) per salvadanai e pianificazione obiettivi.
 
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):

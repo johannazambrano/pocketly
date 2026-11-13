@@ -3,6 +3,7 @@ import { computed, reactive, ref, useId, watch } from 'vue'
 import type { SavingsGoal } from '@/types/models'
 import { calculateRemainingAmount } from '@/domain/savings'
 import { useFinanceStore } from '@/stores/finance'
+import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
 import { toCents } from '@/utils/money'
 import BaseModal from './BaseModal.vue'
@@ -15,6 +16,7 @@ const emit = defineEmits<{ close: [] }>()
 const formId = useId()
 const { t, money, amountInput } = useFormat()
 const finance = useFinanceStore()
+const ui = useUiStore()
 
 type ActionType = 'deposit' | 'withdraw'
 
@@ -40,8 +42,18 @@ watch(
   { immediate: true },
 )
 
+function setAction(a: ActionType) {
+  form.action = a
+  error.value = ''
+}
+
 function setQuickAmount(cents: number) {
   form.amount = amountInput(cents)
+}
+
+function addQuickAmount(cents: number) {
+  const current = toCents(form.amount) ?? 0
+  form.amount = amountInput(current + cents)
 }
 
 function submit() {
@@ -59,6 +71,11 @@ function submit() {
 
   const delta = form.action === 'deposit' ? cents : -cents
   finance.adjustSavingsGoalAmount(props.goal.id, delta)
+  if (form.action === 'deposit') {
+    ui.toast(t('savings.quickDepositSuccess', { amount: money(cents), name: props.goal.name }))
+  } else {
+    ui.toast(t('savings.quickWithdrawSuccess', { amount: money(cents), name: props.goal.name }))
+  }
   emit('close')
 }
 </script>
@@ -86,6 +103,10 @@ function submit() {
           <span>{{ t('savings.remainingLabel') }}:</span>
           <span class="font-semibold">{{ money(remaining) }}</span>
         </div>
+        <div v-else-if="goal.currentAmount >= goal.targetAmount" class="flex items-center gap-1 font-semibold text-accent pt-0.5">
+          <i class="fa-solid fa-champagne-glasses text-[11px]"></i>
+          <span>{{ t('savings.completedNotice') }}</span>
+        </div>
       </div>
 
       <!-- Selettore operazione -->
@@ -98,7 +119,7 @@ function submit() {
               ? 'border-accent bg-accent-soft text-accent'
               : 'border-line-soft bg-surface text-ink-3 hover:bg-surface-2'
           "
-          @click="form.action = 'deposit'"
+          @click="setAction('deposit')"
         >
           <i class="fa-solid fa-arrow-down text-xs"></i>
           {{ t('savings.deposit') }}
@@ -111,7 +132,7 @@ function submit() {
               ? 'border-negative bg-negative-soft text-negative'
               : 'border-line-soft bg-surface text-ink-3 hover:bg-surface-2'
           "
-          @click="form.action = 'withdraw'"
+          @click="setAction('withdraw')"
         >
           <i class="fa-solid fa-arrow-up text-xs"></i>
           {{ t('savings.withdraw') }}
@@ -136,21 +157,21 @@ function submit() {
         <button
           type="button"
           class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="setQuickAmount(1000)"
+          @click="addQuickAmount(1000)"
         >
           +10 €
         </button>
         <button
           type="button"
           class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="setQuickAmount(5000)"
+          @click="addQuickAmount(5000)"
         >
           +50 €
         </button>
         <button
           type="button"
           class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="setQuickAmount(10000)"
+          @click="addQuickAmount(10000)"
         >
           +100 €
         </button>
@@ -161,6 +182,32 @@ function submit() {
           @click="setQuickAmount(remaining)"
         >
           {{ t('savings.fillRemaining') }} ({{ money(remaining) }})
+        </button>
+      </div>
+
+      <div v-else-if="goal && goal.currentAmount > 0" class="flex flex-wrap items-center gap-1.5 pt-0.5">
+        <button
+          v-if="goal.currentAmount >= 1000"
+          type="button"
+          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
+          @click="addQuickAmount(1000)"
+        >
+          +10 €
+        </button>
+        <button
+          v-if="goal.currentAmount >= 5000"
+          type="button"
+          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
+          @click="addQuickAmount(5000)"
+        >
+          +50 €
+        </button>
+        <button
+          type="button"
+          class="rounded-full bg-negative-soft px-2.5 py-1 text-xs font-semibold text-negative hover:bg-negative-soft/80 transition-colors"
+          @click="setQuickAmount(goal.currentAmount)"
+        >
+          {{ t('savings.withdrawAll') }} ({{ money(goal.currentAmount) }})
         </button>
       </div>
 

@@ -2,6 +2,7 @@
 source-files:
   - src/views/IncomeView.vue
   - src/views/BudgetView.vue
+  - src/domain/savings.ts
   - server/webpush.py
   - src/stores/notifications.ts
 verified: 2026-11-12
@@ -50,3 +51,13 @@ Questo documento elenca le caratteristiche note, i limiti architetturali e i com
   Il calcolo dei promemoria (`calculateUpcomingReminders`) genera le scadenze su un orizzonte massimo di 60 giorni in avanti. Inoltre, il server accetta al massimo 5000 notifiche pianificate in totale (`MAX_PUSH_SCHEDULE = 5000`).
 - **Miglioramento apportato:**
   L'interfaccia utente in `NotificationSettings.vue` chiarisce ora esplicitamente all'utente questo comportamento ("I promemoria coprono i prossimi 60 giorni e si rinnovano a ogni apertura dell'app"), e lo store notifica avvisi visivi dedicati (`scheduleProblem`) qualora il tetto massimo di 5000 notifiche venga raggiunto (`tooMany`) o si verifichino errori di rete nell'inoltro del calendario (`failed`). Spese con scadenza oltre 60 giorni vengono pianificate non appena rientrano nella finestra.
+
+---
+
+## 5. Tracciamento Salvadanai e Isolamento dal Saldo Operativo
+- **Classificazione:** `Caratteristica di Design` (Documentata)
+- **File coinvolti:** [`src/domain/savings.ts`](../src/domain/savings.ts), [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Descrizione:**
+  I salvadanai (`SavingsGoal`) gestiscono l'accantonamento fondi verso obiettivi futuri monitorando il capitale attuale (`currentAmount`) e il target desiderato (`targetAmount`). I versamenti e i prelievi modificano direttamente `currentAmount` dell'obiettivo e non generano transazioni contabili nel bilancio operativo del mese (`oneTimeExpenses` / `incomes`).
+- **Motivazione:**
+  L'accantonamento in un salvadanaio è un trasferimento patrimoniale / riserva liquida e non un consumo a fondo perduto né una nuova entrata reddituale; mantenere isolato il saldo operativo evita distorsioni nelle medie storiche e nelle stime previsionali dell'anno.

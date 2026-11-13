@@ -29,7 +29,13 @@ export function daysSince(iso: string, now: Date): number {
 
 /** Vero se c'è almeno un dato inserito dall'utente (le sole categorie predefinite non valgono un backup). */
 export function hasUserData(data: FinanceData): boolean {
-  return data.oneTimeExpenses.length + data.incomes.length + data.recurringExpenses.length + data.loans.length > 0
+  return (
+    data.oneTimeExpenses.length +
+    data.incomes.length +
+    data.recurringExpenses.length +
+    data.loans.length +
+    (data.savingsGoals?.length ?? 0) > 0
+  )
 }
 
 export function isReminderDue(meta: BackupMeta, currentHash: string, hasData: boolean, now: Date): boolean {

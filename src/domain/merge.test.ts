@@ -182,6 +182,37 @@ describe('mergeFinanceData', () => {
     expect(merged.recurringExpenses.find((r) => r.id === 'r1')?.notifications).toBeUndefined()
     expect(merged.recurringExpenses.find((r) => r.id === 'r2')?.notifications).toEqual([{ daysBefore: 3, time: '10:00' }])
   })
+
+  it('unisce i salvadanai aggiunti, modificati e rimossi su dispositivi diversi', () => {
+    const goal = (id: string, current: number, target = 10000) => ({
+      id,
+      name: `Obiettivo ${id}`,
+      targetAmount: target,
+      currentAmount: current,
+      targetDate: '2027-01-01',
+    })
+
+    // Caso 1: aggiunte concorrenti su due dispositivi
+    const base1 = data({ savingsGoals: [goal('g1', 1000)] })
+    const local1 = data({ savingsGoals: [goal('g1', 1000), goal('g-local', 500)] })
+    const remote1 = data({ savingsGoals: [goal('g1', 1000), goal('g-remote', 2000)] })
+    const merged1 = mergeFinanceData(base1, local1, remote1)
+    expect(merged1.savingsGoals.map((g) => g.id).sort()).toEqual(['g-local', 'g-remote', 'g1'])
+
+    // Caso 2: modificata da un lato e cancellata dall'altro -> resta con la modifica
+    const base2 = data({ savingsGoals: [goal('g1', 1000)] })
+    const local2 = data({ savingsGoals: [goal('g1', 3000)] }) // modificato locale
+    const remote2 = data({ savingsGoals: [] }) // cancellato da remoto
+    const merged2 = mergeFinanceData(base2, local2, remote2)
+    expect(merged2.savingsGoals.find((g) => g.id === 'g1')?.currentAmount).toBe(3000)
+
+    // Caso 3: cancellata da un lato e non toccata dall'altro -> viene eliminata
+    const base3 = data({ savingsGoals: [goal('g1', 1000), goal('g2', 500)] })
+    const local3 = data({ savingsGoals: [goal('g2', 500)] }) // g1 rimosso in locale
+    const remote3 = data({ savingsGoals: [goal('g1', 1000), goal('g2', 500)] }) // intoccato da remoto
+    const merged3 = mergeFinanceData(base3, local3, remote3)
+    expect(merged3.savingsGoals.map((g) => g.id)).toEqual(['g2'])
+  })
 })
 
 describe('deepEqual', () => {

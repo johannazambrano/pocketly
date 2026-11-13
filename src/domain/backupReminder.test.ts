@@ -29,6 +29,18 @@ describe('hasUserData', () => {
   it('le sole categorie predefinite non contano', () => {
     expect(hasUserData(createDefaultData('it'))).toBe(false)
   })
+
+  it('i salvadanai contano come dati utente', () => {
+    const data = createDefaultData('it')
+    data.savingsGoals.push({
+      id: 'g-1',
+      name: 'Vacanze',
+      targetAmount: 50000,
+      currentAmount: 10000,
+      targetDate: '2026-12-31',
+    })
+    expect(hasUserData(data)).toBe(true)
+  })
 })
 
 describe('isReminderDue', () => {

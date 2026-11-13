@@ -66,6 +66,11 @@ watch(
 )
 
 function submit() {
+  if (!form.name.trim()) {
+    error.value = t('savings.nameRequired')
+    return
+  }
+
   const target = toCents(form.targetAmount)
   if (target === null || target <= 0) {
     error.value = t('savings.invalidTarget')
@@ -75,11 +80,6 @@ function submit() {
   const current = form.currentAmount.trim() === '' ? 0 : toCents(form.currentAmount)
   if (current === null || current < 0) {
     error.value = t('savings.invalidCurrent')
-    return
-  }
-
-  if (!form.name.trim()) {
-    error.value = t('savings.nameRequired')
     return
   }
 
@@ -95,7 +95,7 @@ function submit() {
     currentAmount: current,
     targetDate: form.targetDate,
     color: form.color,
-    notes: form.notes.trim(),
+    notes: form.notes.trim() || undefined,
   })
 
   emit('close')
