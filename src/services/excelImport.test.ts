@@ -200,7 +200,35 @@ describe('convertWorkbook', () => {
     expect(a!.id).not.toBe(b!.id)
     // Categorie senza distinzione di maiuscole; "Other" per quelle mancanti
     expect(res.data.categories.map((c) => c.name)).toEqual(['Cibo', 'Other'])
-    expect(res.warnings.map((w) => w.code)).toEqual(['dateFromMonth', 'tagIgnored'])
+    expect(res.data.tags.map((t) => t.name)).toEqual(['casa'])
+    expect(res.data.oneTimeExpenses[2]!.tagIds).toEqual([res.data.tags[0]!.id])
+    expect(res.stats.tags).toBe(1)
+    expect(res.warnings.map((w) => w.code)).toEqual(['dateFromMonth'])
+    expect(parseBackup(JSON.parse(JSON.stringify(res.data)))).toEqual(res.data)
+  })
+
+  it('legge i tag da Settings (colonna N dalla riga 4) e supporta più tag separati su One-time', async () => {
+    const settings =
+      row(3, str('A3', 'Categoria') + str('D3', 'Metodo') + str('N3', 'TAG')) +
+      row(4, str('A4', 'Cibo') + str('D4', 'Carta') + str('N4', 'Casa')) +
+      row(5, str('N5', 'Vacanza')) +
+      row(20, str('N20', 'Extra'))
+    const oneTime =
+      ONE_TIME_HEADER +
+      row(3, str('A3', 'Spesa 1') + num('B3', 10) + str('C3', '2026-04-01') + str('H3', 'casa, Condiviso; casa')) +
+      row(4, str('A4', 'Spesa 2') + num('B4', 20) + str('C4', '2026-04-02') + str('H4', 'extra'))
+    const res = convertWorkbook(await readWorkbook(await xlsx({ Settings: settings, 'One-time': oneTime })))
+
+    expect(res.data.tags.map((t) => t.name)).toEqual(['Casa', 'Vacanza', 'Extra', 'Condiviso'])
+    expect(res.stats.tags).toBe(4)
+    expect(res.data.oneTimeExpenses[0]!.tagIds).toEqual([
+      res.data.tags.find((t) => t.name === 'Casa')!.id,
+      res.data.tags.find((t) => t.name === 'Condiviso')!.id,
+    ])
+    expect(res.data.oneTimeExpenses[1]!.tagIds).toEqual([
+      res.data.tags.find((t) => t.name === 'Extra')!.id,
+    ])
+    expect(res.warnings).toEqual([])
     expect(parseBackup(JSON.parse(JSON.stringify(res.data)))).toEqual(res.data)
   })
 

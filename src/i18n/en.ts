@@ -403,7 +403,7 @@ const en: typeof it = {
   },
   excelImport: {
     title: 'Import from Excel',
-    hint: 'Converts the “Expense Tracker” spreadsheet (.xlsx): variable and recurring expenses, income, categories and payment methods. The file is read on this device and is not sent anywhere.',
+    hint: 'Converts the “Expense Tracker” spreadsheet (.xlsx): variable and recurring expenses, income, categories, payment methods and tags. The file is read on this device and is not sent anywhere.',
     choose: 'Choose Excel file',
     previewTitle: 'File contents',
     counts: {
@@ -412,6 +412,7 @@ const en: typeof it = {
       incomes: 'Income',
       categories: 'Categories',
       paymentMethods: 'Payment methods',
+      tags: 'Tags',
     },
     warningsTitle: 'Warnings ({count})',
     replaceWarning: 'Your current data will be replaced by the file contents, including budgets, loans and simulations. We recommend exporting a backup first.',
@@ -425,7 +426,6 @@ const en: typeof it = {
       monthUnknown: '{sheet}, row {row}: unrecognised month “{value}”.',
       missingDate: '{sheet}, row {row}: no date or month, entry skipped.',
       dateFromMonth: '{sheet}, row {row} ({name}): no date, used {date}.',
-      tagIgnored: 'One-time, row {row}: tag “{tag}” is not supported and is ignored.',
       recurringIncomplete: 'Recurring, row {row}: missing name or amount, entry skipped.',
       frequencyUnsupported: 'Recurring, row {row} ({name}): frequency “{frequency}” not supported, entry skipped.',
       recurringNoStart: 'Recurring, row {row} ({name}): missing Data Inizio and Mese, entry skipped.',

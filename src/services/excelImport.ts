@@ -8,8 +8,8 @@
  * - "Income"    -> incomes (stessa regola per la data).
  * - "Recurring" -> recurringExpenses. Inizio = "Data Inizio", altrimenti il primo mese elencato in "Mese".
  *                  Se l'ultimo mese elencato non è dicembre la ricorrenza termina alla fine di quel mese.
- * - Categorie e metodi di pagamento: dal foglio Settings più quelli usati nei dati.
- * - Non supportati e quindi ignorati: Tag, Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
+ * - Categorie, metodi di pagamento e tag: dal foglio Settings più quelli usati nei dati.
+ * - Non supportati e quindi ignorati: Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
  */
 import type { FinanceData, Frequency, Income, OneTimeExpense, RecurringExpense, Tag } from '@/types/models'
 import { defaultForecastSettings } from '@/domain/defaults'
@@ -33,7 +33,6 @@ export type ImportWarningCode =
   | 'monthUnknown'
   | 'missingDate'
   | 'dateFromMonth'
-  | 'tagIgnored'
   | 'recurringIncomplete'
   | 'frequencyUnsupported'
   | 'recurringNoStart'
@@ -48,6 +47,7 @@ export interface ImportWarning {
 export interface ExcelImportStats {
   categories: number
   paymentMethods: number
+  tags: number
   oneTimeExpenses: number
   recurringExpenses: number
   incomes: number
@@ -82,6 +82,13 @@ function clean(v: CellValue | undefined): string {
   if (typeof v === 'boolean') return v ? 'True' : 'False'
   if (isCellDate(v)) return v.date
   return String(v).trim()
+}
+
+function parseTagNames(value: CellValue | undefined): string[] {
+  return clean(value)
+    .split(/[,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
 }
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0')
@@ -170,6 +177,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
 
   const categories = new Tags('cat', 0)
   const payments = new Tags('pm', 8)
+  const tags = new Tags('tag', 4)
 
   const settings = findSheet(wb, 'settings')
   if (settings) {
@@ -177,6 +185,12 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       const row = settings.rows.get(n) ?? []
       if (clean(row[0])) categories.add(clean(row[0]))
       if (clean(row[3])) payments.add(clean(row[3]))
+      if (clean(row[13])) tags.add(clean(row[13]))
+    }
+    for (let n = 20; n <= settings.maxRow; n++) {
+      const tag = clean(settings.rows.get(n)?.[13])
+      if (!tag) break
+      tags.add(tag)
     }
   }
 
@@ -227,6 +241,11 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       if (!date) continue
       const key = name.toLowerCase()
       const k = occurrence(`${date}\u0000${key}\u0000${amount}`)
+      const tagIds: string[] = []
+      for (const tagName of parseTagNames(r.Tag)) {
+        const id = tags.add(tagName)
+        if (!tagIds.includes(id)) tagIds.push(id)
+      }
       oneTime.push({
         id: stableId(`ot:${date}:${key}:${amount}:${k}`),
         name,
@@ -235,9 +254,8 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
         categoryId: categories.add(clean(r.Categoria) || 'Other'),
         paymentMethodId: payments.add(clean(r['Metodo Pagamento']) || 'Other'),
         notes: clean(r.Note),
-        tagIds: [],
+        tagIds,
       })
-      if (clean(r.Tag)) warn('tagIgnored', { row: n, tag: clean(r.Tag) })
     }
   }
 
@@ -322,7 +340,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     schemaVersion: 2,
     categories: categories.items,
     paymentMethods: payments.items,
-    tags: [],
+    tags: tags.items,
     oneTimeExpenses: oneTime,
     recurringExpenses: recurring,
     incomes,
@@ -337,6 +355,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     stats: {
       categories: data.categories.length,
       paymentMethods: data.paymentMethods.length,
+      tags: data.tags.length,
       oneTimeExpenses: oneTime.length,
       recurringExpenses: recurring.length,
       incomes: incomes.length,

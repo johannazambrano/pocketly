@@ -401,7 +401,7 @@ export default {
   },
   excelImport: {
     title: 'Importa da Excel',
-    hint: 'Converte il foglio “Expense Tracker” (.xlsx): spese variabili, ricorrenti, entrate, categorie e metodi di pagamento. Il file viene letto su questo dispositivo e non viene inviato da nessuna parte.',
+    hint: 'Converte il foglio “Expense Tracker” (.xlsx): spese variabili, ricorrenti, entrate, categorie, metodi di pagamento e tag. Il file viene letto su questo dispositivo e non viene inviato da nessuna parte.',
     choose: 'Scegli file Excel',
     previewTitle: 'Contenuto del file',
     counts: {
@@ -410,6 +410,7 @@ export default {
       incomes: 'Entrate',
       categories: 'Categorie',
       paymentMethods: 'Metodi di pagamento',
+      tags: 'Tag',
     },
     warningsTitle: 'Avvisi ({count})',
     replaceWarning: 'I dati attuali verranno sostituiti da quelli del file, compresi budget, prestiti e simulazioni. Ti consigliamo di esportare prima un backup.',
@@ -423,7 +424,6 @@ export default {
       monthUnknown: '{sheet}, riga {row}: mese non riconosciuto “{value}”.',
       missingDate: '{sheet}, riga {row}: mancano data e mese, voce saltata.',
       dateFromMonth: '{sheet}, riga {row} ({name}): senza data, usato il {date}.',
-      tagIgnored: 'One-time, riga {row}: il tag “{tag}” non è supportato e viene ignorato.',
       recurringIncomplete: 'Recurring, riga {row}: nome o importo mancante, voce saltata.',
       frequencyUnsupported: 'Recurring, riga {row} ({name}): frequenza “{frequency}” non supportata, voce saltata.',
       recurringNoStart: 'Recurring, riga {row} ({name}): mancano Data Inizio e Mese, voce saltata.',

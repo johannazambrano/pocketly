@@ -201,7 +201,7 @@ async function importBackup(event: Event) {
 // --- importazione da Excel ------------------------------------------------
 
 const excelPreview = ref<ExcelImportResult | null>(null)
-const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods']
+const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods', 'tags']
 
 function excelErrorKey(e: unknown): string {
   if (e instanceof NotExpenseTrackerError) return 'excelImport.notTracker'

@@ -4,7 +4,7 @@ source-files:
   - src/services/excelImport.ts
   - src/services/xlsx/workbook.ts
   - src/services/xlsx/zip.ts
-verified: 2026-11-11
+verified: 2026-11-13
 ---
 
 # Importare in Pocketly i dati dell'Excel "Expense Tracker"
@@ -54,23 +54,25 @@ elenco di avvisi che iniziano con `!`. **Leggili sempre**: indicano le voci salt
 
 I fogli `One-time`, `Income` e `Recurring` sono letti per **nome delle colonne**, non per posizione:
 aggiungere o spostare colonne non è un problema, rinominare quelle usate sì. Il foglio `Settings` è invece
-letto per **posizione**: categorie nella colonna A e metodi di pagamento nella colonna D, dalla riga 4 alla 19.
+letto per **posizione**: categorie nella colonna A e metodi di pagamento nella colonna D (dalla riga 4 alla 19),
+e tag nella colonna N a partire dalla riga 4 (con intestazione `TAG` alla riga 3).
 
 | Foglio | Diventa | Colonne usate |
 |---|---|---|
-| `One-time` | Spese una tantum | Nome, Importo (€), Categoria, Data (o Mese), Metodo Pagamento, Note |
+| `One-time` | Spese una tantum | Nome, Importo (€), Categoria, Data (o Mese), Metodo Pagamento, Note, Tag |
 | `Income` | Entrate | Nome, Importo (€), Categoria, Data (o Mese), **Prelievo su** (diventa il metodo di pagamento) |
 | `Recurring` | Spese ricorrenti | Nome, Importo (€), Categoria, Frequenza, Data Inizio, Mese, Metodo Pagamento |
-| `Settings` | Categorie e metodi di pagamento | Colonna A (categorie) e colonna D (metodi di pagamento) |
+| `Settings` | Categorie, metodi di pagamento e tag | Colonna A (categorie), colonna D (metodi di pagamento) e colonna N da riga 4 (tag) |
 
 La lettura di ogni foglio si ferma alla riga `TOTALE`. Le righe senza nome o senza importo sono saltate.
 
 Regole di conversione:
 
 - **Importi:** da euro a centesimi interi (63 € → `6300`).
-- **Categorie e metodi di pagamento:** quelli del foglio `Settings` più quelli usati nei dati ma non
-  elencati. `casa` e `Casa` sono la stessa categoria. I colori sono quelli dell'app, non i pastello dell'Excel
-  (con il testo bianco non sarebbero leggibili).
+- **Categorie, metodi di pagamento e tag:** quelli del foglio `Settings` più quelli usati nei dati ma non
+  elencati. `casa` e `Casa` sono la stessa categoria o lo stesso tag. Nella colonna `Tag` di `One-time` si può
+  indicare un solo tag oppure più tag separati da virgola (`,`) o punto e virgola (`;`). I colori sono quelli
+  dell'app, non i pastello dell'Excel (con il testo bianco non sarebbero leggibili).
 - **Data mancante:** si usa il primo giorno del mese indicato in `Mese` (es. `October 2026` → `2026-10-01`).
   Se mancano sia la data sia il mese, la voce è saltata e compare un avviso.
 - **Ricorrenze, data di inizio:** è `Data Inizio` se presente, altrimenti il primo mese elencato in `Mese`.
@@ -80,7 +82,7 @@ Regole di conversione:
 - **Frequenze:** `Monthly`, `Quarterly`, `Semi-annual`, `Annual`.
 - **Annuale con più mesi elencati e `Data Inizio`:** conta solo la `Data Inizio` (con avviso).
 
-**Non vengono convertiti** (Pocketly non li prevede): i Tag, la colonna Fonte, la frequenza `Weekly`, le note
+**Non vengono convertiti** (Pocketly non li prevede): la colonna Fonte, la frequenza `Weekly`, le note
 delle ricorrenze, i prestiti e le simulazioni. Il foglio `Prestiti` non ha una struttura standard: se contiene
 righe, lo script lo segnala e le salta. Prestiti e simulazioni si inseriscono poi a mano nell'app.
 

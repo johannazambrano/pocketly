@@ -13,13 +13,14 @@ Mappatura:
   - "Recurring" -> recurringExpenses. Data di inizio = "Data Inizio" se presente, altrimenti
                    il primo mese elencato in "Mese". Se l'ultimo mese elencato non e' dicembre
                    la ricorrenza termina alla fine di quel mese (endDate).
-  - Categorie e metodi di pagamento: dal foglio Settings piu' quelli usati nei dati.
-  - Non supportati da Pocketly e quindi ignorati: Tag, Fonte, Prelievo su, frequenza Weekly.
+  - Categorie, metodi di pagamento e tag: dal foglio Settings piu' quelli usati nei dati.
+  - Non supportati da Pocketly e quindi ignorati: Fonte, Prelievo su, frequenza Weekly.
 """
 import argparse
 import calendar
 import io
 import json
+import re
 import sys
 import uuid
 from datetime import date, datetime
@@ -49,6 +50,10 @@ def cents(v) -> int | None:
 
 def clean(v) -> str:
     return str(v).strip() if v is not None else ''
+
+
+def parse_tag_names(value) -> list[str]:
+    return [part.strip() for part in re.split(r'[,;]', clean(value)) if part.strip()]
 
 
 def parse_months(text, warn_fn) -> list[tuple[int, int]]:
@@ -138,15 +143,22 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
         source = io.BytesIO(source)
 
     wb = openpyxl.load_workbook(source, data_only=True)
-    categories, payments = Tags('cat', 0), Tags('pm', 8)
+    categories, payments, tags = Tags('cat', 0), Tags('pm', 8), Tags('tag', 4)
 
     settings = sheet(wb, 'settings')
     if settings:
         for row in settings.iter_rows(min_row=4, max_row=19, values_only=True):
             if clean(row[0]):
                 categories.add(clean(row[0]))
-            if clean(row[3]):
+            if len(row) > 3 and clean(row[3]):
                 payments.add(clean(row[3]))
+            if len(row) > 13 and clean(row[13]):
+                tags.add(clean(row[13]))
+        for row in settings.iter_rows(min_row=20, values_only=True):
+            tag = clean(row[13]) if len(row) > 13 else ''
+            if not tag:
+                break
+            tags.add(tag)
 
     def day_of(y: int, m: int) -> int:
         return min(default_day, calendar.monthrange(y, m + 1)[1])
@@ -181,6 +193,12 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
             ot_seen[sig] = ot_seen.get(sig, 0) + 1
             item_id = stable_id(f'ot:{d}:{clean(r["Nome"]).casefold()}:{amount}:{ot_seen[sig]}')
 
+            tag_ids = []
+            for tag_name in parse_tag_names(r.get('Tag')):
+                tag_id = tags.add(tag_name)
+                if tag_id not in tag_ids:
+                    tag_ids.append(tag_id)
+
             one_time.append({
                 'id': item_id,
                 'name': clean(r['Nome']),
@@ -189,9 +207,8 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
                 'categoryId': categories.add(cat_name),
                 'paymentMethodId': payments.add(pm_name),
                 'notes': clean(r.get('Note')),
+                'tagIds': tag_ids,
             })
-            if clean(r.get('Tag')):
-                warn(f'One-time riga {n}: il Tag {clean(r.get("Tag"))!r} non e\' supportato e viene ignorato')
 
     ws = sheet(wb, 'income')
     if ws:
@@ -274,6 +291,7 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
         'schemaVersion': 2,
         'categories': categories.items,
         'paymentMethods': payments.items,
+        'tags': tags.items,
         'oneTimeExpenses': one_time,
         'recurringExpenses': recurring,
         'incomes': incomes,
@@ -291,6 +309,7 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
     stats = {
         'categories': len(data['categories']),
         'paymentMethods': len(data['paymentMethods']),
+        'tags': len(data['tags']),
         'oneTimeExpenses': len(data['oneTimeExpenses']),
         'recurringExpenses': len(data['recurringExpenses']),
         'incomes': len(data['incomes']),
