@@ -232,6 +232,39 @@ describe('convertWorkbook', () => {
     expect(parseBackup(JSON.parse(JSON.stringify(res.data)))).toEqual(res.data)
   })
 
+  it("legge la colonna N di Settings solo con l'intestazione TAG, saltando le celle vuote fino in fondo", async () => {
+    const withHeader =
+      row(3, str('N3', 'Tag')) + row(4, str('N4', 'Casa')) + row(20, str('N20', 'Lavoro')) + row(22, str('N22', 'Regali'))
+    const oneTime = ONE_TIME_HEADER + row(3, str('A3', 'Pane') + num('B3', 2) + str('C3', '2026-02-02'))
+    const read = convertWorkbook(await readWorkbook(await xlsx({ Settings: withHeader, 'One-time': oneTime })))
+    expect(read.data.tags.map((t) => t.name)).toEqual(['Casa', 'Lavoro', 'Regali'])
+
+    const otherColumn = row(3, str('N3', 'Note')) + row(4, str('N4', 'Pagare entro il 5')) + row(5, str('N5', 'Totale annuo'))
+    const ignored = convertWorkbook(await readWorkbook(await xlsx({ Settings: otherColumn, 'One-time': oneTime })))
+    expect(ignored.data.tags).toEqual([])
+  })
+
+  it('dà colori tutti diversi a categorie, metodi e tag, con "Altro" in grigio', async () => {
+    const names = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix} ${i + 1}`)
+    const cats = [...names('Cat', 5), 'Altro']
+    const pms = names('Metodo', 4)
+    const tagNames = names('Tag', 3)
+    const settings =
+      row(3, str('A3', 'Categoria') + str('D3', 'Metodo') + str('N3', 'TAG')) +
+      cats
+        .map((c, i) => {
+          const n = i + 4
+          return row(n, str(`A${n}`, c) + (pms[i] ? str(`D${n}`, pms[i]!) : '') + (tagNames[i] ? str(`N${n}`, tagNames[i]!) : ''))
+        })
+        .join('')
+    const oneTime = ONE_TIME_HEADER + row(3, str('A3', 'Pane') + num('B3', 2) + str('C3', '2026-02-02') + str('E3', 'Cat 1'))
+    const res = convertWorkbook(await readWorkbook(await xlsx({ Settings: settings, 'One-time': oneTime })))
+    const all = [...res.data.categories, ...res.data.paymentMethods, ...res.data.tags]
+    expect(res.data.categories.find((c) => c.name === 'Altro')!.color).toBe('#8c939b')
+    const colored = all.filter((t) => t.name !== 'Altro')
+    expect(new Set(colored.map((t) => t.color)).size).toBe(colored.length)
+  })
+
   it('a ogni importazione dello stesso file dà gli stessi ID', async () => {
     const file = await xlsx({ 'One-time': ONE_TIME_HEADER + row(3, str('A3', 'Pane') + num('B3', 2) + str('C3', '2026-02-02')) })
     const first = convertWorkbook(await readWorkbook(file))

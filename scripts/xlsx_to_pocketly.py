@@ -20,6 +20,7 @@ import argparse
 import calendar
 import io
 import json
+import math
 import re
 import sys
 import uuid
@@ -27,11 +28,100 @@ from datetime import date, datetime
 
 import openpyxl
 
-# Stessa palette di src/utils/colors.ts (leggibile con testo bianco).
+# --- colori: stessa logica di src/utils/colors.ts ------------------------------------------------------
+# Tinte con la stessa luminosita' e intensita' (OKLCH L 0,66, C 0,13), senza rossi, senza il verde delle
+# azioni e il blu del risultato. Ogni voce prende la tinta piu' lontana da quelle gia' date; "Altro" e' grigio.
 PALETTE = [
-    '#f59e0b', '#3b82f6', '#64748b', '#ec4899', '#10b981', '#8b5cf6', '#f97316', '#06b6d4',
-    '#6366f1', '#0284c7', '#ef4444', '#84cc16', '#14b8a6', '#a855f7', '#e11d48', '#0d9488',
+    '#cf7a3d', '#01a0d1', '#b377c5', '#7ea040', '#b18e15', '#8687df',
+    '#06a7a6', '#c38323', '#9a9725', '#9f7ed6', '#c371b0', '#04a4ba',
 ]
+OTHER_COLOR = '#8c939b'
+OTHER_NAMES = {'altro', 'altri', 'other', 'others'}
+L_, C_ = 0.66, 0.13
+HUE_RANGES = [(45, 140), (190, 245), (280, 345)]
+HUE_STEPS = [a + i * 5 for a, b in HUE_RANGES for i in range((b - a) // 5 + 1)]
+
+
+def _to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _from_linear(c):
+    v = min(1.0, max(0.0, c))
+    return 12.92 * v if v <= 0.0031308 else 1.055 * v ** (1 / 2.4) - 0.055
+
+
+def hex_to_oklch(hex_color: str):
+    h = hex_color.lstrip('#')
+    if not re.fullmatch(r'[0-9a-fA-F]{6}', h):
+        return None
+    r, g, b = (_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4))
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    ll = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
+    a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+    bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+    return ll, math.hypot(a, bb), (math.degrees(math.atan2(bb, a)) + 360) % 360
+
+
+def _oklch_to_linear(l, c, h):
+    a, b = c * math.cos(math.radians(h)), c * math.sin(math.radians(h))
+    l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m_ = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s_ = (l - 0.0894841775 * a - 1.291485548 * b) ** 3
+    return [
+        4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+        -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+        -0.0041960863 * l_ - 0.7034186147 * m_ + 1.707614701 * s_,
+    ]
+
+
+def oklch_to_hex(l, c, h) -> str:
+    chroma = c
+    rgb = _oklch_to_linear(l, chroma, h)
+    while chroma > 0 and any(v < -1e-4 or v > 1 + 1e-4 for v in rgb):
+        chroma = max(0.0, chroma - 0.002)
+        rgb = _oklch_to_linear(l, chroma, h)
+    return '#' + ''.join(f'{round(_from_linear(v) * 255):02x}' for v in rgb)
+
+
+def _hue_distance(a, b):
+    d = abs(a - b) % 360
+    return min(d, 360 - d)
+
+
+def _spread(hue, used):
+    return min(_hue_distance(hue, u) for u in used) if used else 360
+
+
+def pick_unique_color(existing: list[str]) -> str:
+    taken = {c.lower() for c in existing}
+    used = [o[2] for o in map(hex_to_oklch, existing) if o and o[1] > 0.04]
+    free = [c for c in PALETTE if c not in taken]
+    if free:
+        best = free[0]
+        for c in free[1:]:
+            if _spread(hex_to_oklch(c)[2], used) > _spread(hex_to_oklch(best)[2], used) + 0.5:
+                best = c
+        return best
+    best_hue = HUE_STEPS[0]
+    for h in HUE_STEPS[1:]:
+        if _spread(h, used) > _spread(best_hue, used):
+            best_hue = h
+    return oklch_to_hex(L_, C_, best_hue)
+
+
+def harmonized_colors(names: list[str], already_given: list[str]) -> list[str]:
+    given = list(already_given)
+    out = []
+    for name in names:
+        color = OTHER_COLOR if name.strip().lower() in OTHER_NAMES else pick_unique_color(given)
+        given.append(color)
+        out.append(color)
+    return out
+
+
 FREQUENCIES = {'monthly': 'monthly', 'quarterly': 'quarterly', 'semi-annual': 'semiannual', 'annual': 'annual'}
 
 POCKETLY_NAMESPACE = uuid.UUID('7b38d648-52e6-4277-bf30-4e4b52df33ce')
@@ -96,20 +186,29 @@ class Tags:
     """Elenco di categorie / metodi di pagamento con ricerca senza distinguere maiuscole
     e ID stabili per evitare duplicazioni."""
 
-    def __init__(self, prefix: str = 'cat', offset: int = 0):
+    def __init__(self, prefix: str = 'cat'):
         self.items: list[dict] = []
         self.by_key: dict[str, dict] = {}
         self.prefix = prefix
-        self.offset = offset
 
     def add(self, name: str) -> str:
         key = name.casefold()
         if key not in self.by_key:
-            color = PALETTE[(len(self.items) + self.offset) % len(PALETTE)]
-            tag = {'id': stable_id(f'{self.prefix}:{key}'), 'name': name, 'color': color}
+            # Il colore si sceglie alla fine, quando ci sono tutte le voci (colorize).
+            tag = {'id': stable_id(f'{self.prefix}:{key}'), 'name': name, 'color': ''}
             self.items.append(tag)
             self.by_key[key] = tag
         return self.by_key[key]['id']
+
+
+def colorize(lists: list['Tags']) -> None:
+    """Categorie, poi metodi di pagamento, poi tag: colori in equilibrio e mai uguali tra elenchi."""
+    given: list[str] = []
+    for lst in lists:
+        colors = harmonized_colors([t['name'] for t in lst.items], given)
+        for t, c in zip(lst.items, colors):
+            t['color'] = c
+        given.extend(colors)
 
 
 def sheet(wb, fragment: str):
@@ -143,7 +242,7 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
         source = io.BytesIO(source)
 
     wb = openpyxl.load_workbook(source, data_only=True)
-    categories, payments, tags = Tags('cat', 0), Tags('pm', 8), Tags('tag', 4)
+    categories, payments, tags = Tags('cat'), Tags('pm'), Tags('tag')
 
     settings = sheet(wb, 'settings')
     if settings:
@@ -152,13 +251,12 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
                 categories.add(clean(row[0]))
             if len(row) > 3 and clean(row[3]):
                 payments.add(clean(row[3]))
-            if len(row) > 13 and clean(row[13]):
-                tags.add(clean(row[13]))
-        for row in settings.iter_rows(min_row=20, values_only=True):
-            tag = clean(row[13]) if len(row) > 13 else ''
-            if not tag:
-                break
-            tags.add(tag)
+        # Tag: colonna N, solo se in N3 c'e' l'intestazione "TAG" (o "Tags"); tutta la colonna dalla riga 4,
+        # saltando le celle vuote.
+        if re.fullmatch(r'tags?', clean(settings.cell(row=3, column=14).value), re.IGNORECASE):
+            for row in settings.iter_rows(min_row=4, min_col=14, max_col=14, values_only=True):
+                if clean(row[0]):
+                    tags.add(clean(row[0]))
 
     def day_of(y: int, m: int) -> int:
         return min(default_day, calendar.monthrange(y, m + 1)[1])
@@ -286,6 +384,8 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
         filled = [row for row in ws.iter_rows(min_row=4, values_only=True) if any(c is not None for c in row)]
         if filled:
             warn(f'Prestiti: {len(filled)} righe presenti ma il foglio non ha una struttura standard, non convertite')
+
+    colorize([categories, payments, tags])
 
     data = {
         'schemaVersion': 2,
