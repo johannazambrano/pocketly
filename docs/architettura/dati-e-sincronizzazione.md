@@ -122,7 +122,7 @@ L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è
       - Se un elemento è stato cancellato localmente (presente in `base`, assente in `local`) e non è stato toccato da `remote`, l'elemento viene definitivamente eliminato.
       - Se un elemento è stato cancellato da una parte ma modificato dall'altra, **vince la modifica**, preservando il dato per evitare perdite accidentali.
       - Se un elemento è stato modificato in entrambi i dispositivi, vince la versione locale.
-      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali.
+      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali. Se però sul server l'ordine non è cambiato dalla base e su questo dispositivo sì (es. inserimenti rapidi riordinati nelle Impostazioni), vale l'ordine locale, con in fondo i nuovi arrivati dal server (`sameOrder` in `merge.ts`).
 
 ### Perché i Tombstone non sono necessari?
 Nei sistemi di sincronizzazione a due vie, per distinguere un elemento "cancellato" da uno "ancora da ricevere" è necessario memorizzare un record fantasma (tombstone). In Pocketly il client memorizza sempre l'ultima **base** sincronizzata. Questo rende la tripla `(base, local, remote)` sufficiente per dedurre con certezza matematica se un'assenza è frutto di una cancellazione o di una mancata creazione, rendendo superflui i tombstone sia nel client che nel server.

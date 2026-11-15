@@ -200,6 +200,18 @@ describe('mergeFinanceData', () => {
     expect(mergeFinanceData(base, local, remote).quickExpenses).toEqual([{ ...caffe, amount: 180 }, pranzo])
   })
 
+  it('tiene il riordino degli inserimenti rapidi fatto su questo dispositivo, con in fondo i nuovi dal server', () => {
+    const q = (id: string) => ({ id, name: id, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] })
+    const base = data({ quickExpenses: [q('a'), q('b'), q('c')] })
+    const local = data({ quickExpenses: [q('c'), q('a'), q('b')] })
+    const remote = data({ quickExpenses: [q('a'), q('b'), q('c'), q('d')] })
+    expect(mergeFinanceData(base, local, remote).quickExpenses.map((x) => x.id)).toEqual(['c', 'a', 'b', 'd'])
+
+    // Riordinato sul server e non qui: vale l'ordine del server.
+    const remoteMoved = data({ quickExpenses: [q('b'), q('a'), q('c')] })
+    expect(mergeFinanceData(base, clone(base), remoteMoved).quickExpenses.map((x) => x.id)).toEqual(['b', 'a', 'c'])
+  })
+
   it('ripristina categoria o metodo cancellato sull’altro dispositivo se usato da un inserimento rapido', () => {
     const base = data()
     const local = data({
