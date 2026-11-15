@@ -505,9 +505,13 @@ export interface TagTrendInfo {
 
 /**
  * Calcola per ciascun tag (categoria o metodo) il confronto tra l'importo del mese e la media dei mesi precedenti.
- * - Per i mesi passati: confronta l'importo totale del mese con la media mensile precedente.
- * - Per il mese in corso: confronta l'importo a oggi con il ritmo atteso a oggi (`pace`).
- * - Per mesi futuri o se non ci sono mesi precedenti: restituisce una mappa vuota.
+ * - La media parte dal primo mese dell'anno in cui il tag ha avuto spese: un abbonamento iniziato a maggio non
+ *   fa media sui mesi da gennaio ad aprile.
+ * - Mese passato: il totale del mese contro la media mensile.
+ * - Mese in corso: l'importo a oggi contro quello che di solito c'era allo stesso giorno. Le spese variabili si
+ *   proporzionano ai giorni passati (`pace`); gli addebiti ricorrenti contano per intero se di solito arrivano
+ *   entro il giorno di oggi, altrimenti no. Così l'affitto addebitato il 1° non sembra "sopra il ritmo" il giorno 3.
+ * - Mesi futuri, anno intero o nessun mese precedente: mappa vuota.
  */
 export function tagTrends(
   data: FinanceData,
@@ -528,17 +532,6 @@ export function tagTrends(
   const start = periodStartMonth(data, year)
   if (month <= start) return result
 
-  const monthsCount = month - start
-  const prevTotals = new Map<Id, Cents>()
-
-  for (let m = start; m < month; m++) {
-    const b = monthBreakdown(data, year, m)
-    const list = field === 'categoryId' ? b.byCategory : b.byPaymentMethod
-    for (const item of list) {
-      prevTotals.set(item.id, (prevTotals.get(item.id) ?? 0) + item.total)
-    }
-  }
-
   const isCurrentMonth = key === now
   let paceFraction = 1
   if (isCurrentMonth) {
@@ -546,14 +539,43 @@ export function tagTrends(
     paceFraction = Math.min(t.day, daysInMonth) / daysInMonth
   }
 
-  for (const row of totals) {
-    const prevSum = prevTotals.get(row.id) ?? 0
-    if (prevSum <= 0) continue
+  // Per ogni tag: primo mese con spese, totale dei mesi precedenti, e la parte da confrontare
+  // (variabili e ricorrenti separate, per il mese in corso).
+  interface Previous { first: number; full: Cents; variable: Cents; recurring: Cents }
+  const prev = new Map<Id, Previous>()
+  const add = (id: Id, m: number, full: Cents, variable: Cents, recurring: Cents) => {
+    const p = prev.get(id) ?? { first: m, full: 0, variable: 0, recurring: 0 }
+    p.first = Math.min(p.first, m)
+    p.full += full
+    p.variable += variable
+    p.recurring += recurring
+    prev.set(id, p)
+  }
+  for (const e of data.oneTimeExpenses) {
+    const d = parseIsoDate(e.date)
+    if (d.year === year && d.month >= start && d.month < month) add(e[field], d.month, e.amount, e.amount, 0)
+  }
+  for (const r of data.recurringExpenses) {
+    for (let m = start; m < month; m++) {
+      const charge = chargeIn(r, year, m)
+      if (!charge) continue
+      const byToday = !isCurrentMonth || parseIsoDate(charge.date).day <= t.day
+      add(r[field], m, charge.amount, 0, byToday ? charge.amount : 0)
+    }
+  }
 
-    const previousAverage = Math.round(prevSum / monthsCount)
+  for (const row of totals) {
+    const p = prev.get(row.id)
+    if (!p || p.full <= 0) continue
+    const monthsCount = month - p.first
+
+    const previousAverage = Math.round(p.full / monthsCount)
     if (previousAverage <= 0) continue
 
-    const baseline = isCurrentMonth ? Math.max(1, Math.round(previousAverage * paceFraction)) : previousAverage
+    const baseline = isCurrentMonth
+      ? Math.round((p.variable * paceFraction + p.recurring) / monthsCount)
+      : previousAverage
+    if (baseline <= 0) continue
     const verdict = compareToAverage(row.total, baseline)
     const diffPercent = Math.round(((row.total - baseline) / baseline) * 100)
 

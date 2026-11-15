@@ -72,9 +72,10 @@ Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'i
 Media del saldo (entrate meno uscite, da `monthSummary`) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
 
 ### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
-Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno (dal mese di inizio del periodo attivo):
+Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno:
+- La media parte dal primo mese (dall'inizio del periodo attivo) in cui il tag ha avuto spese: una voce comparsa a maggio non fa media sui mesi prima.
 - Per i mesi passati: confronta l'importo totale del mese con la media mensile precedente.
-- Per il mese in corso: confronta l'importo a oggi con il ritmo medio atteso a oggi (`pace`).
+- Per il mese in corso: confronta l'importo a oggi con quello che di solito c'era allo stesso giorno. Le spese variabili si proporzionano ai giorni passati (`pace`), come in `variableSpending`; gli addebiti ricorrenti dei mesi precedenti contano per intero se arrivati entro lo stesso giorno del mese, altrimenti non contano. Così un affitto addebitato il 1° non risulta «sopra il ritmo» nei primi giorni.
 - Per l'intero anno (`month = 'all'`), per mesi futuri o per il primo mese del periodo attivo: restituisce una mappa vuota poiché non c'è una serie storica precedente su cui calcolare lo scostamento.
 - Se un tag non ha spese nei mesi precedenti, viene omesso dalla mappa per evitare falsi allarmi o indicatori rumorosi.
 - Restituisce per ciascun tag presente un oggetto `TagTrendInfo` contenente: `previousAverage`, `baseline` (ritmo o media intera), `verdict` (`'above'` | `'inline'` | `'below'`), `diffPercent` e `isPace`.

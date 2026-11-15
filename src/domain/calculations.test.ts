@@ -691,6 +691,66 @@ describe('tagTrends', () => {
     expect(info?.verdict).toBe('below')
     expect(info?.diffPercent).toBe(-100)
   })
+
+  it("nel mese in corso l'addebito ricorrente già arrivato non sembra sopra il ritmo", () => {
+    const d = createEmptyData()
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Affitto',
+      amount: 50000,
+      frequency: 'monthly',
+      startDate: '2026-01-01',
+      endDate: null,
+      categoryId: 'rent',
+      paymentMethodId: 'bank',
+    })
+    // Il 3 marzo l'affitto del 1° è già addebitato: di solito allo stesso giorno c'era già.
+    const info = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'rent', total: 50000 }], '2026-03-03').get('rent')
+    expect(info?.baseline).toBe(50000)
+    expect(info?.verdict).toBe('inline')
+  })
+
+  it("nel mese in corso l'addebito ricorrente che arriva più avanti non conta ancora", () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'Film', amount: 3100, date: '2026-01-05', categoryId: 'svago', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'Film', amount: 3100, date: '2026-02-05', categoryId: 'svago', paymentMethodId: 'p1', notes: '' },
+    )
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Streaming',
+      amount: 1500,
+      frequency: 'monthly',
+      startDate: '2026-01-20',
+      endDate: null,
+      categoryId: 'svago',
+      paymentMethodId: 'p1',
+    })
+    // Il 10 marzo (31 giorni): variabili 3100 × 10/31 = 1000, lo streaming del 20 non è ancora arrivato.
+    const info = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'svago', total: 1000 }], '2026-03-10').get('svago')
+    expect(info?.previousAverage).toBe(4600)
+    expect(info?.baseline).toBe(1000)
+    expect(info?.verdict).toBe('inline')
+  })
+
+  it('la media parte dal mese in cui la voce compare, non dal primo movimento dell anno', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({ id: 'o1', name: 'Spesa', amount: 2000, date: '2026-01-10', categoryId: 'cibo', paymentMethodId: 'p1', notes: '' })
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Palestra',
+      amount: 4000,
+      frequency: 'monthly',
+      startDate: '2026-05-01',
+      endDate: null,
+      categoryId: 'sport',
+      paymentMethodId: 'p1',
+    })
+    // A giugno la palestra ha un solo mese precedente (maggio): media 4000, non 4000 / 5.
+    const info = tagTrends(d, 2026, 5, 'categoryId', [{ id: 'sport', total: 4000 }], '2026-07-01').get('sport')
+    expect(info?.previousAverage).toBe(4000)
+    expect(info?.verdict).toBe('inline')
+  })
 })
 
 describe('addebiti cambiati da soli nei calcoli', () => {
