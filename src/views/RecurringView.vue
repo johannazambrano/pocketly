@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useHighlight } from '@/composables/useHighlight'
+import { computed, ref } from 'vue'
 import type { RecurringException, RecurringExpense } from '@/types/models'
 import { monthlyEquivalent, type RecurringSeries } from '@/domain/recurrence'
 import { formatRulesSummary } from '@/domain/notifications'
@@ -17,7 +17,6 @@ import BaseModal from '@/components/BaseModal.vue'
 const finance = useFinanceStore()
 const { t, money, date } = useFormat()
 const confirmDelete = useConfirmDelete()
-const route = useRoute()
 
 const formOpen = ref(false)
 const editing = ref<RecurringExpense | null>(null)
@@ -25,19 +24,10 @@ const editing = ref<RecurringExpense | null>(null)
 const monthlyTotal = computed(() =>
   Math.round(finance.recurringSeriesOfYear.reduce((acc, s) => acc + (s.active ? monthlyEquivalent(s.current) : 0), 0)),
 )
-const highlightedId = ref<string | null>(null)
-
-watch(
-  () => route.query.highlight,
-  (id) => {
-    if (!id || typeof id !== 'string') return
-    highlightedId.value = id
-    nextTick(() => {
-      const el = document.getElementById(`entry-${id}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-  },
-  { immediate: true },
+// La ricerca può indicare una parte vecchia di una spesa divisa: si segna la riga della serie, che mostra la parte in corso.
+const highlightedId = useHighlight(
+  (id) => `entry-${id}`,
+  (id) => finance.recurringSeriesOfYear.find((s) => s.parts.some((p) => p.id === id))?.current.id ?? id,
 )
 
 function open(item: RecurringExpense | null) {

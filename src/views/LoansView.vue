@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useHighlight } from '@/composables/useHighlight'
+import { ref } from 'vue'
 import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
 import { useFinanceStore } from '@/stores/finance'
@@ -22,21 +22,7 @@ const formOpen = ref(false)
 const editing = ref<Loan | null>(null)
 const repayingLoan = ref<Loan | null>(null)
 const repaymentOpen = ref(false)
-const route = useRoute()
-const highlightedId = ref<string | null>(null)
-
-watch(
-  () => route.query.highlight,
-  (id) => {
-    if (!id || typeof id !== 'string') return
-    highlightedId.value = id
-    nextTick(() => {
-      const el = document.getElementById(`loan-${id}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-  },
-  { immediate: true },
-)
+const highlightedId = useHighlight((id) => `loan-${id}`)
 
 function open(item: Loan | null) {
   editing.value = item

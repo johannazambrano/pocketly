@@ -115,6 +115,19 @@ describe('searchFinance', () => {
     expect(results.some((r) => r.id === 'i1' && r.kind === 'income')).toBe(true)
   })
 
+  it('una spesa ricorrente divisa in due parti compare una volta, con la parte in corso', () => {
+    const d = createEmptyData()
+    d.recurringExpenses.push(
+      { id: 'n1', name: 'Netflix', amount: 1300, frequency: 'monthly', startDate: '2025-01-05', endDate: '2026-03-04', categoryId: '', paymentMethodId: '' },
+      { id: 'n2', seriesId: 'n1', name: 'Netflix', amount: 1599, frequency: 'monthly', startDate: '2026-03-05', endDate: null, categoryId: '', paymentMethodId: '' },
+    )
+    const results = searchFinance(d, 'netflix', '2026-06-01')
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ id: 'n2', amount: 1599 })
+    // Anche cercando l'importo vecchio si trova la stessa riga
+    expect(searchFinance(d, '13,00', '2026-06-01').map((r) => r.id)).toEqual(['n2'])
+  })
+
   it('trova voci per tag associato', () => {
     const results = searchFinance(data, 'vacanza')
     expect(results).toHaveLength(1)

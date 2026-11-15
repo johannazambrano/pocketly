@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useHighlight } from '@/composables/useHighlight'
+import { computed, ref } from 'vue'
 import type { Income } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
@@ -17,32 +17,21 @@ import MonthSelector from '@/components/MonthSelector.vue'
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
 const confirmDelete = useConfirmDelete()
-const route = useRoute()
 
 const formOpen = ref(false)
 const editing = ref<Income | null>(null)
 const selectedTagId = ref<string | null>(null)
 const showBreakdown = ref(false)
-const highlightedId = ref<string | null>(null)
-
-watch(
-  () => route.query.highlight,
+const highlightedId = useHighlight(
+  (id) => `entry-${id}`,
   (id) => {
-    if (!id || typeof id !== 'string') return
-    highlightedId.value = id
-    // Se un filtro tag attivo nasconderebbe l'elemento evidenziato, rimuoviamo il filtro tag
+    // Se un filtro tag attivo nasconderebbe la voce, si toglie il filtro
     if (selectedTagId.value) {
       const inc = finance.incomesFiltered.find((e) => e.id === id)
-      if (!inc || !inc.tagIds?.includes(selectedTagId.value)) {
-        selectedTagId.value = null
-      }
+      if (!inc || !inc.tagIds?.includes(selectedTagId.value)) selectedTagId.value = null
     }
-    nextTick(() => {
-      const el = document.getElementById(`entry-${id}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
+    return id
   },
-  { immediate: true },
 )
 
 const selectedTag = computed(() => (selectedTagId.value ? finance.tag('tags', selectedTagId.value) : null))

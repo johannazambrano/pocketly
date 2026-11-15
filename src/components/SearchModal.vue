@@ -6,7 +6,7 @@ import { useUiStore } from '@/stores/ui'
 import { useFinanceStore } from '@/stores/finance'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
-import { searchFinance, type SearchResult } from '@/domain/search'
+import { searchFinance, type SearchResult, type SearchResultKind } from '@/domain/search'
 import { isActiveInYear } from '@/domain/recurrence'
 import BaseModal from './BaseModal.vue'
 import TagBadge from './TagBadge.vue'
@@ -21,7 +21,7 @@ const { money, date } = useFormat()
 const query = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 
-const results = computed(() => searchFinance(finance.data, query.value))
+const results = computed(() => searchFinance(finance.data, query.value, finance.today))
 
 watch(
   () => ui.searchOpen,
@@ -37,6 +37,15 @@ watch(
     }
   },
 )
+
+/** La pagina di ogni tipo di risultato, per nome di rotta. */
+const ROUTE_OF: Record<SearchResultKind, string> = {
+  onetime: 'onetime',
+  recurring: 'recurring',
+  income: 'income',
+  loan: 'loans',
+  goal: 'budget',
+}
 
 function selectResult(item: SearchResult) {
   if (item.kind === 'onetime' || item.kind === 'income') {
@@ -58,23 +67,8 @@ function selectResult(item: SearchResult) {
   ui.closeSearch()
   ui.quickAddOpen = false
 
-  switch (item.kind) {
-    case 'onetime':
-      void router.push({ path: '/una-tantum', query: { highlight: item.id } })
-      break
-    case 'recurring':
-      void router.push({ path: '/ricorrenti', query: { highlight: item.id } })
-      break
-    case 'income':
-      void router.push({ path: '/entrate', query: { highlight: item.id } })
-      break
-    case 'loan':
-      void router.push({ path: '/prestiti', query: { highlight: item.id } })
-      break
-    case 'goal':
-      void router.push({ path: '/budget', query: { tab: 'savings', highlight: item.id } })
-      break
-  }
+  const route = ROUTE_OF[item.kind]
+  void router.push({ name: route, query: { ...(item.kind === 'goal' ? { tab: 'savings' } : {}), highlight: item.id } })
 }
 </script>
 

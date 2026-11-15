@@ -1,5 +1,6 @@
 import type { Cents, FinanceData, Frequency, Id, IsoDate, LoanType } from '@/types/models'
-import { parseIsoDate } from '@/utils/dates'
+import { parseIsoDate, todayIso } from '@/utils/dates'
+import { groupRecurringSeries } from './recurrence'
 import { savedAmounts } from './savings'
 
 export type SearchResultKind = 'onetime' | 'recurring' | 'income' | 'loan' | 'goal'
@@ -40,7 +41,7 @@ function amountStrings(cents: Cents): string {
  * (nome, note, categoria, metodo di pagamento, tag, importo o data).
  * Supporta la ricerca insensibile a maiuscole e accenti (es. 'caffe' trova 'Caffè').
  */
-export function searchFinance(data: FinanceData, query: string): SearchResult[] {
+export function searchFinance(data: FinanceData, query: string, today: IsoDate = todayIso()): SearchResult[] {
   const q = query.trim()
   if (!q) return []
 
@@ -83,13 +84,19 @@ export function searchFinance(data: FinanceData, query: string): SearchResult[] 
     }
   }
 
-  // Spese ricorrenti
-  for (const r of data.recurringExpenses) {
-    const catName = catMap.get(r.categoryId) ?? ''
-    const payName = payMap.get(r.paymentMethodId) ?? ''
-    const searchable = `${r.name} ${catName} ${payName} ${amountStrings(r.amount)} ${r.startDate} ${r.endDate ?? ''}`
+  // Spese ricorrenti: una riga per spesa, anche se divisa in più parti (es. Netflix 13 € → 15,99 €). Si cerca in
+  // tutte le parti e si mostra quella in corso.
+  for (const series of groupRecurringSeries(data.recurringExpenses, today)) {
+    const searchable = series.parts
+      .map((r) => {
+        const catName = catMap.get(r.categoryId) ?? ''
+        const payName = payMap.get(r.paymentMethodId) ?? ''
+        return `${r.name} ${catName} ${payName} ${amountStrings(r.amount)} ${r.startDate} ${r.endDate ?? ''}`
+      })
+      .join(' ')
 
     if (matches(searchable)) {
+      const r = series.current
       const { year } = parseIsoDate(r.startDate)
       results.push({
         id: r.id,

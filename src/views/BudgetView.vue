@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { useHighlight } from '@/composables/useHighlight'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -31,7 +32,6 @@ const { t, money, month, date, percent, locale } = useFormat()
 // --- tab switcher ---------------------------------------------------------
 type TabKey = 'budget' | 'savings'
 const activeTab = ref<TabKey>('budget')
-const highlightedId = ref<string | null>(null)
 
 watch(
   () => route.query.tab,
@@ -42,27 +42,18 @@ watch(
   { immediate: true },
 )
 
-watch(
-  () => route.query.highlight,
+const highlightedId = useHighlight(
+  (id) => `goal-${id}`,
   (id) => {
-    if (!id || typeof id !== 'string') return
-    highlightedId.value = id
     activeTab.value = 'savings'
-    nextTick(() => {
-      const el = document.getElementById(`goal-${id}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
+    return id
   },
-  { immediate: true },
 )
 
 function switchTab(tab: TabKey) {
   activeTab.value = tab
   const nextQuery: Record<string, any> = { ...route.query, tab }
-  if (tab === 'budget') {
-    delete nextQuery.highlight
-    highlightedId.value = null
-  }
+  if (tab === 'budget') highlightedId.value = null
   void router.replace({ query: nextQuery })
 }
 
