@@ -178,7 +178,7 @@ function submit() {
             @click="applyTemplate(tpl)"
           >
             <span class="truncate max-w-[120px]">{{ tpl.name }}</span>
-            <span class="font-bold text-accent">{{ money(tpl.amount) }}</span>
+            <span class="font-semibold text-ink-2">{{ money(tpl.amount) }}</span>
           </button>
         </div>
       </div>

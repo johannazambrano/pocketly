@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { OTHER_COLOR } from '@/utils/colors'
 import { useHighlight } from '@/composables/useHighlight'
 import { computed, ref } from 'vue'
 import type { OneTimeExpense } from '@/types/models'
@@ -70,7 +71,7 @@ const activeYearTags = computed(() => {
     return {
       id: item.id,
       name: tag?.name ?? t('common.unknown'),
-      color: tag?.color ?? '#94a3b8',
+      color: tag?.color ?? OTHER_COLOR,
       countInMonth: displayedExpensesCountForTag(item.id),
       totalInYear: item.total,
     }
@@ -172,7 +173,8 @@ function remove() {
           >
             <span
               class="h-2 w-2 rounded-full"
-              :style="{ backgroundColor: selectedTagId === item.id ? '#ffffff' : item.color }"
+              :class="{ 'bg-on-color': selectedTagId === item.id }"
+              :style="selectedTagId === item.id ? undefined : { backgroundColor: item.color }"
             ></span>
             <span>#{{ item.name }}</span>
             <span
@@ -215,7 +217,7 @@ function remove() {
           >
             <div class="mb-1 flex justify-between gap-2 text-xs">
               <span class="truncate font-medium text-ink-2 flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8' }"></span>
+                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? OTHER_COLOR }"></span>
                 <span>#{{ finance.tag('tags', row.id)?.name ?? t('common.unknown') }}</span>
                 <span class="text-[10px] text-ink-4">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
               </span>
@@ -229,7 +231,7 @@ function remove() {
                 class="h-full rounded-full transition-all"
                 :style="{
                   width: `${(row.total / grandTotalForBreakdown) * 100}%`,
-                  backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8',
+                  backgroundColor: finance.tag('tags', row.id)?.color ?? OTHER_COLOR,
                 }"
               ></div>
             </div>

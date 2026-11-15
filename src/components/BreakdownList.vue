@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { OTHER_COLOR } from '@/utils/colors'
 import { RouterLink } from 'vue-router'
 import type { TagTotal, TagTrendInfo, Verdict } from '@/domain/calculations'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
@@ -98,7 +99,7 @@ const rowLabel = (row: TagTotal) => {
       <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
         <div
           class="h-full rounded-full"
-          :style="{ width: `${(row.total / grandTotal) * 100}%`, backgroundColor: finance.tag(kind, row.id)?.color ?? '#94a3b8' }"
+          :style="{ width: `${(row.total / grandTotal) * 100}%`, backgroundColor: finance.tag(kind, row.id)?.color ?? OTHER_COLOR }"
         ></div>
       </div>
     </component>
