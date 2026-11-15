@@ -17,7 +17,7 @@ collegamento, senza ripeterne il testo.
 | PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
-| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | da fare | alta | Johanna |
+| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di due decisioni | alta | Johanna |
 | PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
@@ -56,6 +56,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Storia:**
   - 2026-11-13 aperta (Jonny).
   - 2026-11-15 il selettore c'è già in `feature/funzionalita-strategiche`: si chiude con PKT-05.
+  - 2026-11-15 nel ramo l'anno compare solo nel selettore della pagina (`2322033`).
 
 ### PKT-02 — Il mese del Budget segue quello scelto nelle altre pagine
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -95,14 +96,23 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     (gli inserimenti rapidi sono un dato nuovo che si sincronizza).
 
 ### PKT-05 — Rivedere e unire `feature/funzionalita-strategiche`
-- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** in attesa di due decisioni · **Priorità:** alta · **Chi:** Johanna
 - **Perché:** è il ramo più grande (ricerca globale, esportazione CSV ed Excel, entrate con note e tag,
   salvadanai, confronto tra periodi, modelli di spesa). Una prima revisione è del 2026-11-12; da allora sono
   arrivati altri commit.
 - **Fatto quando:** revisione aggiornata, correzioni fatte, ramo in `develop`; chiude anche PKT-01.
+- **Da decidere (Johanna, Jonny):** se i soldi messi nei salvadanai devono ridurre la cifra della Dashboard (una
+  riga «di cui messi da parte» o il versamento come uscita); se `csvExport.ts`, che nessuno usa, va tolto o collegato.
 - **Storia:**
   - 2026-11-12 prima revisione.
   - 2026-11-15 aperta.
+  - 2026-11-15 seconda revisione; unito `develop` nel ramo (`68c113d`), con i tag delle entrate dall'Excel.
+  - 2026-11-15 correzioni nel ramo: versamenti dei salvadanai come movimenti, non più persi sincronizzando
+    (`047bf0e`); confronto tra periodi con le ricorrenti al giorno di addebito e la media dal mese in cui la voce
+    compare (`7e195e3`); quota mensile senza gli obiettivi scaduti (`47d3b98`); ricerca con una riga per spesa divisa,
+    rotte per nome ed evidenziazione che si toglie (`0db5a22`, `af59374`); colori e Frequenti (`f21f9c2`); periodo
+    di Entrate (`2322033`); esportazione con gli addebiti cambiati (`32d3077`); moduli e accessibilità dei
+    salvadanai con «Annulla» (`962f8dd`); confronto leggibile al telefono (`d17aba4`).
 
 ### PKT-06 — Pubblicare su Proxmox e provare sui telefoni
 - **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
