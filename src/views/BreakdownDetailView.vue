@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { breakdownItems, tagTrends, type BreakdownItem, type Verdict } from '@/domain/calculations'
+import { breakdownItems, tagTrends, type BreakdownItem } from '@/domain/calculations'
+import { useTrendText } from '@/composables/useTrendText'
 import { monthIndex, parseIsoDate } from '@/utils/dates'
 import MonthSelector from '@/components/MonthSelector.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
@@ -43,30 +44,8 @@ const trend = computed(() => {
   return trendsMap.get(id.value) ?? null
 })
 
-const trendNote = computed(() => {
-  if (!trend.value) return null
-  const avg = money(trend.value.previousAverage)
-  if (trend.value.isPace) {
-    if (trend.value.verdict === 'above') return t('dashboard.trendPaceAbove', { average: avg })
-    if (trend.value.verdict === 'below') return t('dashboard.trendPaceBelow', { average: avg })
-    return t('dashboard.trendPaceInline', { average: avg })
-  }
-  if (trend.value.verdict === 'above') return t('dashboard.trendAbove', { average: avg })
-  if (trend.value.verdict === 'below') return t('dashboard.trendBelow', { average: avg })
-  return t('dashboard.trendInline', { average: avg })
-})
-
-function trendIcon(verdict: Verdict): string {
-  if (verdict === 'above') return 'fa-solid fa-arrow-trend-up'
-  if (verdict === 'below') return 'fa-solid fa-arrow-trend-down'
-  return 'fa-solid fa-minus'
-}
-
-function trendClass(verdict: Verdict): string {
-  if (verdict === 'above') return 'bg-caution-soft text-caution'
-  if (verdict === 'below') return 'bg-accent-soft text-accent'
-  return 'bg-surface-2 text-ink-3'
-}
+const trendText = useTrendText()
+const trendNote = computed(() => (trend.value ? trendText.label(trend.value) : null))
 
 /** Il periodo detto per esteso, con la stessa regola della dashboard: fino a oggi, tutto avvenuto o solo programmato. */
 const periodLabel = computed(() => {
@@ -191,9 +170,9 @@ function back(e: MouseEvent) {
         <div
           v-if="trendNote && trend"
           class="flex items-center gap-2 border-b border-line-soft px-4 py-2 text-xs font-medium"
-          :class="trendClass(trend.verdict)"
+          :class="trendText.tone(trend.verdict)"
         >
-          <i :class="trendIcon(trend.verdict)" aria-hidden="true"></i>
+          <i :class="trendText.icon(trend.verdict)" aria-hidden="true"></i>
           <span>{{ trendNote }}</span>
         </div>
         <ul v-if="items.length" class="divide-y divide-line-soft">

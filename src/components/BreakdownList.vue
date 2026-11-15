@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { OTHER_COLOR } from '@/utils/colors'
 import { RouterLink } from 'vue-router'
-import type { TagTotal, TagTrendInfo, Verdict } from '@/domain/calculations'
+import type { TagTotal, TagTrendInfo } from '@/domain/calculations'
+import { useTrendText } from '@/composables/useTrendText'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 
@@ -16,29 +17,12 @@ const props = defineProps<{
 }>()
 const finance = useFinanceStore()
 const { t, money, percent } = useFormat()
+const trendText = useTrendText()
 
-function trendLabel(trend: TagTrendInfo): string {
-  const avg = money(trend.previousAverage)
-  if (trend.isPace) {
-    if (trend.verdict === 'above') return t('dashboard.trendPaceAbove', { average: avg })
-    if (trend.verdict === 'below') return t('dashboard.trendPaceBelow', { average: avg })
-    return t('dashboard.trendPaceInline', { average: avg })
-  }
-  if (trend.verdict === 'above') return t('dashboard.trendAbove', { average: avg })
-  if (trend.verdict === 'below') return t('dashboard.trendBelow', { average: avg })
-  return t('dashboard.trendInline', { average: avg })
-}
-
-function trendIcon(verdict: Verdict): string {
-  if (verdict === 'above') return 'fa-solid fa-arrow-trend-up'
-  if (verdict === 'below') return 'fa-solid fa-arrow-trend-down'
-  return 'fa-solid fa-minus'
-}
-
-function trendClass(verdict: Verdict): string {
-  if (verdict === 'above') return 'bg-caution-soft text-caution'
-  if (verdict === 'below') return 'bg-accent-soft text-accent'
-  return 'bg-surface-3 text-ink-4'
+/** Il confronto da mostrare sulla riga: solo se la spesa è sopra o sotto il solito («in linea» non aggiunge niente). */
+const shownTrend = (id: string) => {
+  const trend = props.trends?.get(id)
+  return trend && trend.verdict !== 'inline' ? trend : null
 }
 
 /**
@@ -55,7 +39,7 @@ const rowLabel = (row: TagTotal) => {
       name,
       amount,
       percent: percentStr,
-      trend: trendLabel(trend),
+      trend: trendText.label(trend),
     })
   }
   return t('dashboard.breakdownRowLabel', {
@@ -80,16 +64,6 @@ const rowLabel = (row: TagTotal) => {
       <div class="mb-1 flex items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-1.5 min-w-0">
           <span class="truncate font-medium">{{ finance.tag(kind, row.id)?.name ?? t('common.unknown') }}</span>
-          <span
-            v-if="trends?.get(row.id)"
-            role="img"
-            class="inline-flex shrink-0 items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-medium leading-none"
-            :class="trendClass(trends.get(row.id)!.verdict)"
-            :title="trendLabel(trends.get(row.id)!)"
-            :aria-label="trendLabel(trends.get(row.id)!)"
-          >
-            <i :class="trendIcon(trends.get(row.id)!.verdict)" aria-hidden="true"></i>
-          </span>
         </div>
         <span class="flex shrink-0 items-center gap-2 text-ink-4">
           {{ money(row.total) }} ({{ percent(row.total / grandTotal) }})
@@ -102,6 +76,14 @@ const rowLabel = (row: TagTotal) => {
           :style="{ width: `${(row.total / grandTotal) * 100}%`, backgroundColor: finance.tag(kind, row.id)?.color ?? OTHER_COLOR }"
         ></div>
       </div>
+      <p
+        v-if="shownTrend(row.id)"
+        class="mt-1 flex items-center gap-1 text-[11px] font-medium"
+        :class="trendText.textTone(shownTrend(row.id)!.verdict)"
+      >
+        <i :class="trendText.icon(shownTrend(row.id)!.verdict)" aria-hidden="true"></i>
+        {{ t(shownTrend(row.id)!.verdict === 'above' ? 'dashboard.trendShortAbove' : 'dashboard.trendShortBelow') }}
+      </p>
     </component>
     <p v-if="!totals.length" class="text-xs text-ink-4">{{ emptyText }}</p>
   </div>

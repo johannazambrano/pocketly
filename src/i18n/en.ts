@@ -124,6 +124,8 @@ const en: typeof it = {
     balanceVsInline: 'In line with the previous months average ({average})',
     balanceVsBelow: 'Worse than the previous months average ({average})',
     trendAbove: 'More than the previous months average ({average})',
+    trendShortAbove: 'more than usual',
+    trendShortBelow: 'less than usual',
     trendInline: 'In line with the previous months average ({average})',
     trendBelow: 'Less than the previous months average ({average})',
     trendPaceAbove: 'So far above the usual pace ({average} a month)',

@@ -122,6 +122,8 @@ export default {
     balanceVsInline: 'In linea con la media dei mesi precedenti ({average})',
     balanceVsBelow: 'Peggio della media dei mesi precedenti ({average})',
     trendAbove: 'Più della media dei mesi precedenti ({average})',
+    trendShortAbove: 'più del solito',
+    trendShortBelow: 'meno del solito',
     trendInline: 'In linea con la media dei mesi precedenti ({average})',
     trendBelow: 'Meno della media dei mesi precedenti ({average})',
     trendPaceAbove: 'Finora più del ritmo medio ({average} al mese)',
