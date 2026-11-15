@@ -357,7 +357,7 @@ export default {
     unlockButton: 'Apri backup',
     reminderNever: 'Non hai ancora un backup dei tuoi dati: se perdi o rompi il telefono non si possono recuperare.',
     reminderStale: 'Il tuo ultimo backup risale a {days} giorni fa e da allora hai modificato dei dati.',
-    reminderAction: 'Fai il backup',
+    reminderAction: 'Vai al backup',
     reminderLater: 'Più tardi',
     categories: 'Categorie',
     paymentMethods: 'Metodi di pagamento',

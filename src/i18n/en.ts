@@ -359,7 +359,7 @@ const en: typeof it = {
     unlockButton: 'Open backup',
     reminderNever: 'You do not have a backup of your data yet: if you lose or break your phone it cannot be recovered.',
     reminderStale: 'Your last backup is {days} days old and you have changed data since then.',
-    reminderAction: 'Back up now',
+    reminderAction: 'Go to backup',
     reminderLater: 'Later',
     categories: 'Categories',
     paymentMethods: 'Payment methods',

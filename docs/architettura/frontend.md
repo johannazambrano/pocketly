@@ -99,7 +99,7 @@ Il router è configurato in [`src/router/index.ts`](../../src/router/index.ts):
 - **Routing gerarchico e `meta.navParent`:**
   Le viste di secondo livello o di approfondimento non possiedono una tab autonoma nella barra di navigazione. Per rendere evidente il contesto di appartenenza, definiscono nei metadati di rotta la proprietà `meta.navParent` con il nome della vista genitore (es. `/dettaglio/:kind(categoria|metodo)/:id` specifica `meta: { navParent: 'dashboard' }`). [`BottomNav.vue`](../../src/components/BottomNav.vue) interroga `route.meta.navParent` e mantiene evidenziata la tab padre sia su dispositivi mobili (`!text-emerald-700 font-bold`) sia nella barra laterale desktop (`!bg-emerald-50 !text-emerald-700`).
 - **Comportamento dello scroll (`scrollBehavior`):**
-  Il router adotta la politica `(_to, _from, savedPosition) => savedPosition ?? { top: 0 }`. Quando si torna indietro nella cronologia dalla schermata di dettaglio alla dashboard, la pagina ripristina la posizione di scorrimento esatta in cui si trovava in precedenza; per qualsiasi altra transizione l'utente viene riposizionato in cima alla pagina.
+  Il router adotta la politica `savedPosition`, poi l'ancora (`{ el: to.hash, top }`, con `top` = altezza della barra in alto se è `sticky` + 16 px), altrimenti `{ top: 0 }`. Quando si torna indietro nella cronologia dalla schermata di dettaglio alla dashboard, la pagina ripristina la posizione di scorrimento esatta in cui si trovava in precedenza; con un'ancora (es. `/impostazioni#backup`, usata dall'avviso del backup) scorre fino a quell'elemento; per qualsiasi altra transizione l'utente viene riposizionato in cima alla pagina.
 
 ---
 

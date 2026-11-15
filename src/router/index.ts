@@ -35,6 +35,14 @@ export const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  // Tornando indietro (anche dal dettaglio alla dashboard) si ritrova il punto della pagina dove si era; altrimenti si parte dall'alto.
-  scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
+  // Tornando indietro (anche dal dettaglio alla dashboard) si ritrova il punto della pagina dove si era; con un'ancora
+  // (es. `/impostazioni#backup` dall'avviso del backup) si va a quel riquadro, sotto la barra in alto che resta fissa;
+  // altrimenti si parte dall'alto.
+  scrollBehavior: (to, _from, savedPosition) => {
+    if (savedPosition) return savedPosition
+    if (!to.hash) return { top: 0 }
+    const header = document.querySelector('header')
+    const fixed = header && getComputedStyle(header).position === 'sticky' ? header.offsetHeight : 0
+    return { el: to.hash, top: fixed + 16 }
+  },
 })
