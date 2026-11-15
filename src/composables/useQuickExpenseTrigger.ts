@@ -1,4 +1,4 @@
-import type { OneTimeExpense, QuickExpense } from '@/types/models'
+import type { QuickExpense } from '@/types/models'
 import { useFormat } from '@/i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -13,20 +13,13 @@ export function useQuickExpenseTrigger() {
   const ui = useUiStore()
   const { t, money } = useFormat()
 
-  function prefill(preset: QuickExpense, onPrefill?: (preset: QuickExpense) => void) {
-    if (onPrefill) onPrefill(preset)
-    else ui.openQuickAddFromPreset(preset)
+  function prefill(preset: QuickExpense) {
+    ui.openQuickAddFromPreset(preset)
   }
 
-  function trigger(
-    preset: QuickExpense,
-    options?: {
-      onPrefill?: (preset: QuickExpense) => void
-      onRecorded?: (expense: OneTimeExpense) => void
-    },
-  ) {
+  function trigger(preset: QuickExpense) {
     if (!preset.amount || preset.amount <= 0) {
-      prefill(preset, options?.onPrefill)
+      prefill(preset)
       return
     }
     const created = finance.triggerQuickExpense(preset)
@@ -34,7 +27,6 @@ export function useQuickExpenseTrigger() {
       ui.toast(t('common.noTags'), 'error')
       return
     }
-    options?.onRecorded?.(created)
     ui.toast(t('quickExpenses.recordedToast', { name: created.name, amount: money(created.amount) }), 'success', {
       actions: [
         {

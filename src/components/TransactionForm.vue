@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Modulo per spese una tantum (`kind="expense"`) ed entrate (`kind="income"`). */
-import { computed, nextTick, reactive, ref, useId, watch } from 'vue'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { Income, OneTimeExpense, QuickExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
@@ -12,7 +12,6 @@ import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
-import QuickExpenseBar from './QuickExpenseBar.vue'
 
 /** `deletable`: modifica di una voce esistente da una pagina che sa eliminarla; mostra "Elimina" ed emette `delete`. */
 const props = defineProps<{
@@ -43,16 +42,15 @@ const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
 const saveAsQuick = ref(false)
 const quickKeepAmount = ref(true)
-const appliedPreset = ref(false)
-const amountEl = ref<HTMLInputElement | null>(null)
 
 const title = computed(() => {
   const section = props.kind === 'expense' ? 'onetime' : 'income'
   return t(`${section}.${props.item ? 'edit' : 'new'}`)
 })
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
-const showQuickBar = computed(() => props.kind === 'expense' && !props.item && finance.quickExpenses.length > 0)
-const showSaveAsQuick = computed(() => props.kind === 'expense' && !props.preset && !appliedPreset.value)
+// Gli inserimenti rapidi stanno nella barra di Dashboard e Variabili, non qui (nel modulo ci sono i «Frequenti»):
+// da un rapido il modulo arriva già compilato (`preset`) e non propone di salvarlo di nuovo come rapido.
+const showSaveAsQuick = computed(() => props.kind === 'expense' && !props.preset)
 
 function resolveTag(kind: 'categories' | 'paymentMethods', id?: string): string {
   return (id && finance.tag(kind, id)?.id) ?? finance.data[kind][0]?.id ?? ''
@@ -67,7 +65,6 @@ watch(
     error.value = ''
     saveAsQuick.value = false
     quickKeepAmount.value = true
-    appliedPreset.value = !!p
     Object.assign(form, {
       name: i?.name ?? p?.name ?? '',
       amount: i ? amountInput(i.amount) : p?.amount ? amountInput(p.amount) : '',
@@ -86,21 +83,6 @@ watch(
   },
   { immediate: true },
 )
-
-function applyPreset(p: QuickExpense) {
-  error.value = ''
-  appliedPreset.value = true
-  saveAsQuick.value = false
-  Object.assign(form, {
-    name: p.name,
-    amount: p.amount ? amountInput(p.amount) : '',
-    categoryId: resolveTag('categories', p.categoryId),
-    paymentMethodId: resolveTag('paymentMethods', p.paymentMethodId),
-    notes: p.notes,
-    tagIds: (p.tagIds ?? []).filter((id) => !!finance.tag('tags', id)),
-  })
-  void nextTick(() => amountEl.value?.focus())
-}
 
 function submit() {
   const amount = toCents(form.amount)
@@ -138,7 +120,6 @@ function submit() {
   <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
     <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
-      <QuickExpenseBar v-if="showQuickBar" compact @prefill="applyPreset" @recorded="emit('close')" />
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
         <input v-model="form.name" required maxlength="80" class="field" />
@@ -146,7 +127,7 @@ function submit() {
       <div class="grid grid-cols-2 gap-2">
         <label class="block">
           <span class="field-label">{{ t('common.amount') }}</span>
-          <input ref="amountEl" v-model="form.amount" required inputmode="decimal" class="field" placeholder="0,00" />
+          <input v-model="form.amount" required inputmode="decimal" class="field" placeholder="0,00" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('common.date') }}</span>
