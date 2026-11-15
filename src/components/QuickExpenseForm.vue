@@ -4,12 +4,13 @@ import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { QuickExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
-import { toCents } from '@/utils/money'
 import { useDirty } from '@/composables/useDirty'
 import BaseModal from './BaseModal.vue'
 import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 const props = defineProps<{ open: boolean; item?: QuickExpense | null; deletable?: boolean }>()
 const emit = defineEmits<{ close: []; delete: [] }>()
@@ -28,7 +29,10 @@ const form = reactive({
 })
 
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+/** Come negli altri moduli: errori sotto il campo, letti dal lettore di schermo, cursore sul primo da sistemare. */
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
+const amountHintId = useId()
 
 const title = computed(() => t(props.item ? 'quickExpenses.edit' : 'quickExpenses.new'))
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
@@ -38,12 +42,14 @@ watch(
   (open) => {
     if (!open) return
     const q = props.item
-    error.value = ''
+    fe.clear()
+    const last = finance.lastUsedTags('oneTime')
     Object.assign(form, {
       name: q?.name ?? '',
       amount: q?.amount ? amountInput(q.amount) : '',
-      categoryId: (q?.categoryId && finance.tag('categories', q.categoryId)?.id) ?? finance.data.categories[0]?.id ?? '',
-      paymentMethodId: (q?.paymentMethodId && finance.tag('paymentMethods', q.paymentMethodId)?.id) ?? finance.data.paymentMethods[0]?.id ?? '',
+      // Come nel modulo spesa: un rapido nuovo parte da categoria e metodo dell'ultima spesa variabile.
+      categoryId: (q?.categoryId && finance.tag('categories', q.categoryId)?.id) || last.categoryId,
+      paymentMethodId: (q?.paymentMethodId && finance.tag('paymentMethods', q.paymentMethodId)?.id) || last.paymentMethodId,
       notes: q?.notes ?? '',
       tagIds: q?.tagIds ? [...q.tagIds] : [],
     })
@@ -53,15 +59,13 @@ watch(
 )
 
 function submit() {
-  const rawAmount = form.amount.trim()
-  let amount: number | undefined
-  if (rawAmount) {
-    const parsed = toCents(rawAmount)
-    if (parsed === null || parsed <= 0) {
-      error.value = t('common.invalidAmount')
-      return
-    }
-    amount = parsed
+  fe.clear()
+  fe.required('name', form.name, t('form.nameEmpty'))
+  // L'importo è facoltativo (vuoto = si scrive ogni volta); se c'è, deve essere un importo valido.
+  const amount = form.amount.trim() ? (fe.amount('amount', form.amount) ?? undefined) : undefined
+  if (fe.hasErrors()) {
+    fe.focusFirst(formEl.value)
+    return
   }
 
   finance.saveQuickExpense({
@@ -78,20 +82,29 @@ function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" :initial-focus="item ? undefined : '[data-field=name]'" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
-    <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
+    <!-- Qui il nome viene per primo: è ciò che si vede sul pulsante del rapido, e l'importo è facoltativo. -->
+    <form v-else :id="formId" ref="formEl" novalidate class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('common.name') }}</span>
-        <input v-model="form.name" required maxlength="80" :placeholder="t('quickExpenses.namePlaceholder')" class="field" />
+        <input v-model="form.name" v-bind="fe.attrs('name')" maxlength="80" :placeholder="t('quickExpenses.namePlaceholder')" class="field" />
+        <FieldError :id="fe.errorId('name')" :message="fe.errors.name" />
       </label>
-      <div class="space-y-1">
-        <label class="block">
-          <span class="field-label">{{ t('quickExpenses.amountOptional') }}</span>
-          <input v-model="form.amount" inputmode="decimal" :placeholder="t('quickExpenses.amountPlaceholder')" class="field" />
-        </label>
-        <p class="text-xs text-ink-4">{{ t('quickExpenses.amountHint') }}</p>
-      </div>
+      <label class="block">
+        <span class="field-label">{{ t('quickExpenses.amountOptional') }}</span>
+        <input
+          v-model="form.amount"
+          v-bind="fe.attrs('amount')"
+          :aria-describedby="fe.errors.amount ? `${fe.errorId('amount')} ${amountHintId}` : amountHintId"
+          inputmode="decimal"
+          autocomplete="off"
+          :placeholder="t('quickExpenses.amountPlaceholder')"
+          class="field"
+        />
+        <FieldError :id="fe.errorId('amount')" :message="fe.errors.amount" />
+        <p :id="amountHintId" class="mt-1 text-xs text-ink-4">{{ t('quickExpenses.amountHint') }}</p>
+      </label>
       <div class="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect v-model="form.paymentMethodId" kind="paymentMethods" :label="t('common.paymentMethod')" />
@@ -101,7 +114,6 @@ function submit() {
         <input v-model="form.notes" maxlength="200" class="field" />
       </label>
       <TagInput v-model="form.tagIds" />
-      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
       <div class="pt-2">
         <SubmitButton
           :label="t('common.save')"
