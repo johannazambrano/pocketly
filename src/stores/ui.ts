@@ -69,19 +69,39 @@ export const useUiStore = defineStore('ui', () => {
     confirmRequest.value = null
   }
 
+  const toastTimers = new Map<number, ReturnType<typeof setTimeout>>()
+  const startToastTimer = (id: number, ms: number) => {
+    clearTimeout(toastTimers.get(id))
+    toastTimers.set(id, setTimeout(() => dismissToast(id), ms))
+  }
+
   /**
-   * Un messaggio a comparsa. Gli errori restano di più (10 secondi invece di 3,5): spesso spiegano un problema e cosa
-   * fare, e vanno letti con calma. I messaggi con pulsanti di azione restano 6 secondi. Si possono chiudere toccandoli.
+   * Un messaggio a comparsa. Gli errori e i messaggi con pulsanti (es. «Annulla») restano 10 secondi invece di 3,5:
+   * vanno letti con calma o c'è qualcosa da premere. Mentre ci si sta sopra (dito, mouse o tastiera) non spariscono
+   * (`holdToast` / `releaseToast`). Si possono chiudere con ✕.
    */
   function toast(message: string, kind: Toast['kind'] = 'success', options?: { actions?: ToastAction[]; durationMs?: number }) {
     const id = ++toastSeq
     const actions = options?.actions
     toasts.value.push({ id, message, kind, ...(actions?.length ? { actions } : {}) })
-    const defaultDuration = kind === 'error' ? 10000 : actions?.length ? 6000 : 3500
-    setTimeout(() => dismissToast(id), options?.durationMs ?? defaultDuration)
+    const defaultDuration = kind === 'error' || actions?.length ? 10000 : 3500
+    startToastTimer(id, options?.durationMs ?? defaultDuration)
+  }
+
+  /** Ferma il conto alla rovescia di un messaggio mentre lo si sta usando. */
+  function holdToast(id: number) {
+    clearTimeout(toastTimers.get(id))
+    toastTimers.delete(id)
+  }
+
+  /** Riparte il conto alla rovescia quando lo si lascia: qualche secondo per finire di leggere. */
+  function releaseToast(id: number) {
+    if (toasts.value.some((t) => t.id === id)) startToastTimer(id, 4000)
   }
 
   function dismissToast(id: number) {
+    clearTimeout(toastTimers.get(id))
+    toastTimers.delete(id)
     toasts.value = toasts.value.filter((t) => t.id !== id)
   }
 
@@ -98,6 +118,8 @@ export const useUiStore = defineStore('ui', () => {
     confirm,
     answerConfirm,
     toast,
+    holdToast,
+    releaseToast,
     dismissToast,
   }
 })

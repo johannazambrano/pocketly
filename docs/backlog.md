@@ -16,7 +16,7 @@ collegamento, senza ripeterne il testo.
 | PKT-01 | Filtro del mese nelle Entrate | fatto nel ramo, da unire | media | Jonny |
 | PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
-| PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | da fare | alta | Johanna |
+| PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | in corso | alta | Johanna |
 | PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | da fare | alta | Johanna |
 | PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
@@ -81,13 +81,16 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-15 barra tolta dal modulo in `feature/inserimenti-rapidi` (`5ba2035`).
 
 ### PKT-04 — Rivedere e unire `feature/inserimenti-rapidi`
-- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** in corso · **Priorità:** alta · **Chi:** Johanna
 - **Fatto quando:** revisione fatta, correzioni fatte, barra dei rapidi tolta dal modulo «Nuova spesa» (PKT-03),
   ramo in `develop`.
 - **Storia:**
   - 2026-11-15 aperta.
   - 2026-11-15 revisione: da correggere l'ordine dei rapidi che si perde con la sincronizzazione, i conflitti con
     i P2 della critique 12 (modulo dei rapidi da allineare agli altri moduli) e l'avviso «Annulla» che dura 6 s.
+  - 2026-11-15 correzioni nel ramo: unito `develop`; l'ordine riordinato su un dispositivo resta dopo la
+    sincronizzazione; modulo dei rapidi con gli errori sotto i campi; l'avviso con «Annulla» resta 10 s e non sparisce
+    mentre lo si usa.
 
 ### PKT-05 — Rivedere e unire `feature/funzionalita-strategiche`
 - **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
