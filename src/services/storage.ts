@@ -27,6 +27,11 @@ function loadLegacy(): FinanceData | null {
   return null
 }
 
+/** I dati salvati così come sono, senza leggerli: per scaricarli quando non si riescono a leggere. */
+export async function readStoredDataRaw(): Promise<unknown> {
+  return (await get<unknown>(DATA_KEY)) ?? null
+}
+
 export const deviceDataStore: DataStore = {
   async load() {
     const stored = await get<unknown>(DATA_KEY)

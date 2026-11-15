@@ -24,7 +24,7 @@ function inlineAppleTouchIcon(): Plugin {
   }
 }
 
-/** Uscita di un comando git, o '' senza git (es. copia senza cartella .git). */
+/** Uscita di un comando git, o '' senza git (es. copia senza cartella .git) o se il comando fallisce. */
 function git(args: string): string {
   try {
     return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
@@ -36,7 +36,7 @@ function git(args: string): string {
 /**
  * Numero di versione: le prime due cifre da package.json (si alzano a mano per i passaggi grandi), l'ultima è il numero
  * di commit e cresce da sola a ogni rilascio (es. 0.1.315). In una copia parziale del repository (clone «shallow»,
- * come su Vercel) il conteggio sarebbe sbagliato: allora resta «0.1» e la build si riconosce da commit e ora.
+ * come su Vercel) il conteggio sarebbe sbagliato: allora resta «0.1» e la build si riconosce dall'ora.
  */
 function appVersion(): string {
   const [major = '0', minor = '0'] = pkg.version.split('.')
@@ -47,7 +47,6 @@ function appVersion(): string {
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
-    __APP_COMMIT__: JSON.stringify(git('rev-parse --short HEAD')),
     __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [

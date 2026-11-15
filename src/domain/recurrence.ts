@@ -1,4 +1,4 @@
-import type { Cents, Frequency, Id, IsoDate, RecurringExpense } from '@/types/models'
+import type { Cents, Frequency, Id, IsoDate, RecurringException, RecurringExpense } from '@/types/models'
 import { addDays, monthIndex, parseIsoDate, toIsoDate } from '@/utils/dates'
 
 export const FREQUENCIES: Frequency[] = ['monthly', 'quarterly', 'semiannual', 'annual']
@@ -36,21 +36,72 @@ export function occursIn(r: RecurringExpense, year: number, month: number): bool
 }
 
 /**
- * Data dell'addebito nel mese indicato, o null se quel mese non ne ha. Il giorno è quello della data
- * di inizio, limitato all'ultimo giorno del mese (es. 31 → 30 aprile).
+ * Data che l'addebito del mese ha secondo la serie, senza eccezioni, o null se quel mese non ne ha. Il giorno è quello
+ * della data di inizio, limitato all'ultimo giorno del mese (es. 31 → 30 aprile).
  */
-export function dueDateIn(r: RecurringExpense, year: number, month: number): IsoDate | null {
+export function scheduledDateIn(r: RecurringExpense, year: number, month: number): IsoDate | null {
   if (!occursIn(r, year, month)) return null
   const day = Math.min(parseIsoDate(r.startDate).day, new Date(year, month + 1, 0).getDate())
   return toIsoDate(year, month, day)
 }
 
-export function amountInMonth(r: RecurringExpense, year: number, month: number): Cents {
-  return occursIn(r, year, month) ? r.amount : 0
+/** Un addebito com'è davvero: con l'eccezione applicata, se c'è. */
+export interface Charge {
+  /** Il giorno in cui avviene (spostato, se l'eccezione lo sposta). */
+  date: IsoDate
+  amount: Cents
+  /** La data secondo la serie: identifica l'addebito (vedi `RecurringException.date`). */
+  original: IsoDate
+  exception?: RecurringException
+}
+
+/** L'eccezione dell'addebito che la serie ha il giorno `original`, se c'è. */
+export function exceptionOn(r: RecurringExpense, original: IsoDate): RecurringException | undefined {
+  return r.exceptions?.find((e) => e.date === original)
 }
 
 /**
- * Data del prossimo addebito a partire da `from` (incluso), o null se la
+ * L'addebito del mese, con l'eccezione applicata: null se il mese non ne ha o se è stato saltato. Uno spostamento vale
+ * solo dentro lo stesso mese, così ogni addebito resta nel suo mese.
+ */
+export function chargeIn(r: RecurringExpense, year: number, month: number): Charge | null {
+  const original = scheduledDateIn(r, year, month)
+  if (!original) return null
+  const exception = exceptionOn(r, original)
+  if (exception?.skipped) return null
+  const moved = exception?.movedTo && exception.movedTo.slice(0, 7) === original.slice(0, 7) ? exception.movedTo : null
+  return {
+    date: moved ?? original,
+    amount: exception?.amount ?? r.amount,
+    original,
+    ...(exception ? { exception } : {}),
+  }
+}
+
+/** Data dell'addebito nel mese indicato (spostata, se un'eccezione la sposta), o null se non c'è o è saltato. */
+export function dueDateIn(r: RecurringExpense, year: number, month: number): IsoDate | null {
+  return chargeIn(r, year, month)?.date ?? null
+}
+
+/** Importo addebitato nel mese (quello dell'eccezione, se c'è), 0 se non c'è addebito o è saltato. */
+export function amountInMonth(r: RecurringExpense, year: number, month: number): Cents {
+  return chargeIn(r, year, month)?.amount ?? 0
+}
+
+/** Gli addebiti veri (eccezioni comprese) con data in `[from, to]`, estremi inclusi, in ordine. */
+export function chargesBetween(r: RecurringExpense, from: IsoDate, to: IsoDate): Charge[] {
+  const f = parseIsoDate(from)
+  const t = parseIsoDate(to)
+  const out: Charge[] = []
+  for (let abs = monthIndex(f.year, f.month); abs <= monthIndex(t.year, t.month); abs++) {
+    const c = chargeIn(r, Math.floor(abs / 12), abs % 12)
+    if (c && c.date >= from && c.date <= to) out.push(c)
+  }
+  return out
+}
+
+/**
+ * Data del prossimo addebito secondo la serie (senza eccezioni) a partire da `from` (incluso), o null se la
  * ricorrenza è terminata. Il giorno è quello della data di inizio, limitato
  * all'ultimo giorno del mese (es. 31 → 30 aprile).
  */
@@ -94,10 +145,34 @@ export function splitRecurring(
   const window = moveWindow(r, from)
   if (start < window.min || start > window.max) throw new Error('splitRecurring: il nuovo primo addebito salta o raddoppia un addebito')
   const seriesId = seriesKey(r)
+  const endDate = addDays(start < from ? start : from, -1)
+  // Le eccezioni restano con la parte a cui appartengono i loro addebiti; se il giorno cambia, quelle della parte nuova
+  // non corrispondono più a nessun addebito e si lasciano cadere.
+  const kept = (r.exceptions ?? []).filter((e) => e.date <= endDate)
+  const moved = start === from ? (r.exceptions ?? []).filter((e) => e.date >= from) : []
+  const { exceptions: _drop, ...rest } = r
   return {
-    before: { ...r, seriesId, endDate: addDays(start < from ? start : from, -1) },
-    after: { ...changes, startDate: start, seriesId },
+    before: { ...rest, seriesId, endDate, ...(kept.length ? { exceptions: kept } : {}) },
+    after: { ...changes, startDate: start, seriesId, ...(moved.length ? { exceptions: moved } : {}) },
   }
+}
+
+/**
+ * Aggiunge o sostituisce l'eccezione dell'addebito `e.date`. Un'eccezione che non cambia niente (stesso importo, stesso
+ * giorno, non saltato) la toglie: l'addebito torna quello della serie.
+ */
+export function withException(r: RecurringExpense, e: RecurringException): RecurringExpense {
+  const clean: RecurringException = { date: e.date }
+  if (e.skipped) clean.skipped = true
+  else {
+    if (e.amount !== undefined && e.amount !== r.amount) clean.amount = e.amount
+    if (e.movedTo && e.movedTo !== e.date && e.movedTo.slice(0, 7) === e.date.slice(0, 7)) clean.movedTo = e.movedTo
+  }
+  const others = (r.exceptions ?? []).filter((x) => x.date !== e.date)
+  const list = clean.skipped || clean.amount !== undefined || clean.movedTo ? [...others, clean] : others
+  list.sort((a, b) => a.date.localeCompare(b.date))
+  const { exceptions: _old, ...rest } = r
+  return list.length ? { ...rest, exceptions: list } : rest
 }
 
 /** Data dell'addebito `steps` periodi dopo (o prima, se negativo) il mese di `date`, con il giorno della serie. */
@@ -119,6 +194,30 @@ export function moveWindow(r: RecurringExpense, from: IsoDate): { min: IsoDate; 
   const min = addDays(shiftDue(r, from, -1), 1)
   const beforeNext = addDays(shiftDue(r, from, 1), -1)
   return { min, max: r.endDate && r.endDate < beforeNext ? r.endDate : beforeNext }
+}
+
+/**
+ * Le eccezioni lette dai dati salvati o sincronizzati: tiene solo quelle valide (data giusta, importo in centesimi
+ * non negativo, spostamento nello stesso mese), una per addebito, in ordine di data.
+ */
+export function normalizeExceptions(raw: unknown): RecurringException[] {
+  if (!Array.isArray(raw)) return []
+  const byDate = new Map<IsoDate, RecurringException>()
+  for (const x of raw) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    if (typeof o.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.date)) continue
+    const e: RecurringException = { date: o.date }
+    if (o.skipped === true) e.skipped = true
+    else {
+      if (typeof o.amount === 'number' && Number.isInteger(o.amount) && o.amount >= 0) e.amount = o.amount
+      if (typeof o.movedTo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.movedTo) && o.movedTo.slice(0, 7) === o.date.slice(0, 7)) {
+        e.movedTo = o.movedTo
+      }
+    }
+    if (e.skipped || e.amount !== undefined || e.movedTo) byDate.set(e.date, e)
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /** Chiave della spesa a cui appartiene una parte: il `seriesId`, o l'id stesso per una spesa mai divisa. */

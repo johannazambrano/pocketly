@@ -8,6 +8,18 @@ export function toCents(value: string | number): Cents | null {
 }
 
 /**
+ * Cosa non va in un importo scritto in un modulo: vuoto, illeggibile (es. "12,5,0") o non più di zero. `null` se va
+ * bene. Serve a dire il problema preciso invece di un messaggio solo per tutti i casi.
+ */
+export type AmountProblem = 'empty' | 'unreadable' | 'notPositive'
+export function amountProblem(raw: string): AmountProblem | null {
+  if (raw.trim() === '') return 'empty'
+  const cents = toCents(raw)
+  if (cents === null) return 'unreadable'
+  return cents > 0 ? null : 'notPositive'
+}
+
+/**
  * L'importo da mettere in un campo da modificare, con il separatore decimale della lingua ("13,00" in italiano, "13.00"
  * in inglese), come lo si scriverebbe a mano. `toCents` legge entrambi.
  */

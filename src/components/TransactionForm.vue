@@ -2,24 +2,33 @@
 /** Modulo per spese una tantum (`kind="expense"`) ed entrate (`kind="income"`). */
 import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
-import type { Income, OneTimeExpense } from '@/types/models'
+import type { Income, OneTimeExpense, QuickExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
 import { frequentTemplates, type FrequentTemplate } from '@/domain/calculations'
-import { toCents } from '@/utils/money'
+import { useUiStore } from '@/stores/ui'
 import { todayIso } from '@/utils/dates'
 import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import TagSelect from './TagSelect.vue'
 import TagInput from './TagInput.vue'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 /** `deletable`: modifica di una voce esistente da una pagina che sa eliminarla; mostra "Elimina" ed emette `delete`. */
-const props = defineProps<{ open: boolean; kind: 'expense' | 'income'; item?: OneTimeExpense | Income | null; deletable?: boolean }>()
+const props = defineProps<{
+  open: boolean
+  kind: 'expense' | 'income'
+  item?: OneTimeExpense | Income | null
+  preset?: QuickExpense | null
+  deletable?: boolean
+}>()
 const emit = defineEmits<{ close: []; delete: [] }>()
 /** L'id del modulo: su iPhone "Fine" nella barra del foglio lo invia. */
 const formId = useId()
 const { t, amountInput, money } = useFormat()
 const finance = useFinanceStore()
+const ui = useUiStore()
 
 const isDuplicating = ref(false)
 
@@ -34,7 +43,11 @@ const form = reactive({
 })
 /** Modifiche non salvate: la finestra le protegge da una chiusura per sbaglio. */
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+/** Gli errori stanno sotto i campi; alla conferma il cursore torna sul primo da sistemare. */
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
+const saveAsQuick = ref(false)
+const quickKeepAmount = ref(true)
 
 const isEdit = computed(() => !!props.item && !!props.item.id && !isDuplicating.value)
 
@@ -43,6 +56,14 @@ const title = computed(() => {
   return t(`${section}.${isEdit.value ? 'edit' : 'new'}`)
 })
 const hasTags = computed(() => finance.data.categories.length > 0 && finance.data.paymentMethods.length > 0)
+// Gli inserimenti rapidi stanno nella barra di Dashboard e Variabili, non qui (nel modulo ci sono i «Frequenti»):
+// da un rapido il modulo arriva già compilato (`preset`) e non propone di salvarlo di nuovo come rapido.
+const showSaveAsQuick = computed(() => props.kind === 'expense' && !props.preset)
+
+/** La categoria o il metodo di un rapido, se esiste ancora. */
+function usable(kind: 'categories' | 'paymentMethods', id?: string): string | undefined {
+  return (id && finance.tag(kind, id)?.id) || undefined
+}
 
 const frequentList = computed(() => {
   if (props.item || isDuplicating.value) return []
@@ -78,19 +99,22 @@ watch(
     if (!open) return
     isDuplicating.value = false
     const i = props.item
-    error.value = ''
-    const catExists = finance.data.categories.some((c) => c.id === i?.categoryId)
-    const payExists = finance.data.paymentMethods.some((p) => p.id === i?.paymentMethodId)
+    const p = !i ? props.preset : null
+    fe.clear()
+    saveAsQuick.value = false
+    quickKeepAmount.value = true
+    const last = finance.lastUsedTags(props.kind === 'expense' ? 'oneTime' : 'income')
     Object.assign(form, {
-      name: i?.name ?? '',
-      amount: i ? amountInput(i.amount) : '',
+      name: i?.name ?? p?.name ?? '',
+      amount: i ? amountInput(i.amount) : p?.amount ? amountInput(p.amount) : '',
       date: i?.date ?? todayIso(),
-      categoryId: catExists ? i!.categoryId : (finance.data.categories[0]?.id ?? ''),
-      paymentMethodId: payExists ? i!.paymentMethodId : (finance.data.paymentMethods[0]?.id ?? ''),
-      notes: i && 'notes' in i && typeof i.notes === 'string' ? i.notes : '',
-      tagIds: i && 'tagIds' in i && Array.isArray(i.tagIds)
-        ? i.tagIds.filter((id) => finance.data.tags.some((t) => t.id === id))
-        : [],
+      categoryId: i?.categoryId ?? usable('categories', p?.categoryId) ?? last.categoryId,
+      paymentMethodId: i?.paymentMethodId ?? usable('paymentMethods', p?.paymentMethodId) ?? last.paymentMethodId,
+      notes: i && 'notes' in i ? i.notes : (p?.notes ?? ''),
+      tagIds:
+        i && 'tagIds' in i && Array.isArray(i.tagIds)
+          ? i.tagIds.filter((id) => !!finance.tag('tags', id))
+          : (p?.tagIds ?? []).filter((id) => !!finance.tag('tags', id)),
     })
     resetDirty()
   },
@@ -98,9 +122,12 @@ watch(
 )
 
 function submit() {
-  const amount = toCents(form.amount)
-  if (amount === null || amount <= 0) {
-    error.value = t('common.invalidAmount')
+  fe.clear()
+  const amount = fe.amount('amount', form.amount)
+  fe.required('name', form.name, t('form.nameEmpty'))
+  fe.required('date', form.date, t('form.dateEmpty'))
+  if (amount === null || fe.hasErrors()) {
+    fe.focusFirst(formEl.value)
     return
   }
   const base = {
@@ -111,16 +138,32 @@ function submit() {
     categoryId: form.categoryId,
     paymentMethodId: form.paymentMethodId,
   }
-  if (props.kind === 'expense') finance.saveOneTime({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
-  else finance.saveIncome({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
+  if (props.kind === 'expense') {
+    finance.saveOneTime({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
+    if (showSaveAsQuick.value && saveAsQuick.value) {
+      finance.saveQuickExpense({
+        name: base.name,
+        ...(quickKeepAmount.value ? { amount: base.amount } : {}),
+        categoryId: base.categoryId,
+        paymentMethodId: base.paymentMethodId,
+        notes: form.notes.trim(),
+        tagIds: form.tagIds,
+      })
+      ui.toast(t('quickExpenses.savedToast', { name: base.name }))
+    }
+  } else finance.saveIncome({ ...base, notes: form.notes.trim(), tagIds: form.tagIds })
   emit('close')
 }
 </script>
 
 <template>
-  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" @close="emit('close')">
+  <BaseModal :open="open" :dirty="dirty" :form-id="hasTags ? formId : undefined" :title="title" :initial-focus="item ? undefined : '[data-field=amount]'" @close="emit('close')">
     <p v-if="!hasTags" class="rounded-lg bg-caution-soft p-3 text-xs text-caution-strong">{{ t('common.noTags') }}</p>
-    <form v-else :id="formId" class="space-y-3" @submit.prevent="submit">
+    <!--
+      L'importo per primo, grande: è ciò che si scrive subito dopo aver speso. Su una voce nuova il cursore parte da lì
+      (con la tastiera numerica); su una da modificare parte dal titolo, perché non si sa quale campo serve.
+    -->
+    <form v-else :id="formId" ref="formEl" novalidate class="space-y-3" @submit.prevent="submit">
       <!-- Chip Template Spese Frequenti -->
       <div v-if="!isEdit && frequentList.length > 0" class="space-y-1 pb-1">
         <span class="text-[11px] font-medium text-ink-4 flex items-center gap-1">
@@ -141,19 +184,20 @@ function submit() {
       </div>
 
       <label class="block">
-        <span class="field-label">{{ t('common.name') }}</span>
-        <input v-model="form.name" required maxlength="80" class="field" />
+        <span class="field-label">{{ t('common.amount') }}</span>
+        <input v-model="form.amount" v-bind="fe.attrs('amount')" inputmode="decimal" autocomplete="off" class="field field-amount" placeholder="0,00" />
+        <FieldError :id="fe.errorId('amount')" :message="fe.errors.amount" />
       </label>
-      <div class="grid grid-cols-2 gap-2">
-        <label class="block">
-          <span class="field-label">{{ t('common.amount') }}</span>
-          <input v-model="form.amount" required inputmode="decimal" class="field" placeholder="0,00" />
-        </label>
-        <label class="block">
-          <span class="field-label">{{ t('common.date') }}</span>
-          <input v-model="form.date" type="date" required class="field" />
-        </label>
-      </div>
+      <label class="block">
+        <span class="field-label">{{ t('common.name') }}</span>
+        <input v-model="form.name" v-bind="fe.attrs('name')" maxlength="80" class="field" />
+        <FieldError :id="fe.errorId('name')" :message="fe.errors.name" />
+      </label>
+      <label class="block">
+        <span class="field-label">{{ t('common.date') }}</span>
+        <input v-model="form.date" v-bind="fe.attrs('date')" type="date" class="field" />
+        <FieldError :id="fe.errorId('date')" :message="fe.errors.date" />
+      </label>
       <div class="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         <TagSelect v-model="form.categoryId" kind="categories" :label="t('common.category')" />
         <TagSelect
@@ -167,7 +211,16 @@ function submit() {
         <input v-model="form.notes" maxlength="200" class="field" />
       </label>
       <TagInput v-model="form.tagIds" />
-      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
+      <div v-if="showSaveAsQuick" class="space-y-1.5 rounded-lg border border-line bg-surface-2 px-3 py-2">
+        <label class="flex min-h-8 cursor-pointer items-center gap-2 text-xs font-medium text-ink-2">
+          <input v-model="saveAsQuick" type="checkbox" class="h-4 w-4 accent-accent-icon" />
+          <span>{{ t('quickExpenses.saveAsQuick') }}</span>
+        </label>
+        <label v-if="saveAsQuick" class="flex min-h-7 cursor-pointer items-center gap-2 pl-6 text-xs text-ink-3">
+          <input v-model="quickKeepAmount" type="checkbox" class="h-4 w-4 accent-accent-icon" />
+          <span>{{ t('quickExpenses.keepAmount') }}</span>
+        </label>
+      </div>
 
       <!-- Azione secondaria: Duplica come nuova voce -->
       <div v-if="isEdit" class="pt-1">

@@ -6,9 +6,12 @@ import type {
   ForecastSettings,
   Id,
   Income,
+  IsoDate,
   Loan,
   NotificationRule,
   OneTimeExpense,
+  QuickExpense,
+  RecurringException,
   RecurringExpense,
   Repayment,
   SavingsGoal,
@@ -17,12 +20,12 @@ import type {
 } from '@/types/models'
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, tagTrends, type TagTrendInfo, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
-import { groupRecurringSeries, isActiveInYear, seriesKey } from '@/domain/recurrence'
+import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
 import { savingsSummary, sortSavingsGoals } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
-import { lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { addDays, lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
 export type TagKind = 'categories' | 'paymentMethods' | 'tags'
@@ -49,6 +52,12 @@ export const useFinanceStore = defineStore('finance', () => {
   const data = ref<FinanceData>(createEmptyData())
   const ready = ref(false)
   const saveError = ref(false)
+  /**
+   * I dati salvati su questo dispositivo ci sono ma non si leggono (errore nel codice, dati di una versione più nuova
+   * dell'app, archivio rovinato). Allora l'app non salva e non sincronizza niente: ripartire vuota e salvare sopra
+   * cancellerebbe i dati veri. `LoadErrorScreen` lo dice e permette di scaricarli così come sono.
+   */
+  const loadError = ref(false)
   const selectedYear = ref(new Date().getFullYear())
   /**
    * All'apertura si guarda il mese di oggi: la domanda più frequente è "come va questo mese". La scelta non viene
@@ -66,6 +75,7 @@ export const useFinanceStore = defineStore('finance', () => {
   async function flush() {
     clearTimeout(saveTimer)
     saveTimer = undefined
+    if (loadError.value) return
     try {
       await dataStore.save(data.value)
       saveError.value = false
@@ -86,6 +96,10 @@ export const useFinanceStore = defineStore('finance', () => {
       loaded = await dataStore.load()
     } catch (e) {
       console.error('Caricamento non riuscito', e)
+      // Niente dati di partenza e niente salvataggio: quelli salvati restano intatti.
+      loadError.value = true
+      ready.value = true
+      return
     }
     data.value = loaded ?? createDefaultData(locale)
     if (!loaded) await flush()
@@ -191,6 +205,7 @@ export const useFinanceStore = defineStore('finance', () => {
   const loans = computed(() => [...data.value.loans].sort(byDateDesc))
   const savingsGoals = computed(() => sortSavingsGoals(data.value.savingsGoals ?? [], today.value))
   const savingsSummaryData = computed(() => savingsSummary(data.value.savingsGoals ?? [], today.value))
+  const quickExpenses = computed(() => data.value.quickExpenses)
 
   const tagMaps = computed(() => ({
     categories: new Map(data.value.categories.map((t) => [t.id, t])),
@@ -204,9 +219,67 @@ export const useFinanceStore = defineStore('finance', () => {
 
   // --- movimenti ---------------------------------------------------------
 
-  function saveOneTime(item: WithOptionalId<OneTimeExpense>) {
-    upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
+  /**
+   * Categoria e metodo da cui parte una voce nuova: quelli dell'ultima voce aggiunta dello stesso tipo (le voci nuove
+   * vanno in fondo all'elenco), se esistono ancora; altrimenti i primi dell'elenco. Chi registra spesso la stessa cosa
+   * non deve cambiarli ogni volta, e non si salva "il primo della lista" senza volerlo.
+   */
+  function lastUsedTags(source: 'oneTime' | 'income' | 'recurring'): { categoryId: string; paymentMethodId: string } {
+    const list = source === 'oneTime' ? data.value.oneTimeExpenses : source === 'income' ? data.value.incomes : data.value.recurringExpenses
+    const last = list.at(-1)
+    const pick = (kind: TagKind, id: string | undefined) =>
+      (id && data.value[kind].some((t) => t.id === id) ? id : data.value[kind][0]?.id) ?? ''
+    return { categoryId: pick('categories', last?.categoryId), paymentMethodId: pick('paymentMethods', last?.paymentMethodId) }
+  }
+
+  function saveOneTime(item: WithOptionalId<OneTimeExpense>): OneTimeExpense {
+    const saved = upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
     selectedYear.value = yearOf(item.date)
+    return saved
+  }
+
+  function saveQuickExpense(item: WithOptionalId<QuickExpense>): QuickExpense {
+    const { amount, ...rest } = item
+    const normalizedAmount = typeof amount === 'number' && Number.isInteger(amount) && amount > 0 ? amount : undefined
+    return upsert(data.value.quickExpenses, {
+      ...rest,
+      name: item.name.trim(),
+      notes: item.notes.trim(),
+      tagIds: item.tagIds ?? [],
+      ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),
+    })
+  }
+
+  const deleteQuickExpense = (id: Id) => remove(data.value.quickExpenses, id)
+
+  function moveQuickExpense(id: Id, direction: -1 | 1) {
+    const list = data.value.quickExpenses
+    const index = list.findIndex((q) => q.id === id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= list.length) return
+    const [item] = list.splice(index, 1)
+    if (item) list.splice(target, 0, item)
+  }
+
+  /**
+   * Registra subito una spesa variabile a partire da un inserimento rapido con importo fisso.
+   * Restituisce null se il rapido non ha importo o se mancano categoria/metodo utilizzabili.
+   */
+  function triggerQuickExpense(preset: QuickExpense, date: IsoDate = today.value): OneTimeExpense | null {
+    if (!preset.amount || preset.amount <= 0) return null
+    const categoryId = tag('categories', preset.categoryId)?.id ?? data.value.categories[0]?.id
+    const paymentMethodId = tag('paymentMethods', preset.paymentMethodId)?.id ?? data.value.paymentMethods[0]?.id
+    if (!categoryId || !paymentMethodId) return null
+    const tagIds = (preset.tagIds ?? []).filter((id) => !!tag('tags', id))
+    return saveOneTime({
+      name: preset.name,
+      amount: preset.amount,
+      date,
+      categoryId,
+      paymentMethodId,
+      notes: preset.notes,
+      tagIds,
+    })
   }
 
   function saveIncome(item: WithOptionalId<Income>) {
@@ -245,6 +318,36 @@ export const useFinanceStore = defineStore('finance', () => {
   const deleteOneTime = (id: Id) => remove(data.value.oneTimeExpenses, id)
   const deleteIncome = (id: Id) => remove(data.value.incomes, id)
   const deleteRecurring = (id: Id) => remove(data.value.recurringExpenses, id)
+  /**
+   * Cambia un solo addebito di una spesa ricorrente («Solo questo addebito»): lo salta, o gli dà un importo o un giorno
+   * diverso. Un'eccezione che non cambia niente toglie quella che c'era (l'addebito torna quello della serie).
+   */
+  function saveRecurringException(item: RecurringExpense, exception: RecurringException) {
+    const current = data.value.recurringExpenses.find((r) => r.id === item.id) ?? item
+    upsert(data.value.recurringExpenses, withException(current, exception))
+  }
+  /** Ripristina un addebito cambiato da solo: torna quello della serie. */
+  function restoreRecurringCharge(item: RecurringExpense, original: IsoDate) {
+    saveRecurringException(item, { date: original })
+  }
+  /**
+   * «Elimina» da un addebito, «Da questo addebito in poi»: la spesa finisce il giorno prima di `from`. Le parti che
+   * partono da `from` in poi spariscono, quella in corso si ferma (con le sue eccezioni fino a lì).
+   */
+  function endRecurringSeriesFrom(item: RecurringExpense, from: IsoDate) {
+    const key = seriesKey(item)
+    const endDate = addDays(from, -1)
+    const out: RecurringExpense[] = []
+    for (const r of data.value.recurringExpenses) {
+      if (seriesKey(r) !== key || (r.endDate && r.endDate <= endDate)) out.push(r)
+      else if (r.startDate < from) {
+        const exceptions = (r.exceptions ?? []).filter((e) => e.date <= endDate)
+        const { exceptions: _old, ...rest } = r
+        out.push({ ...rest, endDate, ...(exceptions.length ? { exceptions } : {}) })
+      }
+    }
+    data.value.recurringExpenses = out
+  }
   /** Elimina la spesa intera: tutte le parti collegate a `item` (o solo `item`, se non è mai stata divisa). */
   function deleteRecurringSeries(item: RecurringExpense) {
     const key = seriesKey(item)
@@ -373,21 +476,18 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function tagUsage(kind: TagKind, id: Id): number {
     if (kind === 'tags') {
-      return (
-        data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length +
-        data.value.incomes.filter((x) => x.tagIds?.includes(id)).length
-      )
+      return [...data.value.oneTimeExpenses, ...data.value.incomes, ...data.value.quickExpenses].filter((x) => x.tagIds?.includes(id)).length
     }
     const field = REF_FIELD[kind]
     const d = data.value
-    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes].filter((x) => x[field] === id).length
+    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses].filter((x) => x[field] === id).length
   }
 
   /** Elimina una categoria/metodo/tag spostando le voci che lo usano su `reassignTo`. */
   function deleteTag(kind: TagKind, id: Id, reassignTo?: Id) {
     const d = data.value
     if (kind === 'tags') {
-      for (const x of [...d.oneTimeExpenses, ...d.incomes]) {
+      for (const x of [...d.oneTimeExpenses, ...d.incomes, ...d.quickExpenses]) {
         if (x.tagIds?.includes(id)) {
           x.tagIds = x.tagIds.filter((t) => t !== id)
           if (reassignTo && !x.tagIds.includes(reassignTo)) {
@@ -400,7 +500,7 @@ export const useFinanceStore = defineStore('finance', () => {
     }
     const field = REF_FIELD[kind]
     if (reassignTo) {
-      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes]) {
+      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses]) {
         if (x[field] === id) x[field] = reassignTo
       }
     }
@@ -416,6 +516,7 @@ export const useFinanceStore = defineStore('finance', () => {
     data,
     ready,
     saveError,
+    loadError,
     selectedYear,
     selectedMonth,
     isMonthFiltered,
@@ -446,8 +547,14 @@ export const useFinanceStore = defineStore('finance', () => {
     loans,
     savingsGoals,
     savingsSummaryData,
+    quickExpenses,
     tag,
+    lastUsedTags,
     saveOneTime,
+    saveQuickExpense,
+    deleteQuickExpense,
+    moveQuickExpense,
+    triggerQuickExpense,
     saveIncome,
     saveRecurring,
     applyNotificationsToRecurring,
@@ -455,6 +562,9 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteIncome,
     deleteRecurring,
     deleteRecurringSeries,
+    saveRecurringException,
+    restoreRecurringCharge,
+    endRecurringSeriesFrom,
     saveLoan,
     deleteLoan,
     addRepayment,

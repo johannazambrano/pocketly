@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { parseIsoDate } from '@/utils/dates'
@@ -8,7 +8,7 @@ import { useAppearanceStore } from '@/stores/appearance'
 
 /**
  * `heading`: su iPhone il titolo grande della pagina è il periodo stesso (la dashboard): il selettore lo disegna e lo
- * rende il menu dei mesi, come il titolo di Calendario. Senza, su iPhone il menu è un testo nella tinta.
+ * rende il menu del periodo, come il titolo di Calendario. Senza, su iPhone il menu è un testo nella tinta.
  */
 const props = defineProps<{ heading?: string }>()
 
@@ -21,7 +21,7 @@ const currentMonth = computed(() => todayParts.value.month)
 const isCurrentYear = computed(() => finance.selectedYear === todayParts.value.year)
 const onCurrentMonth = computed(() => isCurrentYear.value && finance.selectedMonth === currentMonth.value)
 
-/** Dopo "Questo mese" il pulsante si nasconde: il focus passa al menu, che resta dov'era, invece di perdersi. */
+/** Dopo "Oggi" il pulsante si nasconde: il focus passa al menu, che resta dov'era, invece di perdersi. */
 const select = ref<HTMLSelectElement | null>(null)
 function goToCurrentMonth() {
   finance.selectedYear = todayParts.value.year
@@ -32,9 +32,9 @@ function goToCurrentMonth() {
 const { previous, next, go } = useMonthStep()
 
 /**
- * Tasti ← → per il mese prima e dopo, su qualunque pagina mostri questo filtro (dashboard, dettaglio, spese variabili).
- * Non agiscono mentre si scrive, quando il focus è su un menu (lì le frecce cambiano già la scelta) o con una finestra
- * aperta.
+ * Tasti ← → per il periodo prima e dopo, su qualunque pagina mostri questo filtro (dashboard, dettaglio, spese
+ * variabili). Non agiscono mentre si scrive, quando il focus è su un menu (lì le frecce cambiano già la scelta) o con
+ * una finestra aperta.
  */
 function onKey(e: KeyboardEvent) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
@@ -56,64 +56,67 @@ async function step(target: MonthTarget | null, event: MouseEvent) {
 }
 
 /**
- * Nel nome sulla freccia l'anno compare solo quando cambia: "dicembre 2025", ma "ottobre". In una frase italiana il mese
- * va in minuscolo ("Vai a ottobre"); in inglese resta maiuscolo.
+ * Il nome del periodo su cui porta una freccia: l'anno compare solo quando cambia ("dicembre 2025", ma "ottobre"). In
+ * una frase italiana il mese va in minuscolo ("Mese precedente: ottobre"); in inglese resta maiuscolo.
  */
-function targetName(target: MonthTarget | null): string {
-  if (!target) return ''
+function targetName(target: MonthTarget): string {
+  if (target.month === 'all') return String(target.year)
   const name = locale.value === 'it' ? month(target.month).toLocaleLowerCase('it') : month(target.month)
   return target.year === finance.selectedYear ? name : `${name} ${target.year}`
 }
-/** Da "Tutti i mesi" la freccia non va a un mese "precedente" ma entra in un mese: l'etichetta dice dove. */
+/** Sull'anno intero le frecce cambiano anno, su un mese cambiano mese: l'etichetta dice quale. */
 const fromAll = computed(() => finance.selectedMonth === 'all')
 const previousLabel = computed(() => {
-  if (!previous.value) return t('dashboard.previousMonthNone')
-  const args = { month: targetName(previous.value) }
-  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.previousMonth', args)
+  if (!previous.value) return t(fromAll.value ? 'dashboard.previousYearNone' : 'dashboard.previousMonthNone')
+  return t(fromAll.value ? 'dashboard.previousYear' : 'dashboard.previousMonth', { month: targetName(previous.value) })
 })
 const nextLabel = computed(() => {
-  if (!next.value) return t('dashboard.nextMonthNone')
-  const args = { month: targetName(next.value) }
-  return fromAll.value ? t('dashboard.goToMonth', args) : t('dashboard.nextMonth', args)
+  if (!next.value) return t(fromAll.value ? 'dashboard.nextYearNone' : 'dashboard.nextMonthNone')
+  return t(fromAll.value ? 'dashboard.nextYear' : 'dashboard.nextMonth', { month: targetName(next.value) })
 })
 
-function showYear() {
-  finance.selectedMonth = 'all'
-}
-
-/** L'ultimo mese guardato: "Mese" (iPhone) dopo "Tutto l'anno" torna lì, o al mese di oggi. */
-const lastMonth = ref(typeof finance.selectedMonth === 'number' ? finance.selectedMonth : isCurrentYear.value ? currentMonth.value : 0)
-watch(
-  () => finance.selectedMonth,
-  (m) => {
-    if (typeof m === 'number') lastMonth.value = m
-  },
+/**
+ * Un solo menu per il periodo, con l'anno dentro: le voci sono raggruppate per anno (il più recente in cima), e ogni
+ * anno comincia con "Tutto il 2026", poi i mesi; quello di oggi è segnato. Il valore è "anno:mese" ("2026:10",
+ * "2026:all"), così il menu cambia anno e mese insieme.
+ */
+const groups = computed(() =>
+  [...finance.years]
+    .sort((a, b) => b - a)
+    .map((year) => ({
+      year,
+      options: [
+        { value: `${year}:all`, label: t('dashboard.yearTitle', { year }) },
+        ...Array.from({ length: 12 }, (_, m) => ({
+          value: `${year}:${m}`,
+          label: year === todayParts.value.year && m === currentMonth.value ? `${month(m)} · ${t('dashboard.todayMark')}` : month(m),
+        })),
+      ],
+    })),
 )
-function showMonth() {
-  finance.selectedMonth = lastMonth.value
-}
-
-/** Le voci del menu, uguali su ogni piattaforma: "Tutto l'anno" per primo, poi i mesi, quello di oggi segnato. */
-const options = computed(() => [
-  { value: 'all' as const, label: t('dashboard.wholeYear') },
-  ...Array.from({ length: 12 }, (_, m) => ({
-    value: m,
-    label: isCurrentYear.value && m === currentMonth.value ? `${month(m)} · ${t('dashboard.todayMark')}` : month(m),
-  })),
-])
-const selectedLabel = computed(() => options.value.find((o) => o.value === finance.selectedMonth)?.label ?? '')
+const period = computed({
+  get: () => `${finance.selectedYear}:${finance.selectedMonth}`,
+  set: (value: string) => {
+    const [y, m] = value.split(':')
+    finance.selectedYear = Number(y)
+    finance.selectedMonth = m === 'all' ? 'all' : Number(m)
+  },
+})
+/** Il periodo scelto per esteso, come lo mostrano il testo, la chip e il menu chiuso: "Novembre 2026", "Tutto il 2026". */
+const periodLabel = computed(() =>
+  finance.selectedMonth === 'all'
+    ? t('dashboard.yearTitle', { year: finance.selectedYear })
+    : `${month(finance.selectedMonth)} ${finance.selectedYear}`,
+)
 
 /**
- * Il titolo grande di iPhone si stringe quando è lungo ("Settembre 2025") o lo schermo è stretto (iPhone SE, 320 px),
- * per lasciare posto a "Oggi" e alle frecce senza tagliare il nome del mese.
+ * Il titolo grande di iPhone si stringe quando è lungo ("Novembre 2026") o lo schermo è stretto (iPhone SE, 320 px),
+ * per lasciare posto a "Oggi" e alle frecce senza tagliare il nome del periodo.
  */
 const headingSize = computed(() =>
-  (props.heading?.length ?? 0) > 10 ? 'text-[28px] max-[359px]:text-[18px]' : 'text-[34px] max-[359px]:text-[22px]',
+  (props.heading?.length ?? 0) > 10 ? 'text-[28px] max-[359px]:text-[20px]' : 'text-[34px] max-[359px]:text-[22px]',
 )
 
-/** iPhone: i segmenti scelgono solo il modo (Mese, Tutto l'anno), come in Calendario e Salute. */
-const seg = 'inline-flex h-8 flex-1 items-center justify-center rounded-[7px] px-2.5 text-[13px] font-medium text-ink transition-colors'
-const segOn = 'seg-on bg-surface font-semibold shadow-sm'
 /** iPhone: frecce tonde nella tinta, sul fondo grigio della pagina. */
 const roundArrow =
   'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-accent transition-colors disabled:text-ink-6'
@@ -123,50 +126,42 @@ const iconArrow =
 
 const arrow =
   'inline-flex h-10 w-10 shrink-0 items-center justify-center text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-strong disabled:cursor-not-allowed disabled:text-ink-6 disabled:hover:bg-surface'
+/** Il menu vero, trasparente sopra il testo disegnato: il tocco e il lettore di schermo trovano un menu, l'occhio il periodo. */
+const overlay = 'absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0'
 </script>
 
 <template>
   <!--
-    Il periodo si sceglie con il controllo della piattaforma, e la scelta dell'anno si chiama ovunque "Tutto l'anno".
-    iPhone: il titolo (o un testo nella tinta) è il menu dei mesi, ‹ › accanto, "Oggi" come testo, e sotto i segmenti
-    "Mese | Tutto l'anno" che scelgono solo il modo. Android: ‹ · chip con il menu · ›, più la chip "Oggi": pochi
-    elementi, che stanno anche su uno schermo stretto. PC: frecce e menu. In tutti i casi restano i tasti ← →.
+    Un solo posto per il periodo, con l'anno dentro: il menu elenca tutti i periodi raggruppati per anno ("Tutto il 2026",
+    poi i mesi). ‹ › cambiano mese, o anno quando si guarda l'anno intero; "Oggi" compare solo fuori dal mese di oggi.
+    iPhone: il titolo (o un testo nella tinta) è il menu, frecce tonde accanto. Android: ‹ · chip con il menu · ›.
+    PC: frecce e menu in un solo controllo. Ovunque restano i tasti ← →.
   -->
-  <div v-if="appearance.platform === 'ios'" class="w-full min-w-0 space-y-2">
-    <div class="flex min-w-0 items-center gap-1.5">
-      <div class="relative flex min-w-0 flex-1 items-center">
-        <h2 v-if="heading" class="flex min-w-0 items-center gap-2 leading-tight font-bold tracking-tight text-ink" :class="headingSize">
-          <span class="truncate">{{ heading }}</span>
-          <i class="fa-solid fa-chevron-down shrink-0 text-base text-accent" aria-hidden="true"></i>
-        </h2>
-        <span v-else class="flex min-w-0 items-center gap-1.5 text-[17px] font-semibold text-accent" aria-hidden="true">
-          <span class="truncate">{{ selectedLabel }}</span>
-          <i class="fa-solid fa-chevron-down shrink-0 text-xs"></i>
-        </span>
-        <!-- Il menu vero sta sopra il titolo, trasparente: il tocco e il lettore di schermo trovano un menu, l'occhio il titolo. -->
-        <select
-          ref="select"
-          v-model="finance.selectedMonth"
-          class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-          :aria-label="t('dashboard.filterMonth')"
-        >
-          <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option>
-        </select>
-      </div>
-      <button v-if="!onCurrentMonth" type="button" class="h-9 shrink-0 px-1.5 text-[17px] text-accent" :aria-label="t('dashboard.currentMonth')" @click="goToCurrentMonth">
-        {{ t('dashboard.currentMonthShort') }}
-      </button>
-      <button type="button" :class="roundArrow" :disabled="!previous" :aria-label="previousLabel" @click="step(previous, $event)">
-        <i class="fa-solid fa-chevron-left text-sm" aria-hidden="true"></i>
-      </button>
-      <button type="button" :class="roundArrow" :disabled="!next" :aria-label="nextLabel" @click="step(next, $event)">
-        <i class="fa-solid fa-chevron-right text-sm" aria-hidden="true"></i>
-      </button>
+  <div v-if="appearance.platform === 'ios'" class="flex w-full min-w-0 items-center gap-1.5">
+    <div class="relative flex min-w-0 flex-1 items-center">
+      <h2 v-if="heading" class="flex min-w-0 items-center gap-2 leading-tight font-bold tracking-tight text-ink" :class="headingSize">
+        <span class="truncate">{{ heading }}</span>
+        <i class="fa-solid fa-chevron-down shrink-0 text-base text-accent" aria-hidden="true"></i>
+      </h2>
+      <span v-else class="flex min-w-0 items-center gap-1.5 text-[17px] font-semibold text-accent" aria-hidden="true">
+        <span class="truncate">{{ periodLabel }}</span>
+        <i class="fa-solid fa-chevron-down shrink-0 text-xs"></i>
+      </span>
+      <select ref="select" v-model="period" :class="overlay" :aria-label="t('dashboard.filterMonth')">
+        <optgroup v-for="g in groups" :key="g.year" :label="String(g.year)">
+          <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </optgroup>
+      </select>
     </div>
-    <div class="flex gap-0.5 rounded-[9px] bg-surface-3 p-0.5" role="group" :aria-label="t('dashboard.filterMonth')">
-      <button type="button" :class="[seg, !fromAll ? segOn : '']" :aria-pressed="!fromAll" @click="showMonth">{{ t('dashboard.monthMode') }}</button>
-      <button type="button" :class="[seg, fromAll ? segOn : '']" :aria-pressed="fromAll" @click="showYear">{{ t('dashboard.wholeYear') }}</button>
-    </div>
+    <button v-if="!onCurrentMonth" type="button" class="h-9 shrink-0 px-1.5 text-[17px] text-accent" :aria-label="t('dashboard.currentMonth')" @click="goToCurrentMonth">
+      {{ t('dashboard.currentMonthShort') }}
+    </button>
+    <button type="button" :class="roundArrow" :disabled="!previous" :aria-label="previousLabel" @click="step(previous, $event)">
+      <i class="fa-solid fa-chevron-left text-sm" aria-hidden="true"></i>
+    </button>
+    <button type="button" :class="roundArrow" :disabled="!next" :aria-label="nextLabel" @click="step(next, $event)">
+      <i class="fa-solid fa-chevron-right text-sm" aria-hidden="true"></i>
+    </button>
   </div>
 
   <div v-else-if="appearance.platform === 'android'" class="flex min-w-0 items-center gap-1">
@@ -174,15 +169,12 @@ const arrow =
       <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
     </button>
     <label class="relative flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-lg border border-line-strong px-3 text-sm font-medium text-ink transition-colors hover:bg-surface-2">
-      <span class="truncate" aria-hidden="true">{{ selectedLabel }}</span>
+      <span class="truncate" aria-hidden="true">{{ periodLabel }}</span>
       <i class="fa-solid fa-caret-down ml-1.5 text-xs text-ink-3" aria-hidden="true"></i>
-      <select
-        ref="select"
-        v-model="finance.selectedMonth"
-        class="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-        :aria-label="t('dashboard.filterMonth')"
-      >
-        <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option>
+      <select ref="select" v-model="period" :class="overlay" :aria-label="t('dashboard.filterMonth')">
+        <optgroup v-for="g in groups" :key="g.year" :label="String(g.year)">
+          <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </optgroup>
       </select>
     </label>
     <button type="button" :class="iconArrow" :disabled="!next" :aria-label="nextLabel" @click="step(next, $event)">
@@ -218,7 +210,7 @@ const arrow =
       <span class="max-md:sr-only">{{ t('dashboard.currentMonthShort') }}</span>
     </button>
 
-    <!-- Frecce e menu formano un solo controllo: ‹ mese › -->
+    <!-- Frecce e menu formano un solo controllo: ‹ periodo › -->
     <!-- Niente overflow-hidden: taglierebbe il contorno del focus. Gli angoli li arrotondano le frecce. -->
     <div class="flex min-w-0 items-center rounded-lg border border-line bg-surface shadow-sm">
       <button
@@ -231,14 +223,18 @@ const arrow =
       >
         <i class="fa-solid fa-chevron-left text-xs" aria-hidden="true"></i>
       </button>
-      <select
-        ref="select"
-        v-model="finance.selectedMonth"
-        class="h-10 min-w-0 bg-surface px-2.5 text-sm font-medium text-ink-2 hover:bg-surface-2"
-        :aria-label="t('dashboard.filterMonth')"
+      <!-- Il menu chiuso mostra il periodo per esteso ("Novembre 2026"): il testo è disegnato, il menu vero sta sopra. -->
+      <label
+        class="relative flex h-10 min-w-0 cursor-pointer items-center gap-1.5 bg-surface px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 has-[select:focus-visible]:outline-2 has-[select:focus-visible]:-outline-offset-2 has-[select:focus-visible]:outline-accent"
       >
-        <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option>
-      </select>
+        <span class="truncate" aria-hidden="true">{{ periodLabel }}</span>
+        <i class="fa-solid fa-caret-down text-xs text-ink-4" aria-hidden="true"></i>
+        <select ref="select" v-model="period" :class="overlay" :aria-label="t('dashboard.filterMonth')">
+          <optgroup v-for="g in groups" :key="g.year" :label="String(g.year)">
+            <option v-for="o in g.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </optgroup>
+        </select>
+      </label>
       <button
         type="button"
         :class="[arrow, 'rounded-r-lg border-l border-line']"

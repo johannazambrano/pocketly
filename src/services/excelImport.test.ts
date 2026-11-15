@@ -200,8 +200,69 @@ describe('convertWorkbook', () => {
     expect(a!.id).not.toBe(b!.id)
     // Categorie senza distinzione di maiuscole; "Other" per quelle mancanti
     expect(res.data.categories.map((c) => c.name)).toEqual(['Cibo', 'Other'])
-    expect(res.warnings.map((w) => w.code)).toEqual(['dateFromMonth', 'tagIgnored'])
+    expect(res.data.tags.map((t) => t.name)).toEqual(['casa'])
+    expect(res.data.oneTimeExpenses[2]!.tagIds).toEqual([res.data.tags[0]!.id])
+    expect(res.stats.tags).toBe(1)
+    expect(res.warnings.map((w) => w.code)).toEqual(['dateFromMonth'])
     expect(parseBackup(JSON.parse(JSON.stringify(res.data)))).toEqual(res.data)
+  })
+
+  it('legge i tag da Settings (colonna N dalla riga 4) e supporta più tag separati su One-time', async () => {
+    const settings =
+      row(3, str('A3', 'Categoria') + str('D3', 'Metodo') + str('N3', 'TAG')) +
+      row(4, str('A4', 'Cibo') + str('D4', 'Carta') + str('N4', 'Casa')) +
+      row(5, str('N5', 'Vacanza')) +
+      row(20, str('N20', 'Extra'))
+    const oneTime =
+      ONE_TIME_HEADER +
+      row(3, str('A3', 'Spesa 1') + num('B3', 10) + str('C3', '2026-04-01') + str('H3', 'casa, Condiviso; casa')) +
+      row(4, str('A4', 'Spesa 2') + num('B4', 20) + str('C4', '2026-04-02') + str('H4', 'extra'))
+    const res = convertWorkbook(await readWorkbook(await xlsx({ Settings: settings, 'One-time': oneTime })))
+
+    expect(res.data.tags.map((t) => t.name)).toEqual(['Casa', 'Vacanza', 'Extra', 'Condiviso'])
+    expect(res.stats.tags).toBe(4)
+    expect(res.data.oneTimeExpenses[0]!.tagIds).toEqual([
+      res.data.tags.find((t) => t.name === 'Casa')!.id,
+      res.data.tags.find((t) => t.name === 'Condiviso')!.id,
+    ])
+    expect(res.data.oneTimeExpenses[1]!.tagIds).toEqual([
+      res.data.tags.find((t) => t.name === 'Extra')!.id,
+    ])
+    expect(res.warnings).toEqual([])
+    expect(parseBackup(JSON.parse(JSON.stringify(res.data)))).toEqual(res.data)
+  })
+
+  it("legge la colonna N di Settings solo con l'intestazione TAG, saltando le celle vuote fino in fondo", async () => {
+    const withHeader =
+      row(3, str('N3', 'Tag')) + row(4, str('N4', 'Casa')) + row(20, str('N20', 'Lavoro')) + row(22, str('N22', 'Regali'))
+    const oneTime = ONE_TIME_HEADER + row(3, str('A3', 'Pane') + num('B3', 2) + str('C3', '2026-02-02'))
+    const read = convertWorkbook(await readWorkbook(await xlsx({ Settings: withHeader, 'One-time': oneTime })))
+    expect(read.data.tags.map((t) => t.name)).toEqual(['Casa', 'Lavoro', 'Regali'])
+
+    const otherColumn = row(3, str('N3', 'Note')) + row(4, str('N4', 'Pagare entro il 5')) + row(5, str('N5', 'Totale annuo'))
+    const ignored = convertWorkbook(await readWorkbook(await xlsx({ Settings: otherColumn, 'One-time': oneTime })))
+    expect(ignored.data.tags).toEqual([])
+  })
+
+  it('dà colori tutti diversi a categorie, metodi e tag, con "Altro" in grigio', async () => {
+    const names = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix} ${i + 1}`)
+    const cats = [...names('Cat', 5), 'Altro']
+    const pms = names('Metodo', 4)
+    const tagNames = names('Tag', 3)
+    const settings =
+      row(3, str('A3', 'Categoria') + str('D3', 'Metodo') + str('N3', 'TAG')) +
+      cats
+        .map((c, i) => {
+          const n = i + 4
+          return row(n, str(`A${n}`, c) + (pms[i] ? str(`D${n}`, pms[i]!) : '') + (tagNames[i] ? str(`N${n}`, tagNames[i]!) : ''))
+        })
+        .join('')
+    const oneTime = ONE_TIME_HEADER + row(3, str('A3', 'Pane') + num('B3', 2) + str('C3', '2026-02-02') + str('E3', 'Cat 1'))
+    const res = convertWorkbook(await readWorkbook(await xlsx({ Settings: settings, 'One-time': oneTime })))
+    const all = [...res.data.categories, ...res.data.paymentMethods, ...res.data.tags]
+    expect(res.data.categories.find((c) => c.name === 'Altro')!.color).toBe('#8c939b')
+    const colored = all.filter((t) => t.name !== 'Altro')
+    expect(new Set(colored.map((t) => t.color)).size).toBe(colored.length)
   })
 
   it('a ogni importazione dello stesso file dà gli stessi ID', async () => {

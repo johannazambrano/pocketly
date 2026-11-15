@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore } from '@/stores/appearance'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import AppHeader from '@/components/AppHeader.vue'
 import BackupReminder from '@/components/BackupReminder.vue'
 import BottomNav from '@/components/BottomNav.vue'
@@ -12,11 +13,22 @@ import ToastHost from '@/components/ToastHost.vue'
 import UpdatePrompt from '@/components/UpdatePrompt.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import SearchModal from '@/components/SearchModal.vue'
+import LoadErrorScreen from '@/components/LoadErrorScreen.vue'
 
 const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
 const appearance = useAppearanceStore()
+const confirmDelete = useConfirmDelete()
+
+function removeQuickEdit() {
+  const item = ui.quickEditExpense
+  if (!item) return
+  void confirmDelete(item.name, () => {
+    finance.deleteOneTime(item.id)
+    ui.closeQuickAdd()
+  })
+}
 
 function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -47,6 +59,7 @@ onUnmounted(() => {
           :class="appearance.platform === 'android' ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'"
         >
           <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-4">{{ t('app.loading') }}</p>
+          <LoadErrorScreen v-else-if="finance.loadError" />
           <template v-else>
             <BackupReminder />
             <RouterView />
@@ -56,7 +69,15 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
-  <TransactionForm :open="ui.quickAddOpen" kind="expense" @close="ui.quickAddOpen = false" />
+  <TransactionForm
+    :open="ui.quickAddOpen"
+    kind="expense"
+    :item="ui.quickEditExpense"
+    :preset="ui.quickAddPreset"
+    :deletable="!!ui.quickEditExpense"
+    @close="ui.closeQuickAdd()"
+    @delete="removeQuickEdit"
+  />
   <SearchModal />
   <ConfirmHost />
   <ToastHost />

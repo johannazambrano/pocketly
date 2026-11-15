@@ -9,7 +9,7 @@ source-files:
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-12
+verified: 2026-11-13
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -77,6 +77,21 @@ export interface OneTimeExpense {
 }
 ```
 
+### `QuickExpense` (Inserimento Rapido di Spesa Variabile)
+```ts
+export interface QuickExpense {
+  id: Id
+  name: string
+  amount?: Cents // Importo fisso in centesimi, oppure assente se varia ogni volta
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+```
+
+Un `QuickExpense` con `amount` definito registra una `OneTimeExpense` in un solo tocco alla data corrente (`finance.triggerQuickExpense`); senza `amount` precompila il modulo di inserimento lasciando l'importo da scrivere. È facoltativo rispetto ai backup v2 precedenti (`normalizeV2` usa `[]` se assente) senza aumentare lo `schemaVersion`.
+
 ### `NotificationRule` e `RecurringExpense` (Spesa Ricorrente)
 ```ts
 export interface NotificationRule {
@@ -96,9 +111,19 @@ export interface RecurringExpense {
   categoryId: Id
   paymentMethodId: Id
   seriesId?: Id               // Parti della stessa spesa dopo un cambio «da questo addebito in poi»: l'id della prima parte
+  exceptions?: RecurringException[] // Addebiti cambiati da soli («Solo questo addebito»); assente se nessuno
   notifications?: NotificationRule[] // Regole di promemoria stile Google Calendar
 }
+
+export interface RecurringException {
+  date: IsoDate               // La data dell'addebito secondo la serie: lo identifica anche se spostato
+  skipped?: true              // Addebito saltato
+  amount?: Cents              // Importo solo di questo addebito
+  movedTo?: IsoDate           // Giorno solo di questo addebito, nello stesso mese di `date`
+}
 ```
+
+Le eccezioni sono facoltative e non cambiano lo `schemaVersion`: `parseBackup` tiene solo quelle valide (`normalizeExceptions`), una per addebito. Un dispositivo con una versione precedente dell'app le scarta quando legge i dati: su quel dispositivo gli addebiti tornano quelli della serie finché non si aggiorna l'app.
 
 `endDate` è inclusiva al giorno: nel mese in cui la serie finisce, un addebito che cadrebbe dopo `endDate` non conta (vedi `occursIn`). `splitRecurring` ([`src/domain/recurrence.ts`](../../src/domain/recurrence.ts)) chiude una serie impostando `endDate` al giorno prima della divisione e ne apre una nuova da quella data (o dal giorno scelto, se l'addebito si sposta: allora la vecchia si ferma il giorno prima della prima delle due date); le due parti hanno lo stesso `seriesId` (l'id della prima parte), così l'app le mostra come una spesa sola. Il campo è facoltativo e non cambia lo `schemaVersion`: una spesa mai divisa non lo ha. Un dispositivo con una versione dell'app precedente lo scarta quando legge i dati (`parseBackup` tiene solo i campi che conosce): le cifre restano giuste, ma su quel dispositivo le parti tornano righe separate finché non si aggiorna l'app.
 
@@ -195,6 +220,7 @@ export interface FinanceData {
   forecast: ForecastSettings
   budget: BudgetSettings
   savingsGoals: SavingsGoal[]
+  quickExpenses: QuickExpense[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

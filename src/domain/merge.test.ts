@@ -19,6 +19,7 @@ function data(overrides: Partial<FinanceData> = {}): FinanceData {
     forecast: { estimateIncome: false, incomeCategoryIds: [] },
     budget: { limits: {} },
     savingsGoals: [],
+    quickExpenses: [],
     ...overrides,
   }
 }
@@ -212,6 +213,45 @@ describe('mergeFinanceData', () => {
     const remote3 = data({ savingsGoals: [goal('g1', 1000), goal('g2', 500)] }) // intoccato da remoto
     const merged3 = mergeFinanceData(base3, local3, remote3)
     expect(merged3.savingsGoals.map((g) => g.id)).toEqual(['g2'])
+  })
+
+  it('unisce gli inserimenti rapidi tra dispositivi e funziona anche su basi senza il campo', () => {
+    const baseWithout = data()
+    delete (baseWithout as Partial<FinanceData>).quickExpenses
+    const remoteWithout = clone(baseWithout)
+    const caffe = { id: 'q1', name: 'Caffè', amount: 150, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] }
+    const pranzo = { id: 'q2', name: 'Pranzo', categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: 'mensa', tagIds: [] }
+
+    // Solo locale ha quickExpenses: non viene perso
+    expect(mergeFinanceData(baseWithout, data({ quickExpenses: [caffe] }), remoteWithout).quickExpenses).toEqual([caffe])
+
+    // Aggiunte concorrenti su entrambi i dispositivi
+    const base = data({ quickExpenses: [caffe] })
+    const local = data({ quickExpenses: [{ ...caffe, amount: 180 }] })
+    const remote = data({ quickExpenses: [caffe, pranzo] })
+    expect(mergeFinanceData(base, local, remote).quickExpenses).toEqual([{ ...caffe, amount: 180 }, pranzo])
+  })
+
+  it('tiene il riordino degli inserimenti rapidi fatto su questo dispositivo, con in fondo i nuovi dal server', () => {
+    const q = (id: string) => ({ id, name: id, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] })
+    const base = data({ quickExpenses: [q('a'), q('b'), q('c')] })
+    const local = data({ quickExpenses: [q('c'), q('a'), q('b')] })
+    const remote = data({ quickExpenses: [q('a'), q('b'), q('c'), q('d')] })
+    expect(mergeFinanceData(base, local, remote).quickExpenses.map((x) => x.id)).toEqual(['c', 'a', 'b', 'd'])
+
+    // Riordinato sul server e non qui: vale l'ordine del server.
+    const remoteMoved = data({ quickExpenses: [q('b'), q('a'), q('c')] })
+    expect(mergeFinanceData(base, clone(base), remoteMoved).quickExpenses.map((x) => x.id)).toEqual(['b', 'a', 'c'])
+  })
+
+  it('ripristina categoria o metodo cancellato sull’altro dispositivo se usato da un inserimento rapido', () => {
+    const base = data()
+    const local = data({
+      quickExpenses: [{ id: 'q1', name: 'Caffè', amount: 150, categoryId: 'cat-food', paymentMethodId: 'pm-card', notes: '', tagIds: [] }],
+    })
+    const remote = data({ categories: [{ id: 'cat-home', name: 'Casa', color: '#3b82f6' }] })
+    const merged = mergeFinanceData(base, local, remote)
+    expect(merged.categories.some((c) => c.id === 'cat-food')).toBe(true)
   })
 })
 

@@ -35,11 +35,38 @@ export interface OneTimeExpense {
   tagIds?: Id[]
 }
 
+/** Scorciatoia per spese variabili frequenti (es. caffè con importo fisso, pranzo con importo libero). */
+export interface QuickExpense {
+  id: Id
+  name: string
+  /** Importo fisso in centesimi, oppure assente se cambia ogni volta. */
+  amount?: Cents
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+
 export interface NotificationRule {
   /** Giorni prima dell'addebito: 0 = il giorno stesso, 1 = il giorno prima, ecc. (0..365). */
   daysBefore: number
   /** Orario locale nel formato HH:MM (es. "09:00"). */
   time: string
+}
+
+/**
+ * Un addebito di una spesa ricorrente cambiato da solo («Solo questo addebito»): saltato, con un importo diverso o in
+ * un altro giorno dello stesso mese. Gli altri addebiti restano quelli della serie.
+ */
+export interface RecurringException {
+  /** La data che l'addebito avrebbe secondo la serie: lo identifica anche se viene spostato. */
+  date: IsoDate
+  /** Addebito saltato: non conta in nessun calcolo. */
+  skipped?: true
+  /** Importo di questo addebito, al posto di quello della serie. */
+  amount?: Cents
+  /** Giorno di questo addebito, nello stesso mese di `date`. */
+  movedTo?: IsoDate
 }
 
 export interface RecurringExpense {
@@ -58,6 +85,8 @@ export interface RecurringExpense {
    * hanno l'id della prima parte. Assente per una spesa mai divisa. La pagina Ricorrenti le mostra come una riga sola.
    */
   seriesId?: Id
+  /** Addebiti cambiati da soli (saltati, importo o giorno diverso). Assente se nessuno. */
+  exceptions?: RecurringException[]
   /**
    * Promemoria configurati per questa spesa (stile Google Calendar).
    * Presente solo quando c'è almeno una regola attiva; assente se disattivato.
@@ -152,6 +181,7 @@ export interface FinanceData {
   forecast: ForecastSettings
   budget: BudgetSettings
   savingsGoals: SavingsGoal[]
+  quickExpenses: QuickExpense[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2

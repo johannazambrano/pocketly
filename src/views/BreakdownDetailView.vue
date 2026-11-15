@@ -123,7 +123,7 @@ function edit(item: BreakdownItem) {
   if (item.source === 'oneTime') editingOneTime.value = finance.data.oneTimeExpenses.find((e) => e.id === item.sourceId) ?? null
   else {
     editingRecurring.value = finance.data.recurringExpenses.find((r) => r.id === item.sourceId) ?? null
-    editingOccurrence.value = item.date
+    editingOccurrence.value = item.original ?? item.date
   }
 }
 async function closeForm() {

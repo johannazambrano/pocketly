@@ -42,7 +42,7 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):
 - L'interfaccia `DataStore` espone `load()` e `save(data: FinanceData)`.
-- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`).
+- L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`). Se i dati ci sono ma `parseBackup` non li legge, `load()` lancia l'errore e lo store non scrive niente sopra (`finance.loadError`, vedi [frontend.md](./frontend.md)); `readStoredDataRaw()` li restituisce così come sono per scaricarli.
 - Gli store per preferenze locali del dispositivo utilizzano chiavi separate su `idb-keyval`: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). In questo modo la configurazione del dispositivo non si confonde con i dati finanziari condivisi.
 
 ---
@@ -128,7 +128,7 @@ L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è
       - Se un elemento è stato cancellato localmente (presente in `base`, assente in `local`) e non è stato toccato da `remote`, l'elemento viene definitivamente eliminato.
       - Se un elemento è stato cancellato da una parte ma modificato dall'altra, **vince la modifica**, preservando il dato per evitare perdite accidentali.
       - Se un elemento è stato modificato in entrambi i dispositivi, vince la versione locale.
-      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali.
+      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali. Se però sul server l'ordine non è cambiato dalla base e su questo dispositivo sì (es. inserimenti rapidi riordinati nelle Impostazioni), vale l'ordine locale, con in fondo i nuovi arrivati dal server (`sameOrder` in `merge.ts`).
 
 ### Perché i Tombstone non sono necessari?
 Nei sistemi di sincronizzazione a due vie, per distinguere un elemento "cancellato" da uno "ancora da ricevere" è necessario memorizzare un record fantasma (tombstone). In Pocketly il client memorizza sempre l'ultima **base** sincronizzata. Questo rende la tripla `(base, local, remote)` sufficiente per dedurre con certezza matematica se un'assenza è frutto di una cancellazione o di una mancata creazione, rendendo superflui i tombstone sia nel client che nel server.

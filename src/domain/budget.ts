@@ -1,7 +1,7 @@
 import type { Cents, FinanceData, Id, IsoDate } from '@/types/models'
 import { monthIndex, parseIsoDate } from '@/utils/dates'
 import { ESTIMATE_MONTHS } from './calculations'
-import { dueDateIn, monthlyEquivalent } from './recurrence'
+import { chargeIn, monthlyEquivalent } from './recurrence'
 
 /** Oltre questa quota del limite una categoria passa in "attenzione". */
 export const BUDGET_WARNING_RATIO = 0.8
@@ -69,8 +69,8 @@ function expensesOfMonth(data: FinanceData, year: number, month: number): Expens
     }
   }
   for (const r of data.recurringExpenses) {
-    const due = dueDateIn(r, year, month)
-    if (due) result.push({ categoryId: r.categoryId, amount: r.amount, date: due, recurring: true })
+    const charge = chargeIn(r, year, month)
+    if (charge) result.push({ categoryId: r.categoryId, amount: charge.amount, date: charge.date, recurring: true })
   }
   return result
 }

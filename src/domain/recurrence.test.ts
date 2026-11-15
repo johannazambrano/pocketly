@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RecurringExpense } from '@/types/models'
-import { dueDateIn, groupRecurringSeries, isActiveInYear, monthlyEquivalent, moveWindow, nextDueDate, occursIn, seriesKey, splitRecurring } from './recurrence'
+import { amountInMonth, chargeIn, dueDateIn, groupRecurringSeries, isActiveInYear, monthlyEquivalent, moveWindow, nextDueDate, occursIn, seriesKey, normalizeExceptions, splitRecurring, withException } from './recurrence'
 
 const rec = (over: Partial<RecurringExpense> = {}): RecurringExpense => ({
   id: 'r',
@@ -170,5 +170,56 @@ describe('occursIn con la fine a metà mese', () => {
     expect(occursIn(rec({ endDate: '2026-11-14' }), 2026, 10)).toBe(false)
     expect(occursIn(rec({ endDate: '2026-11-15' }), 2026, 10)).toBe(true)
     expect(occursIn(rec({ endDate: '2026-11-30' }), 2026, 10)).toBe(true)
+  })
+})
+
+describe('solo questo addebito', () => {
+  const bolletta = rec({ id: 'b', startDate: '2026-01-25', amount: 11000 })
+
+  it('un addebito saltato non c è, gli altri restano', () => {
+    const r = withException(bolletta, { date: '2026-11-25', skipped: true })
+    expect(chargeIn(r, 2026, 10)).toBeNull()
+    expect(amountInMonth(r, 2026, 10)).toBe(0)
+    expect(dueDateIn(r, 2026, 11)).toBe('2026-12-25')
+  })
+
+  it('importo e giorno diversi valgono solo per quell addebito, nello stesso mese', () => {
+    const r = withException(bolletta, { date: '2026-11-25', amount: 13200, movedTo: '2026-11-27' })
+    expect(chargeIn(r, 2026, 10)).toMatchObject({ date: '2026-11-27', amount: 13200, original: '2026-11-25' })
+    expect(chargeIn(r, 2026, 11)).toMatchObject({ date: '2026-12-25', amount: 11000 })
+  })
+
+  it('un eccezione che non cambia niente si toglie, e uno spostamento in un altro mese non vale', () => {
+    const r = withException(bolletta, { date: '2026-11-25', amount: 13200 })
+    expect(withException(r, { date: '2026-11-25' }).exceptions).toBeUndefined()
+    expect(withException(bolletta, { date: '2026-11-25', amount: 11000 }).exceptions).toBeUndefined()
+    expect(withException(bolletta, { date: '2026-11-25', movedTo: '2026-12-02' }).exceptions).toBeUndefined()
+  })
+
+  it('dividendo la serie, le eccezioni restano con la parte dei loro addebiti', () => {
+    let r = withException(bolletta, { date: '2026-03-25', skipped: true })
+    r = withException(r, { date: '2026-12-25', amount: 15000 })
+    const changes = { name: 'b', amount: 12000, frequency: 'monthly' as const, endDate: null, categoryId: 'c', paymentMethodId: 'p' }
+    const same = splitRecurring(r, '2026-11-25', changes)
+    expect(same.before.exceptions).toEqual([{ date: '2026-03-25', skipped: true }])
+    expect(same.after.exceptions).toEqual([{ date: '2026-12-25', amount: 15000 }])
+    const moved = splitRecurring(r, '2026-11-25', changes, '2026-11-27')
+    expect(moved.after.exceptions).toBeUndefined()
+  })
+
+  it('dai dati salvati tiene solo le eccezioni valide, una per addebito', () => {
+    expect(
+      normalizeExceptions([
+        { date: '2026-11-25', skipped: true, amount: 5 },
+        { date: '2026-12-25', amount: 13200, movedTo: '2027-01-02' },
+        { date: '2026-12-25', amount: 14000 },
+        { date: 'ieri', skipped: true },
+        { date: '2026-10-25', amount: -3 },
+        'boh',
+      ]),
+    ).toEqual([
+      { date: '2026-11-25', skipped: true },
+      { date: '2026-12-25', amount: 14000 },
+    ])
   })
 })

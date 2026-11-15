@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newId } from './id'
-import { centsToInput, toCents, formatCents } from './money'
+import { amountProblem, centsToInput, toCents, formatCents } from './money'
 import { isValidIsoDate, parseIsoDate } from './dates'
 import { OTHER_COLOR, PALETTE, badgeColors, contrast, harmonizedColors, hexToOklch, pickUniqueColor, randomUniqueColor, readableTextColor } from './colors'
+
+describe('amountProblem', () => {
+  it('dice il caso preciso di un importo che non va', () => {
+    expect(amountProblem('')).toBe('empty')
+    expect(amountProblem('   ')).toBe('empty')
+    expect(amountProblem('12,5,0')).toBe('unreadable')
+    expect(amountProblem('abc')).toBe('unreadable')
+    expect(amountProblem('0')).toBe('notPositive')
+    expect(amountProblem('-3')).toBe('notPositive')
+    expect(amountProblem('12,50')).toBeNull()
+    expect(amountProblem('0.01')).toBeNull()
+  })
+})
 
 describe('toCents', () => {
   it('accetta virgola e punto ed evita errori di arrotondamento', () => {

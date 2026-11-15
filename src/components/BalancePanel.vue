@@ -25,6 +25,11 @@ interface Main extends Figure {
   estimate?: string
   /** Colore neutro invece di blu/rosso: la cifra è positiva solo grazie alla stima. */
   neutral?: boolean
+  /**
+   * Con la cifra neutra, il conto senza le entrate stimate (sotto zero, quindi in rosso): spiega il nero con il numero
+   * che serve per decidere, "e se lo stipendio non arriva?".
+   */
+  withoutEstimate?: { label: string; value: number }
   note?: string
 }
 
@@ -114,17 +119,24 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         <p class="mt-1 font-bold tracking-tight whitespace-nowrap" :class="[heroSize(main.value), main.neutral ? 'text-ink' : signColor(main.value)]">
           {{ money(main.value) }}
         </p>
-        <!-- Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo in evidenza. -->
-        <p v-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-ink-2">
+        <!--
+          Sotto una cifra neutra, il conto senza la stima: il rosso compare dove davvero si va sotto zero. Altrimenti, se
+          la cifra conta su entrate stimate, lo dice una frase con l'icona.
+        -->
+        <p v-if="main.withoutEstimate" class="mt-1 text-sm font-medium text-ink-2">
+          {{ main.withoutEstimate.label }}
+          <span class="font-semibold whitespace-nowrap" :class="signColor(main.withoutEstimate.value)">{{ money(main.withoutEstimate.value) }}</span>
+        </p>
+        <p v-else-if="main.estimate" class="mt-1 flex items-start gap-1.5 text-sm font-medium text-ink-2">
           <i class="fa-solid fa-circle-info mt-1 text-xs text-ink-4" aria-hidden="true"></i>{{ main.estimate }}
         </p>
         <!--
-          Con la stima, il risultato di oggi e le entrate che mancano stanno nella stessa frase: chi vede −1.087,20 € sotto
-          un previsto positivo legge subito il perché, invece di mettere insieme due righe.
+          Il risultato fino a oggi non compete con la cifra grande: è una frase, con l'importo nello stesso peso del testo.
+          Un negativo in grassetto qui si leggeva prima della spiegazione e spaventava.
         -->
         <p v-if="main.today !== undefined" class="mt-1.5 text-sm font-medium text-ink-2">
           {{ main.today.label }}
-          <b class="font-bold whitespace-nowrap text-ink">{{ money(main.today.value) }}</b><template v-if="main.today.after">; {{ main.today.after }}</template>
+          <span class="whitespace-nowrap">{{ money(main.today.value) }}</span><template v-if="main.today.after">; {{ main.today.after }}</template>
         </p>
         <p v-if="main.note" class="mt-1.5 text-sm font-medium text-ink-2">{{ main.note }}</p>
         <p v-if="main.hint" class="mt-1 text-xs text-ink-4">{{ main.hint }}</p>

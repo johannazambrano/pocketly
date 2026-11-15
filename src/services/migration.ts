@@ -8,6 +8,7 @@ import type {
   IsoDate,
   Loan,
   OneTimeExpense,
+  QuickExpense,
   RecurringExpense,
   Repayment,
   SavingsGoal,
@@ -17,7 +18,7 @@ import type {
 import { CURRENT_SCHEMA_VERSION } from '@/types/models'
 import { defaultBudgetSettings, defaultForecastSettings } from '@/domain/defaults'
 import { normalizeNotifications } from '@/domain/notifications'
-import { FREQUENCIES } from '@/domain/recurrence'
+import { FREQUENCIES, normalizeExceptions } from '@/domain/recurrence'
 import { pickUniqueColor } from '@/utils/colors'
 import { isValidIsoDate, todayIso } from '@/utils/dates'
 import { newId } from '@/utils/id'
@@ -104,6 +105,7 @@ export function migrateV1(raw: Obj): FinanceData {
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
     savingsGoals: [],
+    quickExpenses: [],
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -253,6 +255,7 @@ function normalizeV2(raw: Obj): FinanceData {
       const amount = cents(o.amount)
       if (amount === null || !isValidIsoDate(o.startDate)) return null
       const notifications = normalizeNotifications(o.notifications)
+      const exceptions = normalizeExceptions(o.exceptions)
       return {
         id: id(o.id),
         name: str(o.name),
@@ -263,6 +266,7 @@ function normalizeV2(raw: Obj): FinanceData {
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
         ...(typeof o.seriesId === 'string' && o.seriesId ? { seriesId: o.seriesId } : {}),
+        ...(exceptions.length ? { exceptions } : {}),
         ...(notifications.length ? { notifications } : {}),
       }
     }),
@@ -317,6 +321,25 @@ function normalizeV2(raw: Obj): FinanceData {
         targetDate: date(o.targetDate, today),
         ...(isHexColor(o.color) ? { color: o.color } : {}),
         ...(typeof o.notes === 'string' && o.notes ? { notes: str(o.notes) } : {}),
+      }
+    }),
+    quickExpenses: valid<QuickExpense>(raw.quickExpenses, (o) => {
+      const name = str(o.name).trim()
+      if (!name) return null
+      let amount: number | undefined
+      if (o.amount !== undefined && o.amount !== null) {
+        const parsed = cents(o.amount)
+        if (parsed === null || parsed <= 0) return null
+        amount = parsed
+      }
+      return {
+        id: id(o.id),
+        name,
+        ...(amount !== undefined ? { amount } : {}),
+        categoryId: str(o.categoryId),
+        paymentMethodId: str(o.paymentMethodId),
+        notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
       }
     }),
   }

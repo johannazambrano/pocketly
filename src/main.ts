@@ -17,9 +17,13 @@ document.documentElement.lang = i18n.global.locale.value
 useAppearanceStore()
 app.mount('#app')
 
+// Se i dati salvati non si leggono, niente sincronizzazione né promemoria: non devono partire da dati vuoti.
 void useFinanceStore()
   .init(i18n.global.locale.value)
-  .then(() => Promise.all([useBackupStore().init(), useSyncStore().init(), useNotificationsStore().init()]))
+  .then(() => {
+    if (useFinanceStore().loadError) return
+    return Promise.all([useBackupStore().init(), useSyncStore().init(), useNotificationsStore().init()])
+  })
 void requestPersistentStorage()
 
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {

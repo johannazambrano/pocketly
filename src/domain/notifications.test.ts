@@ -207,3 +207,23 @@ describe('pushServiceName', () => {
     expect(pushServiceName(undefined)).toBe('')
   })
 })
+
+describe('promemoria e addebiti cambiati da soli', () => {
+  it('niente promemoria per un addebito saltato; giorno e importo dell eccezione per uno cambiato', () => {
+    const r = rec({
+      id: 'b',
+      amount: 11000,
+      startDate: '2026-01-25',
+      notifications: [{ daysBefore: 0, time: '09:00' }],
+      exceptions: [
+        { date: '2026-11-25', amount: 13200, movedTo: '2026-11-27' },
+        { date: '2026-12-25', skipped: true },
+      ],
+    })
+    const reminders = calculateUpcomingReminders([r], new Date(2026, 10, 20, 12, 0, 0), 70)
+    expect(reminders.map((x) => [x.dueDate, x.amount])).toEqual([
+      ['2026-11-27', 13200],
+      ['2027-01-25', 11000],
+    ])
+  })
+})
