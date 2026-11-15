@@ -81,7 +81,11 @@ function selectResult(item: SearchResult) {
         <input
           ref="inputRef"
           v-model="query"
-          type="search"
+          type="text"
+          inputmode="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          :aria-label="t('search.title')"
           :placeholder="t('search.placeholder')"
           class="field pl-9 pr-9"
           maxlength="100"
@@ -104,21 +108,17 @@ function selectResult(item: SearchResult) {
       </div>
 
       <!-- Lista risultati -->
-      <div v-if="results.length > 0" class="max-h-[55vh] space-y-2 overflow-y-auto pr-0.5">
-        <div
-          v-for="item in results"
-          :key="`${item.kind}-${item.id}`"
-          role="button"
-          tabindex="0"
-          class="card flex cursor-pointer items-center justify-between gap-3 p-3 transition-colors hover:bg-surface-2 focus:bg-surface-2 outline-none"
+      <ul v-if="results.length > 0" class="-mx-2 max-h-[55vh] divide-y divide-line-soft overflow-y-auto">
+        <li v-for="item in results" :key="`${item.kind}-${item.id}`">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
           @click="selectResult(item)"
-          @keydown.enter="selectResult(item)"
-          @keydown.space.prevent="selectResult(item)"
         >
           <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-center gap-2">
               <span
-                class="inline-block shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                class="inline-block shrink-0 rounded-full px-2 py-0.5 text-xs font-medium"
                 :class="{
                   'bg-surface-3 text-ink-2': item.kind === 'onetime',
                   'bg-chrome-2/15 text-chrome-2': item.kind === 'recurring',
@@ -150,8 +150,9 @@ function selectResult(item: SearchResult) {
               {{ money(item.amount) }}
             </span>
           </div>
-        </div>
-      </div>
+        </button>
+        </li>
+      </ul>
 
       <!-- Nessun risultato -->
       <div v-else-if="query.trim()" class="py-10 text-center text-sm text-ink-4">
