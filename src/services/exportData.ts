@@ -13,7 +13,8 @@
  * 3. Singoli file CSV per specifica sezione
  */
 
-import type { FinanceData, Frequency, Loan } from '@/types/models'
+import type { Cents, FinanceData, Frequency, Loan, RecurringException, RecurringExpense } from '@/types/models'
+import { i18n } from '@/i18n'
 import { isActiveInYear } from '@/domain/recurrence'
 import { loanStatus } from '@/domain/calculations'
 import { formatRulesSummary } from '@/domain/notifications'
@@ -109,17 +110,22 @@ export function extractSectionTables(data: FinanceData, options: ExportOptions =
     ? { monthly: 'Mensile', quarterly: 'Trimestrale', semiannual: 'Semestrale', annual: 'Annuale' }
     : { monthly: 'Monthly', quarterly: 'Quarterly', semiannual: 'Semi-annual', annual: 'Annual' }
 
-  const dummyT = (key: string, params?: Record<string, unknown>) => {
-    if (key === 'notifications.daysBefore.sameDay') return isIt ? 'il giorno stesso' : 'on the day'
-    if (key === 'notifications.daysBefore.oneDayBefore') return isIt ? '1 giorno prima' : '1 day before'
-    if (key === 'notifications.daysBefore.daysBefore') return isIt ? `${String(params?.days ?? '')} giorni prima` : `${String(params?.days ?? '')} days before`
-    if (key === 'notifications.ruleSummary') return isIt ? `${String(params?.days ?? '')} alle ${String(params?.time ?? '')}` : `${String(params?.days ?? '')} at ${String(params?.time ?? '')}`
-    return ''
+  // Testi dalle traduzioni dell'app, nella lingua dell'esportazione.
+  const locale = isIt ? 'it' : 'en'
+  const t = (key: string, params: Record<string, unknown> = {}) => i18n.global.t(key, params, { locale })
+  const euro = (c: Cents) => `${(c / 100).toFixed(2).replace('.', isIt ? ',' : '.')} €`
+  const exceptionText = (r: RecurringExpense, e: RecurringException) => {
+    if (e.skipped) return t('recurring.historySkipped', { date: e.date })
+    const amount = euro(e.amount ?? r.amount)
+    return e.movedTo
+      ? t('recurring.historyMoved', { date: e.date, amount, moved: e.movedTo })
+      : t('recurring.historyChanged', { date: e.date, amount })
   }
 
+  // Le parti di una spesa divisa (un cambio «da questo addebito in poi») restano una sotto l'altra, in ordine.
   const recurringFiltered = data.recurringExpenses
     .filter((r) => (selectedYear ? isActiveInYear(r, selectedYear) : true))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.startDate.localeCompare(b.startDate))
 
   const recurringRows: CellScalar[][] = recurringFiltered.map((r) => [
     r.name,
@@ -129,7 +135,11 @@ export function extractSectionTables(data: FinanceData, options: ExportOptions =
     r.endDate ?? '',
     catMap.get(r.categoryId) ?? '',
     payMap.get(r.paymentMethodId) ?? '',
-    r.notifications?.length ? formatRulesSummary(r.notifications, dummyT) : '',
+    r.notifications?.length ? formatRulesSummary(r.notifications, t) : '',
+    (r.exceptions ?? [])
+      .filter((e) => (selectedYear ? parseIsoDate(e.date).year === selectedYear : true))
+      .map((e) => exceptionText(r, e))
+      .join('; '),
   ])
 
   const recurringTable: SectionTable = {
@@ -137,8 +147,8 @@ export function extractSectionTables(data: FinanceData, options: ExportOptions =
     sheetName: isIt ? 'Spese ricorrenti' : 'Recurring expenses',
     csvFilename: isIt ? 'spese-ricorrenti.csv' : 'recurring-expenses.csv',
     headers: isIt
-      ? ['Nome', 'Importo (€)', 'Frequenza', 'Data inizio', 'Data fine', 'Categoria', 'Metodo di pagamento', 'Promemoria']
-      : ['Name', 'Amount (€)', 'Frequency', 'Start date', 'End date', 'Category', 'Payment method', 'Reminders'],
+      ? ['Nome', 'Importo (€)', 'Frequenza', 'Data inizio', 'Data fine', 'Categoria', 'Metodo di pagamento', 'Promemoria', 'Addebiti saltati o cambiati']
+      : ['Name', 'Amount (€)', 'Frequency', 'Start date', 'End date', 'Category', 'Payment method', 'Reminders', 'Skipped or changed charges'],
     rows: recurringRows,
   }
 

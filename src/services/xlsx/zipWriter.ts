@@ -13,15 +13,14 @@ function crc32(data: Uint8Array): number {
   return ~c >>> 0
 }
 
-async function deflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  if (typeof CompressionStream === 'undefined') {
-    return data
-  }
+/** Dati compressi con deflate, o null se il browser non sa comprimere: allora il file va salvato non compresso. */
+async function deflateRaw(data: Uint8Array): Promise<Uint8Array | null> {
+  if (typeof CompressionStream === 'undefined') return null
   try {
     const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('deflate-raw'))
     return new Uint8Array(await new Response(stream).arrayBuffer())
   } catch {
-    return data
+    return null
   }
 }
 
@@ -50,9 +49,11 @@ export async function createZipArchive(
   for (const entry of entries) {
     const nameBytes = enc.encode(entry.name)
     const raw = typeof entry.data === 'string' ? enc.encode(entry.data) : entry.data
-    const isStored = stored || typeof CompressionStream === 'undefined'
-    const compressed = isStored ? raw : await deflateRaw(raw)
-    const method = isStored ? 0 : 8
+    // Il metodo segue quello che è successo davvero: se la compressione non riesce, il file resta non compresso
+    // (metodo 0); dichiarare deflate (8) su dati non compressi renderebbe lo ZIP illeggibile.
+    const deflated = stored ? null : await deflateRaw(raw)
+    const compressed = deflated ?? raw
+    const method = deflated ? 8 : 0
 
     // Local file header (30 byte + nome + dati)
     const local = new Uint8Array(30 + nameBytes.length + compressed.length)

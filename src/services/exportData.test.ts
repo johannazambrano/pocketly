@@ -51,6 +51,11 @@ function createTestData(): FinanceData {
       categoryId: cat.id,
       paymentMethodId: pay.id,
       notifications: [{ daysBefore: 1, time: '09:00' }],
+      exceptions: [
+        { date: '2026-03-01', skipped: true },
+        { date: '2026-04-01', amount: 6000 },
+        { date: '2025-12-01', skipped: true },
+      ],
     },
     {
       id: 'r-2',
@@ -113,6 +118,9 @@ describe('exportData (estrazione sezioni)', () => {
     expect(recurring.rows[0]![0]).toBe('Palestra')
     expect(recurring.rows[0]![1]).toBe(50)
     expect(recurring.rows[0]![2]).toBe('Mensile')
+    // Promemoria con i testi dell'app e addebiti saltati o cambiati dell'anno scelto
+    expect(recurring.rows[0]![7]).toBe('1g prima (09:00)')
+    expect(recurring.rows[0]![8]).toBe('2026-03-01 · saltato; 2026-04-01 · solo questo addebito: 60,00 €')
 
     // 3. Entrate: solo anno 2026
     const income = tables.find((t) => t.id === 'income')!
