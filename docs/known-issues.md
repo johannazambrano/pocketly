@@ -5,7 +5,7 @@ source-files:
   - src/domain/savings.ts
   - server/webpush.py
   - src/stores/notifications.ts
-verified: 2026-11-12
+verified: 2026-11-15
 ---
 
 # Stato e Difetti Noti (Known Issues)
@@ -58,6 +58,6 @@ Questo documento elenca le caratteristiche note, i limiti architetturali e i com
 - **Classificazione:** `Caratteristica di Design` (Documentata)
 - **File coinvolti:** [`src/domain/savings.ts`](../src/domain/savings.ts), [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
 - **Descrizione:**
-  I salvadanai (`SavingsGoal`) gestiscono l'accantonamento fondi verso obiettivi futuri monitorando il capitale attuale (`currentAmount`) e il target desiderato (`targetAmount`). I versamenti e i prelievi modificano direttamente `currentAmount` dell'obiettivo e non generano transazioni contabili nel bilancio operativo del mese (`oneTimeExpenses` / `incomes`).
+  I salvadanai (`SavingsGoal`) gestiscono l'accantonamento fondi verso obiettivi futuri monitorando il capitale attuale e il target desiderato (`targetAmount`). I versamenti e i prelievi sono movimenti (`savingsMovements`) da cui si calcola il capitale attuale, e non generano transazioni contabili nel bilancio operativo del mese (`oneTimeExpenses` / `incomes`).
 - **Motivazione:**
   L'accantonamento in un salvadanaio è un trasferimento patrimoniale / riserva liquida e non un consumo a fondo perduto né una nuova entrata reddituale; mantenere isolato il saldo operativo evita distorsioni nelle medie storiche e nelle stime previsionali dell'anno.

@@ -44,6 +44,7 @@ function emptyData(): FinanceData {
     forecast: { estimateIncome: true, incomeCategoryIds: [] },
     budget: { limits: {} },
     savingsGoals: [],
+    savingsMovements: [],
     quickExpenses: [],
   }
 }

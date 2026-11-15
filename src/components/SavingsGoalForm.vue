@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
-import type { SavingsGoal } from '@/types/models'
+import type { SavedGoal } from '@/domain/savings'
 import { useFinanceStore } from '@/stores/finance'
 import { toCents } from '@/utils/money'
 import { addDays, todayIso } from '@/utils/dates'
@@ -10,7 +10,7 @@ import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
-const props = defineProps<{ open: boolean; item?: SavingsGoal | null; deletable?: boolean }>()
+const props = defineProps<{ open: boolean; item?: SavedGoal | null; deletable?: boolean }>()
 const emit = defineEmits<{ close: []; delete: [] }>()
 
 const formId = useId()
@@ -39,6 +39,8 @@ const form = reactive({
 
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
 const error = ref('')
+/** Importo accantonato quando il modulo è stato aperto: al salvataggio si registra solo la differenza. */
+let openedAmount = 0
 
 /** Data suggerita di default: circa 6 mesi da oggi se nuova voce */
 function defaultTargetDate(): string {
@@ -51,6 +53,7 @@ watch(
     if (!open) return
     const i = props.item
     error.value = ''
+    openedAmount = i?.currentAmount ?? 0
     const existingColors = finance.savingsGoals.map((g) => g.color ?? '')
     Object.assign(form, {
       name: i?.name ?? '',
@@ -88,15 +91,17 @@ function submit() {
     return
   }
 
-  finance.saveSavingsGoal({
-    id: props.item?.id,
-    name: form.name.trim(),
-    targetAmount: target,
-    currentAmount: current,
-    targetDate: form.targetDate,
-    color: form.color,
-    notes: form.notes.trim() || undefined,
-  })
+  finance.saveSavingsGoal(
+    {
+      id: props.item?.id,
+      name: form.name.trim(),
+      targetAmount: target,
+      targetDate: form.targetDate,
+      color: form.color,
+      notes: form.notes.trim() || undefined,
+    },
+    current - openedAmount,
+  )
 
   emit('close')
 }

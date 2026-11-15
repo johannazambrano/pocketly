@@ -12,6 +12,7 @@ import type {
   RecurringExpense,
   Repayment,
   SavingsGoal,
+  SavingsMovement,
   Simulation,
   Tag,
 } from '@/types/models'
@@ -105,6 +106,7 @@ export function migrateV1(raw: Obj): FinanceData {
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
     savingsGoals: [],
+    savingsMovements: [],
     quickExpenses: [],
   }
   const seenRecurring = new Set<Id>()
@@ -232,6 +234,37 @@ function normalizeV2(raw: Obj): FinanceData {
       .map(map)
       .filter((x): x is T => x !== null)
 
+  // Salvadanai: i dati salvati prima dei movimenti avevano solo `currentAmount` sul salvadanaio. Diventa un
+  // movimento iniziale con un id fisso, così due dispositivi che convertono lo stesso salvadanaio non lo contano due volte.
+  const legacyAmounts = new Map<string, number>()
+  const savingsGoals = valid<SavingsGoal>(raw.savingsGoals, (o) => {
+    const targetAmount = cents(o.targetAmount)
+    if (targetAmount === null || targetAmount <= 0) return null
+    const goal: SavingsGoal = {
+      id: id(o.id),
+      name: str(o.name),
+      targetAmount,
+      targetDate: date(o.targetDate, today),
+      ...(isHexColor(o.color) ? { color: o.color } : {}),
+      ...(typeof o.notes === 'string' && o.notes ? { notes: str(o.notes) } : {}),
+    }
+    const legacy = cents(o.currentAmount)
+    if (legacy !== null && legacy > 0) legacyAmounts.set(goal.id, legacy)
+    return goal
+  })
+  const goalIds = new Set(savingsGoals.map((g) => g.id))
+  const savingsMovements = valid<SavingsMovement>(raw.savingsMovements, (o) => {
+    const amount = cents(o.amount)
+    const goalId = str(o.goalId)
+    if (amount === null || amount === 0 || !goalIds.has(goalId)) return null
+    return { id: id(o.id), goalId, date: date(o.date, today), amount }
+  })
+  for (const [goalId, amount] of legacyAmounts) {
+    if (!savingsMovements.some((m) => m.goalId === goalId)) {
+      savingsMovements.push({ id: `${goalId}-iniziale`, goalId, date: today, amount })
+    }
+  }
+
   return {
     schemaVersion: 2,
     categories,
@@ -309,20 +342,8 @@ function normalizeV2(raw: Obj): FinanceData {
     }),
     forecast: normalizeForecast(raw.forecast),
     budget: normalizeBudget(raw.budget, categories),
-    savingsGoals: valid<SavingsGoal>(raw.savingsGoals, (o) => {
-      const targetAmount = cents(o.targetAmount)
-      const currentAmount = cents(o.currentAmount) ?? 0
-      if (targetAmount === null || targetAmount <= 0) return null
-      return {
-        id: id(o.id),
-        name: str(o.name),
-        targetAmount,
-        currentAmount: Math.max(0, currentAmount),
-        targetDate: date(o.targetDate, today),
-        ...(isHexColor(o.color) ? { color: o.color } : {}),
-        ...(typeof o.notes === 'string' && o.notes ? { notes: str(o.notes) } : {}),
-      }
-    }),
+    savingsGoals,
+    savingsMovements,
     quickExpenses: valid<QuickExpense>(raw.quickExpenses, (o) => {
       const name = str(o.name).trim()
       if (!name) return null

@@ -241,7 +241,6 @@ describe('parseBackup – schema v2', () => {
       id: 'g1',
       name: 'Fondo emergenza',
       targetAmount: 300000,
-      currentAmount: 50000,
       targetDate: '2026-12-31',
       color: '#10b981',
       notes: 'Banca',
@@ -250,9 +249,28 @@ describe('parseBackup – schema v2', () => {
       id: 'g4',
       name: 'Auto',
       targetAmount: 500000,
-      currentAmount: 0,
       targetDate: '2027-06-30',
     })
+    // L'importo accantonato salvato sul salvadanaio (versione precedente) diventa un movimento con id fisso
+    expect(withGoals.savingsMovements).toEqual([
+      { id: 'g1-iniziale', goalId: 'g1', date: expect.any(String), amount: 50000 },
+    ])
+  })
+
+  it('tiene i movimenti dei salvadanai validi e scarta quelli senza salvadanaio', () => {
+    const parsed = parseBackup({
+      schemaVersion: 2,
+      savingsGoals: [{ id: 'g1', name: 'Auto', targetAmount: 500000, currentAmount: 9999, targetDate: '2027-06-30' }],
+      savingsMovements: [
+        { id: 'm1', goalId: 'g1', date: '2026-11-01', amount: 10000 },
+        { id: 'm2', goalId: 'g1', date: '2026-11-02', amount: -2500 },
+        { id: 'm3', goalId: 'altro', date: '2026-11-02', amount: 100 },
+        { id: 'm4', goalId: 'g1', date: '2026-11-02', amount: 0 },
+        { id: 'm5', goalId: 'g1', date: '2026-11-02', amount: 1.5 },
+      ],
+    })
+    // Con movimenti già presenti il vecchio currentAmount non si aggiunge una seconda volta
+    expect(parsed.savingsMovements.map((m) => m.id)).toEqual(['m1', 'm2'])
   })
 
   it('gestisce gli inserimenti rapidi con retrocompatibilità e validazione difensiva', () => {

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, useId, watch } from 'vue'
-import type { SavingsGoal } from '@/types/models'
-import { calculateRemainingAmount } from '@/domain/savings'
+import { calculateRemainingAmount, type SavedGoal } from '@/domain/savings'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
@@ -10,7 +9,7 @@ import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
 
-const props = defineProps<{ open: boolean; goal: SavingsGoal | null }>()
+const props = defineProps<{ open: boolean; goal: SavedGoal | null }>()
 const emit = defineEmits<{ close: [] }>()
 
 const formId = useId()
@@ -70,7 +69,7 @@ function submit() {
   }
 
   const delta = form.action === 'deposit' ? cents : -cents
-  finance.adjustSavingsGoalAmount(props.goal.id, delta)
+  finance.addSavingsMovement(props.goal.id, delta)
   if (form.action === 'deposit') {
     ui.toast(t('savings.quickDepositSuccess', { amount: money(cents), name: props.goal.name }))
   } else {

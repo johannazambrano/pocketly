@@ -13,7 +13,7 @@ import {
   calculateSavingsQuota,
   goalStatus,
 } from '@/domain/savings'
-import type { SavingsGoal } from '@/types/models'
+import type { SavedGoal } from '@/domain/savings'
 import { parseIsoDate } from '@/utils/dates'
 import { toCents } from '@/utils/money'
 import BudgetBar from '@/components/BudgetBar.vue'
@@ -123,22 +123,22 @@ function openNewGoal() {
   formOpen.value = true
 }
 
-function openEditGoal(goal: SavingsGoal) {
+function openEditGoal(goal: SavedGoal) {
   editingGoalId.value = goal.id
   formOpen.value = true
 }
 
-function openDepositModal(goal: SavingsGoal) {
+function openDepositModal(goal: SavedGoal) {
   selectedGoalId.value = goal.id
   depositModalOpen.value = true
 }
 
-function quickAdd(goal: SavingsGoal, deltaCents: number) {
-  finance.adjustSavingsGoalAmount(goal.id, deltaCents)
+function quickAdd(goal: SavedGoal, deltaCents: number) {
+  finance.addSavingsMovement(goal.id, deltaCents)
   ui.toast(t('savings.quickDepositSuccess', { amount: money(deltaCents), name: goal.name }))
 }
 
-function deleteGoal(goal: SavingsGoal) {
+function deleteGoal(goal: SavedGoal) {
   void confirmDelete(goal.name, () => {
     finance.deleteSavingsGoal(goal.id)
   })

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { SavingsGoal } from '@/types/models'
 import {
   calculateGoalProgress,
   calculateMonthsRemaining,
@@ -8,12 +7,14 @@ import {
   goalStatus,
   savingsSummary,
   sortSavingsGoals,
+  withSavedAmounts,
+  type SavedGoal,
 } from './savings'
 
 describe('savings domain', () => {
   const TODAY = '2026-05-15'
 
-  function makeGoal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
+  function makeGoal(overrides: Partial<SavedGoal> = {}): SavedGoal {
     return {
       id: 'g-1',
       name: 'Fondo emergenza',
@@ -23,6 +24,19 @@ describe('savings domain', () => {
       ...overrides,
     }
   }
+
+  describe('withSavedAmounts', () => {
+    it("somma versamenti e prelievi di ogni salvadanaio, senza scendere sotto zero", () => {
+      const goals = [makeGoal({ id: 'a' }), makeGoal({ id: 'b' }), makeGoal({ id: 'c' })]
+      const movements = [
+        { id: 'm1', goalId: 'a', date: TODAY, amount: 5000 },
+        { id: 'm2', goalId: 'a', date: TODAY, amount: 10000 },
+        { id: 'm3', goalId: 'a', date: TODAY, amount: -3000 },
+        { id: 'm4', goalId: 'b', date: TODAY, amount: -100 },
+      ]
+      expect(withSavedAmounts(goals, movements).map((g) => g.currentAmount)).toEqual([12000, 0, 0])
+    })
+  })
 
   describe('calculateMonthsRemaining', () => {
     it('restituisce 0 se la data obiettivo è trascorsa prima di oggi', () => {
@@ -133,7 +147,7 @@ describe('savings domain', () => {
     })
 
     it('calcola correttamente i totali e i conteggi con obiettivi misti', () => {
-      const goals: SavingsGoal[] = [
+      const goals: SavedGoal[] = [
         // 1. Completato
         makeGoal({ id: '1', name: 'Completato', targetAmount: 50000, currentAmount: 50000, targetDate: '2026-06-01' }),
         // 2. Attivo: 120000 target, 60000 attuale, mancano 60000 in 6 mesi (10000/mese)

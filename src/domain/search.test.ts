@@ -211,7 +211,6 @@ describe('searchFinance', () => {
       id: 'g1',
       name: 'Fondo emergenza estate',
       targetAmount: 250000,
-      currentAmount: 50000,
       targetDate: '2026-08-31',
       notes: 'Conto deposito',
     })

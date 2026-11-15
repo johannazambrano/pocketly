@@ -374,6 +374,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     forecast: defaultForecastSettings(),
     budget: { limits: {} },
     savingsGoals: [],
+    savingsMovements: [],
     quickExpenses: [],
   }
 

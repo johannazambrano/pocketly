@@ -19,6 +19,7 @@ function data(overrides: Partial<FinanceData> = {}): FinanceData {
     forecast: { estimateIncome: false, incomeCategoryIds: [] },
     budget: { limits: {} },
     savingsGoals: [],
+    savingsMovements: [],
     quickExpenses: [],
     ...overrides,
   }
@@ -185,34 +186,43 @@ describe('mergeFinanceData', () => {
   })
 
   it('unisce i salvadanai aggiunti, modificati e rimossi su dispositivi diversi', () => {
-    const goal = (id: string, current: number, target = 10000) => ({
+    const goal = (id: string, target = 10000) => ({
       id,
       name: `Obiettivo ${id}`,
       targetAmount: target,
-      currentAmount: current,
       targetDate: '2027-01-01',
     })
 
     // Caso 1: aggiunte concorrenti su due dispositivi
-    const base1 = data({ savingsGoals: [goal('g1', 1000)] })
-    const local1 = data({ savingsGoals: [goal('g1', 1000), goal('g-local', 500)] })
-    const remote1 = data({ savingsGoals: [goal('g1', 1000), goal('g-remote', 2000)] })
+    const base1 = data({ savingsGoals: [goal('g1')] })
+    const local1 = data({ savingsGoals: [goal('g1'), goal('g-local')] })
+    const remote1 = data({ savingsGoals: [goal('g1'), goal('g-remote')] })
     const merged1 = mergeFinanceData(base1, local1, remote1)
     expect(merged1.savingsGoals.map((g) => g.id).sort()).toEqual(['g-local', 'g-remote', 'g1'])
 
     // Caso 2: modificata da un lato e cancellata dall'altro -> resta con la modifica
-    const base2 = data({ savingsGoals: [goal('g1', 1000)] })
-    const local2 = data({ savingsGoals: [goal('g1', 3000)] }) // modificato locale
+    const base2 = data({ savingsGoals: [goal('g1')] })
+    const local2 = data({ savingsGoals: [goal('g1', 30000)] }) // modificato locale
     const remote2 = data({ savingsGoals: [] }) // cancellato da remoto
     const merged2 = mergeFinanceData(base2, local2, remote2)
-    expect(merged2.savingsGoals.find((g) => g.id === 'g1')?.currentAmount).toBe(3000)
+    expect(merged2.savingsGoals.find((g) => g.id === 'g1')?.targetAmount).toBe(30000)
 
     // Caso 3: cancellata da un lato e non toccata dall'altro -> viene eliminata
-    const base3 = data({ savingsGoals: [goal('g1', 1000), goal('g2', 500)] })
-    const local3 = data({ savingsGoals: [goal('g2', 500)] }) // g1 rimosso in locale
-    const remote3 = data({ savingsGoals: [goal('g1', 1000), goal('g2', 500)] }) // intoccato da remoto
+    const base3 = data({ savingsGoals: [goal('g1'), goal('g2')] })
+    const local3 = data({ savingsGoals: [goal('g2')] }) // g1 rimosso in locale
+    const remote3 = data({ savingsGoals: [goal('g1'), goal('g2')] }) // intoccato da remoto
     const merged3 = mergeFinanceData(base3, local3, remote3)
     expect(merged3.savingsGoals.map((g) => g.id)).toEqual(['g2'])
+  })
+
+  it('tiene i versamenti fatti su due dispositivi prima di sincronizzare', () => {
+    const goal = { id: 'g1', name: 'Vacanze', targetAmount: 100000, targetDate: '2027-01-01' }
+    const start = { id: 'm0', goalId: 'g1', date: '2026-11-01', amount: 20000 }
+    const base = data({ savingsGoals: [goal], savingsMovements: [start] })
+    const phone = data({ savingsGoals: [goal], savingsMovements: [start, { id: 'm-tel', goalId: 'g1', date: '2026-11-15', amount: 5000 }] })
+    const pc = data({ savingsGoals: [goal], savingsMovements: [start, { id: 'm-pc', goalId: 'g1', date: '2026-11-15', amount: 10000 }] })
+    const merged = mergeFinanceData(base, phone, pc)
+    expect(merged.savingsMovements.reduce((sum, m) => sum + m.amount, 0)).toBe(35000)
   })
 
   it('unisce gli inserimenti rapidi tra dispositivi e funziona anche su basi senza il campo', () => {

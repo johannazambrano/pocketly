@@ -6,10 +6,27 @@
  * la quota mensile raccomandata in centesimi interi.
  */
 
-import type { Cents, IsoDate, SavingsGoal } from '@/types/models'
+import type { Cents, IsoDate, SavingsGoal, SavingsMovement } from '@/types/models'
 import { parseIsoDate } from '@/utils/dates'
 
 export type GoalStatus = 'completed' | 'active' | 'overdue'
+
+/** Salvadanaio con l'importo già accantonato, calcolato dai movimenti. */
+export type SavedGoal = SavingsGoal & { currentAmount: Cents }
+
+/** Importo accantonato per salvadanaio: somma di versamenti e prelievi, mai sotto zero. */
+export function savedAmounts(movements: SavingsMovement[]): Map<string, Cents> {
+  const totals = new Map<string, Cents>()
+  for (const m of movements) totals.set(m.goalId, (totals.get(m.goalId) ?? 0) + m.amount)
+  for (const [id, v] of totals) if (v < 0) totals.set(id, 0)
+  return totals
+}
+
+/** Aggiunge a ogni salvadanaio l'importo accantonato. */
+export function withSavedAmounts(goals: SavingsGoal[], movements: SavingsMovement[]): SavedGoal[] {
+  const totals = savedAmounts(movements)
+  return goals.map((g) => ({ ...g, currentAmount: totals.get(g.id) ?? 0 }))
+}
 
 export interface SavingsSummary {
   /** Importo totale target di tutti gli obiettivi in centesimi */
@@ -52,7 +69,7 @@ export function calculateMonthsRemaining(today: IsoDate, targetDate: IsoDate): n
 /**
  * Calcola l'importo rimanente in centesimi per raggiungere il target (>= 0).
  */
-export function calculateRemainingAmount(goal: Pick<SavingsGoal, 'targetAmount' | 'currentAmount'>): Cents {
+export function calculateRemainingAmount(goal: Pick<SavedGoal, 'targetAmount' | 'currentAmount'>): Cents {
   return Math.max(0, goal.targetAmount - goal.currentAmount)
 }
 
@@ -63,7 +80,7 @@ export function calculateRemainingAmount(goal: Pick<SavingsGoal, 'targetAmount' 
  * - Se la data obiettivo è superata ma l'obiettivo non è raggiunto: l'intero importo rimanente.
  * - Altrimenti: `Math.ceil(remaining / months)`.
  */
-export function calculateSavingsQuota(goal: SavingsGoal, today: IsoDate): Cents {
+export function calculateSavingsQuota(goal: SavedGoal, today: IsoDate): Cents {
   const remaining = calculateRemainingAmount(goal)
   if (remaining <= 0) return 0
   const months = calculateMonthsRemaining(today, goal.targetDate)
@@ -74,7 +91,7 @@ export function calculateSavingsQuota(goal: SavingsGoal, today: IsoDate): Cents 
 /**
  * Calcola la percentuale di avanzamento dell'obiettivo (compresa tra 0 e 1).
  */
-export function calculateGoalProgress(goal: Pick<SavingsGoal, 'targetAmount' | 'currentAmount'>): number {
+export function calculateGoalProgress(goal: Pick<SavedGoal, 'targetAmount' | 'currentAmount'>): number {
   if (goal.targetAmount <= 0) return 1
   return Math.min(1, Math.max(0, goal.currentAmount / goal.targetAmount))
 }
@@ -85,7 +102,7 @@ export function calculateGoalProgress(goal: Pick<SavingsGoal, 'targetAmount' | '
  * - 'overdue': data obiettivo superata e importo non ancora raggiunto.
  * - 'active': in corso e nei tempi stabiliti.
  */
-export function goalStatus(goal: SavingsGoal, today: IsoDate): GoalStatus {
+export function goalStatus(goal: SavedGoal, today: IsoDate): GoalStatus {
   if (goal.currentAmount >= goal.targetAmount) return 'completed'
   if (goal.targetDate < today) return 'overdue'
   return 'active'
@@ -94,7 +111,7 @@ export function goalStatus(goal: SavingsGoal, today: IsoDate): GoalStatus {
 /**
  * Calcola statistiche aggregate su tutti i salvadanai configurati.
  */
-export function savingsSummary(goals: SavingsGoal[], today: IsoDate): SavingsSummary {
+export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSummary {
   let totalTarget: Cents = 0
   let totalCurrent: Cents = 0
   let totalRemaining: Cents = 0
@@ -142,7 +159,7 @@ export function savingsSummary(goals: SavingsGoal[], today: IsoDate): SavingsSum
  * 2. Obiettivi attivi con scadenza più vicina
  * 3. Obiettivi completati in fondo
  */
-export function sortSavingsGoals(goals: SavingsGoal[], today: IsoDate): SavingsGoal[] {
+export function sortSavingsGoals(goals: SavedGoal[], today: IsoDate): SavedGoal[] {
   return [...goals].sort((a, b) => {
     const statusA = goalStatus(a, today)
     const statusB = goalStatus(b, today)

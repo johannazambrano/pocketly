@@ -36,7 +36,6 @@ describe('hasUserData', () => {
       id: 'g-1',
       name: 'Vacanze',
       targetAmount: 50000,
-      currentAmount: 10000,
       targetDate: '2026-12-31',
     })
     expect(hasUserData(data)).toBe(true)

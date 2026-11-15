@@ -21,7 +21,7 @@ import type {
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, tagTrends, type TagTrendInfo, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
-import { savingsSummary, sortSavingsGoals } from '@/domain/savings'
+import { savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
@@ -203,8 +203,9 @@ export const useFinanceStore = defineStore('finance', () => {
     data.value.simulations.filter((s) => s.year === selectedYear.value).sort((a, b) => a.month - b.month),
   )
   const loans = computed(() => [...data.value.loans].sort(byDateDesc))
-  const savingsGoals = computed(() => sortSavingsGoals(data.value.savingsGoals ?? [], today.value))
-  const savingsSummaryData = computed(() => savingsSummary(data.value.savingsGoals ?? [], today.value))
+  const savedGoals = computed(() => withSavedAmounts(data.value.savingsGoals ?? [], data.value.savingsMovements ?? []))
+  const savingsGoals = computed(() => sortSavingsGoals(savedGoals.value, today.value))
+  const savingsSummaryData = computed(() => savingsSummary(savedGoals.value, today.value))
   const quickExpenses = computed(() => data.value.quickExpenses)
 
   const tagMaps = computed(() => ({
@@ -382,31 +383,31 @@ export const useFinanceStore = defineStore('finance', () => {
 
   // --- salvadanai e obiettivi di risparmio ------------------------------
 
-  function saveSavingsGoal(item: WithOptionalId<SavingsGoal>): SavingsGoal {
+  /**
+   * Salva il salvadanaio. `amountChange` è la differenza tra l'importo accantonato scritto nel modulo e quello
+   * che c'era quando il modulo è stato aperto: diventa un movimento, così un versamento arrivato nel frattempo
+   * da un altro dispositivo non si perde.
+   */
+  function saveSavingsGoal(item: WithOptionalId<SavingsGoal>, amountChange: Cents = 0): SavingsGoal {
     if (!data.value.savingsGoals) data.value.savingsGoals = []
-    return upsert(data.value.savingsGoals, {
-      ...item,
-      targetAmount: Math.max(0, item.targetAmount),
-      currentAmount: Math.max(0, item.currentAmount),
-    })
+    const goal = upsert(data.value.savingsGoals, { ...item, targetAmount: Math.max(0, item.targetAmount) })
+    if (amountChange !== 0) addSavingsMovement(goal.id, amountChange)
+    return goal
   }
 
   const deleteSavingsGoal = (id: Id) => {
     if (data.value.savingsGoals) remove(data.value.savingsGoals, id)
-  }
-
-  function adjustSavingsGoalAmount(id: Id, deltaCents: Cents) {
-    const goal = data.value.savingsGoals?.find((g) => g.id === id)
-    if (goal) {
-      goal.currentAmount = Math.max(0, goal.currentAmount + deltaCents)
+    if (data.value.savingsMovements) {
+      data.value.savingsMovements = data.value.savingsMovements.filter((m) => m.goalId !== id)
     }
   }
 
-  function setSavingsGoalAmount(id: Id, amount: Cents) {
-    const goal = data.value.savingsGoals?.find((g) => g.id === id)
-    if (goal) {
-      goal.currentAmount = Math.max(0, amount)
-    }
+  /** Versamento (importo positivo) o prelievo (negativo) su un salvadanaio. Restituisce l'id del movimento. */
+  function addSavingsMovement(goalId: Id, amount: Cents): Id {
+    if (!data.value.savingsMovements) data.value.savingsMovements = []
+    const movement = { id: newId(), goalId, date: today.value, amount }
+    data.value.savingsMovements.push(movement)
+    return movement.id
   }
 
   // --- previsioni --------------------------------------------------------
@@ -573,8 +574,7 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteSimulation,
     saveSavingsGoal,
     deleteSavingsGoal,
-    adjustSavingsGoalAmount,
-    setSavingsGoalAmount,
+    addSavingsMovement,
     addTag,
     renameTag,
     setTagColor,

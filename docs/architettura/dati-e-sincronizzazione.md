@@ -13,7 +13,7 @@ source-files:
   - src/services/xlsx/zipWriter.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-12
+verified: 2026-11-15
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -38,6 +38,7 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 - `forecast`: configurazione [`ForecastSettings`](../../src/types/models.ts).
 - `budget`: impostazioni limiti [`BudgetSettings`](../../src/types/models.ts).
 - `savingsGoals`: lista di [`SavingsGoal`](../../src/types/models.ts) per salvadanai e pianificazione obiettivi.
+- `savingsMovements`: lista di [`SavingsMovement`](../../src/types/models.ts), versamenti e prelievi dei salvadanai. L'importo accantonato è la loro somma: ogni movimento è una voce a sé, così versamenti fatti su due dispositivi prima di sincronizzare non si sovrascrivono.
 
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):

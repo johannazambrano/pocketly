@@ -9,7 +9,7 @@ source-files:
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-13
+verified: 2026-11-15
 ---
 
 # Riferimento: Modello Dati e Tipi
@@ -195,12 +195,28 @@ export interface SavingsGoal {
   id: Id
   name: string
   targetAmount: Cents           // Importo target in centesimi
-  currentAmount: Cents          // Importo già accantonato in centesimi
   targetDate: IsoDate           // Data entro cui raggiungere il traguardo (YYYY-MM-DD)
   color?: string                // Colore identificativo personalizzato
   notes?: string                // Note o promemoria testuali opzionali
 }
 ```
+L'importo già accantonato non è salvato sul salvadanaio: è la somma dei suoi movimenti
+(`withSavedAmounts` in `domain/savings.ts`, mai sotto zero). I dati salvati prima dei movimenti avevano
+`currentAmount` sul salvadanaio: `parseBackup` lo trasforma in un movimento con id `<id salvadanaio>-iniziale`,
+uguale su tutti i dispositivi, solo se il salvadanaio non ha ancora movimenti.
+
+### `SavingsMovement` (Versamento o prelievo su un salvadanaio)
+```ts
+export interface SavingsMovement {
+  id: Id
+  goalId: Id                    // Salvadanaio a cui appartiene
+  date: IsoDate                 // Giorno del movimento
+  amount: Cents                 // Positivo = versamento, negativo = prelievo (mai 0)
+}
+```
+Ogni movimento è una voce a sé nell'elenco `savingsMovements`: due versamenti fatti su due dispositivi prima di
+sincronizzare restano entrambi. Cancellando un salvadanaio si cancellano anche i suoi movimenti; quelli che
+puntano a un salvadanaio inesistente vengono scartati da `parseBackup`.
 
 ---
 
@@ -220,6 +236,7 @@ export interface FinanceData {
   forecast: ForecastSettings
   budget: BudgetSettings
   savingsGoals: SavingsGoal[]
+  savingsMovements: SavingsMovement[]
   quickExpenses: QuickExpense[]
 }
 

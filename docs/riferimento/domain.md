@@ -9,7 +9,7 @@ source-files:
   - src/domain/defaults.ts
   - src/domain/savings.ts
   - src/domain/search.ts
-verified: 2026-11-13
+verified: 2026-11-15
 ---
 
 # Riferimento: Logica di Dominio
@@ -181,6 +181,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 ## 7. Salvadanai e Obiettivi di Risparmio (`savings.ts`)
 
 Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi finanziari specifici (`SavingsGoal`):
+- `savedAmounts(movements)` e `withSavedAmounts(goals, movements)`: l'importo accantonato di ogni salvadanaio è la somma dei suoi movimenti (`SavingsMovement`), mai sotto zero. Le funzioni sotto lavorano sul tipo `SavedGoal` (salvadanaio + `currentAmount` calcolato).
 - `calculateMonthsRemaining(today, targetDate)`: calcola quanti mesi effettivi mancano alla scadenza, arrotondando sui giorni solari (~30.4375 giorni/mese) con un minimo di 1 mese se entro lo stesso mese.
 - `calculateRemainingAmount(goal)`: calcola l'importo ancora mancante (`targetAmount - currentAmount`), mai negativo.
 - `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.

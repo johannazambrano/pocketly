@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-13
+verified: 2026-11-15
 ---
 
 # Mappa del Codice
@@ -48,7 +48,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/domain/notifications.ts`](../../src/domain/notifications.ts) | Calcolo promemoria futuri (`calculateUpcomingReminders`), formattazione messaggi, normalizzazione regole e causa di una notifica di prova fallita (`pushTestCause`, `pushServiceName`) | [`src/domain/notifications.test.ts`](../../src/domain/notifications.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
 | [`src/domain/backupReminder.ts`](../../src/domain/backupReminder.ts) | Verifica necessità promemoria backup (`isReminderDue`): dati presenti e cambiati dall'ultimo backup, 7 giorni trascorsi, rinvio | [`src/domain/backupReminder.test.ts`](../../src/domain/backupReminder.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/defaults.ts`](../../src/domain/defaults.ts) | Inizializzazione dati: `createEmptyData` e `createDefaultData` con categorie e metodi predefiniti | — | [domain.md](./domain.md) |
-| [`src/domain/savings.ts`](../../src/domain/savings.ts) | Gestione salvadanai e obiettivi di risparmio: `calculateMonthsRemaining`, `calculateRemainingAmount`, `calculateSavingsQuota`, `calculateGoalProgress`, `goalStatus`, `savingsSummary`, `sortSavingsGoals` | [`src/domain/savings.test.ts`](../../src/domain/savings.test.ts) | [domain.md](./domain.md) |
+| [`src/domain/savings.ts`](../../src/domain/savings.ts) | Gestione salvadanai e obiettivi di risparmio: importo accantonato dai movimenti (`savedAmounts`, `withSavedAmounts`), `calculateMonthsRemaining`, `calculateRemainingAmount`, `calculateSavingsQuota`, `calculateGoalProgress`, `goalStatus`, `savingsSummary`, `sortSavingsGoals` | [`src/domain/savings.test.ts`](../../src/domain/savings.test.ts) | [domain.md](./domain.md) |
 | [`src/domain/search.ts`](../../src/domain/search.ts) | Ricerca globale Omnisearch (`searchFinance`): ricerca full-text per token su spese, ricorrenti, entrate e prestiti | [`src/domain/search.test.ts`](../../src/domain/search.test.ts) | [domain.md](./domain.md) |
 
 ---

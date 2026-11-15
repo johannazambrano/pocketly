@@ -156,16 +156,27 @@ export interface BudgetSettings {
 
 /**
  * Salvadanaio / Obiettivo di risparmio: accumulo di fondi verso un traguardo
- * con importo target, importo già accantonato e data di scadenza desiderata.
+ * con importo target e data di scadenza desiderata. L'importo già accantonato non sta qui:
+ * è la somma dei suoi movimenti (`SavingsMovement`).
  */
 export interface SavingsGoal {
   id: Id
   name: string
   targetAmount: Cents
-  currentAmount: Cents
   targetDate: IsoDate
   color?: string
   notes?: string
+}
+
+/**
+ * Versamento (importo positivo) o prelievo (negativo) su un salvadanaio. Ogni movimento è una voce a sé,
+ * così due dispositivi che versano prima di sincronizzare non si cancellano a vicenda i versamenti.
+ */
+export interface SavingsMovement {
+  id: Id
+  goalId: Id
+  date: IsoDate
+  amount: Cents
 }
 
 export interface FinanceData {
@@ -181,6 +192,7 @@ export interface FinanceData {
   forecast: ForecastSettings
   budget: BudgetSettings
   savingsGoals: SavingsGoal[]
+  savingsMovements: SavingsMovement[]
   quickExpenses: QuickExpense[]
 }
 
