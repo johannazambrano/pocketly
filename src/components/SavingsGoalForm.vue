@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { reactive, ref, useId, watch } from 'vue'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import { useFormat } from '@/i18n'
 import type { SavedGoal } from '@/domain/savings'
 import { useFinanceStore } from '@/stores/finance'
-import { toCents } from '@/utils/money'
+import { amountProblem, toCents } from '@/utils/money'
 import { addDays, todayIso } from '@/utils/dates'
-import { pickUniqueColor } from '@/utils/colors'
+import { PALETTE, pickUniqueColor } from '@/utils/colors'
 import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 const props = defineProps<{ open: boolean; item?: SavedGoal | null; deletable?: boolean }>()
 const emit = defineEmits<{ close: []; delete: [] }>()
@@ -17,28 +19,23 @@ const formId = useId()
 const { t, amountInput } = useFormat()
 const finance = useFinanceStore()
 
-const PRESET_COLORS = [
-  '#10b981', // Smeraldo / Verde
-  '#3b82f6', // Blu
-  '#f59e0b', // Ambra
-  '#8b5cf6', // Viola
-  '#ec4899', // Rosa
-  '#06b6d4', // Ciano
-  '#f97316', // Arancio
-  '#14b8a6', // Teal
-]
-
 const form = reactive({
   name: '',
   targetAmount: '',
   currentAmount: '',
   targetDate: '',
-  color: PRESET_COLORS[0]!,
+  color: PALETTE[0]!,
   notes: '',
 })
 
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
+/**
+ * I colori tra cui scegliere: la tavolozza dell'app (la stessa di categorie e tag, senza il verde delle azioni né i
+ * rossi). Un colore di un salvadanaio più vecchio che non ne fa parte resta in testa, così si vede quello scelto.
+ */
+const colors = computed(() => (PALETTE.includes(form.color) || !form.color ? PALETTE : [form.color, ...PALETTE]))
 /** Importo accantonato quando il modulo è stato aperto: al salvataggio si registra solo la differenza. */
 let openedAmount = 0
 
@@ -52,7 +49,7 @@ watch(
   (open) => {
     if (!open) return
     const i = props.item
-    error.value = ''
+    fe.clear()
     openedAmount = i?.currentAmount ?? 0
     const existingColors = finance.savingsGoals.map((g) => g.color ?? '')
     Object.assign(form, {
@@ -69,25 +66,22 @@ watch(
 )
 
 function submit() {
-  if (!form.name.trim()) {
-    error.value = t('savings.nameRequired')
-    return
+  fe.clear()
+  fe.required('name', form.name, t('savings.nameRequired'))
+  const target = fe.amount('targetAmount', form.targetAmount)
+  // L'importo già accantonato può restare vuoto (= zero), ma se c'è dev'essere un importo valido.
+  let current: number | null = 0
+  if (form.currentAmount.trim() !== '') {
+    current = toCents(form.currentAmount)
+    if (current === null || current < 0) {
+      fe.set('currentAmount', amountProblem(form.currentAmount) === 'unreadable'
+        ? t('form.amountUnreadable', { value: form.currentAmount.trim() })
+        : t('savings.invalidCurrent'))
+    }
   }
-
-  const target = toCents(form.targetAmount)
-  if (target === null || target <= 0) {
-    error.value = t('savings.invalidTarget')
-    return
-  }
-
-  const current = form.currentAmount.trim() === '' ? 0 : toCents(form.currentAmount)
-  if (current === null || current < 0) {
-    error.value = t('savings.invalidCurrent')
-    return
-  }
-
-  if (!form.targetDate) {
-    error.value = t('savings.dateRequired')
+  fe.required('targetDate', form.targetDate, t('savings.dateRequired'))
+  if (target === null || current === null || fe.hasErrors()) {
+    void fe.focusFirst(formEl.value)
     return
   }
 
@@ -109,16 +103,17 @@ function submit() {
 
 <template>
   <BaseModal :open="open" :dirty="dirty" :form-id="formId" :title="t(item ? 'savings.edit' : 'savings.new')" @close="emit('close')">
-    <form :id="formId" class="space-y-3" @submit.prevent="submit">
+    <form :id="formId" ref="formEl" novalidate class="space-y-3" @submit.prevent="submit">
       <label class="block">
         <span class="field-label">{{ t('savings.name') }}</span>
         <input
           v-model="form.name"
-          required
+          v-bind="fe.attrs('name')"
           maxlength="80"
           class="field"
           :placeholder="t('savings.namePlaceholder')"
         />
+        <FieldError :id="fe.errorId('name')" :message="fe.errors.name" />
       </label>
 
       <div class="grid grid-cols-2 gap-2">
@@ -126,41 +121,52 @@ function submit() {
           <span class="field-label">{{ t('savings.targetAmount') }}</span>
           <input
             v-model="form.targetAmount"
-            required
+            v-bind="fe.attrs('targetAmount')"
             inputmode="decimal"
+            autocomplete="off"
             class="field"
             placeholder="0,00"
           />
+          <FieldError :id="fe.errorId('targetAmount')" :message="fe.errors.targetAmount" />
         </label>
         <label class="block">
           <span class="field-label">{{ t('savings.currentAmount') }}</span>
           <input
             v-model="form.currentAmount"
+            v-bind="fe.attrs('currentAmount')"
             inputmode="decimal"
+            autocomplete="off"
             class="field"
             placeholder="0,00"
           />
+          <FieldError :id="fe.errorId('currentAmount')" :message="fe.errors.currentAmount" />
         </label>
       </div>
 
       <label class="block">
         <span class="field-label">{{ t('savings.targetDate') }}</span>
-        <input v-model="form.targetDate" type="date" required class="field" />
+        <input v-model="form.targetDate" v-bind="fe.attrs('targetDate')" type="date" class="field" />
+        <FieldError :id="fe.errorId('targetDate')" :message="fe.errors.targetDate" />
       </label>
 
-      <div>
-        <span class="field-label">{{ t('savings.color') }}</span>
+      <div role="group" :aria-labelledby="`${formId}-color`">
+        <span :id="`${formId}-color`" class="field-label">{{ t('savings.color') }}</span>
         <div class="mt-1 flex flex-wrap items-center gap-2">
           <button
-            v-for="c in PRESET_COLORS"
+            v-for="(c, i) in colors"
             :key="c"
             type="button"
-            class="h-7 w-7 rounded-full transition-transform focus:scale-110"
-            :class="form.color === c ? 'ring-2 ring-ink ring-offset-2 scale-110' : 'opacity-80 hover:opacity-100'"
-            :style="{ backgroundColor: c }"
-            :aria-label="c"
+            class="grid h-9 w-9 place-items-center rounded-full"
+            :aria-label="t('savings.colorOption', { n: i + 1, total: colors.length })"
+            :aria-pressed="form.color === c"
             @click="form.color = c"
-          ></button>
+          >
+            <span
+              class="h-7 w-7 rounded-full transition-transform"
+              :class="form.color === c ? 'ring-2 ring-ink ring-offset-2 ring-offset-surface' : ''"
+              :style="{ backgroundColor: c }"
+            ></span>
+          </button>
         </div>
       </div>
 
@@ -173,8 +179,6 @@ function submit() {
           :placeholder="t('savings.notesPlaceholder')"
         />
       </label>
-
-      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
 
       <div class="pt-2">
         <SubmitButton

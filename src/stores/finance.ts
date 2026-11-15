@@ -410,6 +410,11 @@ export const useFinanceStore = defineStore('finance', () => {
     return movement.id
   }
 
+  /** Toglie un movimento (es. «Annulla» dopo un versamento rapido). */
+  const removeSavingsMovement = (id: Id) => {
+    if (data.value.savingsMovements) remove(data.value.savingsMovements, id)
+  }
+
   // --- previsioni --------------------------------------------------------
 
   function setForecastSettings(patch: Partial<ForecastSettings>) {
@@ -575,6 +580,7 @@ export const useFinanceStore = defineStore('finance', () => {
     saveSavingsGoal,
     deleteSavingsGoal,
     addSavingsMovement,
+    removeSavingsMovement,
     addTag,
     renameTag,
     setTagColor,

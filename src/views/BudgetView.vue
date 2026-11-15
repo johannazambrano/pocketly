@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useHighlight } from '@/composables/useHighlight'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -27,7 +27,7 @@ const ui = useUiStore()
 const route = useRoute()
 const router = useRouter()
 const confirmDelete = useConfirmDelete()
-const { t, money, month, date, percent, locale } = useFormat()
+const { t, money, moneyWhole, month, date, percent, locale } = useFormat()
 
 // --- tab switcher ---------------------------------------------------------
 type TabKey = 'budget' | 'savings'
@@ -49,6 +49,13 @@ const highlightedId = useHighlight(
     return id
   },
 )
+
+/** Frecce sinistra/destra tra le schede, come nelle schede dei sistemi operativi. */
+function switchTabByKey() {
+  const next: TabKey = activeTab.value === 'budget' ? 'savings' : 'budget'
+  switchTab(next)
+  void nextTick(() => document.getElementById(`tab-${next}`)?.focus())
+}
 
 function switchTab(tab: TabKey) {
   activeTab.value = tab
@@ -124,9 +131,23 @@ function openDepositModal(goal: SavedGoal) {
   depositModalOpen.value = true
 }
 
+/** Versamenti con un tocco dalla scheda del salvadanaio. */
+const QUICK_DEPOSITS = [1000, 5000, 10000]
+
+/** Un tocco versa subito: il messaggio offre «Annulla», perché i pulsanti stanno accanto agli altri e si toccano per sbaglio. */
 function quickAdd(goal: SavedGoal, deltaCents: number) {
-  finance.addSavingsMovement(goal.id, deltaCents)
-  ui.toast(t('savings.quickDepositSuccess', { amount: money(deltaCents), name: goal.name }))
+  const movementId = finance.addSavingsMovement(goal.id, deltaCents)
+  ui.toast(t('savings.quickDepositSuccess', { amount: money(deltaCents), name: goal.name }), 'success', {
+    actions: [
+      {
+        label: t('savings.undo'),
+        onClick: () => {
+          finance.removeSavingsMovement(movementId)
+          ui.toast(t('savings.depositUndone', { amount: money(deltaCents), name: goal.name }))
+        },
+      },
+    ],
+  })
 }
 
 function deleteGoal(goal: SavedGoal) {
@@ -151,7 +172,7 @@ function onDeleteFromForm() {
     <!-- Intestazione pagina con selettore mese o pulsante nuovo salvadanaio -->
     <PageHeader :title="activeTab === 'savings' ? t('savings.title') : t('budget.title')">
       <!-- Azioni per tab Budget Mensile -->
-      <div v-if="activeTab === 'budget'" class="flex items-center gap-1">
+      <div v-if="activeTab === 'budget'" id="panel-budget" role="tabpanel" aria-labelledby="tab-budget" class="flex items-center gap-1">
         <button
           type="button"
           class="icon-btn"
@@ -182,28 +203,34 @@ function onDeleteFromForm() {
     </PageHeader>
 
     <!-- Selettore Navigazione a Schede (Tabs) -->
-    <div class="flex items-center gap-1 rounded-xl bg-surface-3 p-1 w-fit" role="tablist" :aria-label="t('budget.title')">
+    <div class="flex items-center gap-1 rounded-xl bg-surface-3 p-1 w-fit" role="tablist" :aria-label="t('budget.title')" @keydown.left.prevent="switchTabByKey" @keydown.right.prevent="switchTabByKey">
       <button
+        id="tab-budget"
         type="button"
         role="tab"
+        aria-controls="panel-budget"
         :aria-selected="activeTab === 'budget'"
+        :tabindex="activeTab === 'budget' ? 0 : -1"
         class="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors"
         :class="activeTab === 'budget' ? 'bg-surface text-ink-strong shadow-xs' : 'text-ink-4 hover:text-ink-2'"
         @click="switchTab('budget')"
       >
-        <i class="fa-solid fa-sliders text-xs"></i>
+        <i class="fa-solid fa-sliders text-xs" aria-hidden="true"></i>
         <span>{{ t('budget.tabs.spending') }}</span>
       </button>
 
       <button
+        id="tab-savings"
         type="button"
         role="tab"
+        aria-controls="panel-savings"
         :aria-selected="activeTab === 'savings'"
+        :tabindex="activeTab === 'savings' ? 0 : -1"
         class="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors"
         :class="activeTab === 'savings' ? 'bg-surface text-ink-strong shadow-xs' : 'text-ink-4 hover:text-ink-2'"
         @click="switchTab('savings')"
       >
-        <i class="fa-solid fa-piggy-bank text-xs"></i>
+        <i class="fa-solid fa-piggy-bank text-xs" aria-hidden="true"></i>
         <span>{{ t('budget.tabs.savings') }}</span>
         <span
           v-if="finance.savingsGoals.length"
@@ -340,7 +367,7 @@ function onDeleteFromForm() {
     </div>
 
     <!-- VISTA 2: Salvadanai & Obiettivi di Risparmio -->
-    <div v-else class="space-y-4">
+    <div v-else id="panel-savings" role="tabpanel" aria-labelledby="tab-savings" class="space-y-4">
       <!-- Pannello Riepilogo Risparmio -->
       <div v-if="finance.savingsGoals.length" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <!-- Card Avanzamento Globale -->
@@ -525,28 +552,14 @@ function onDeleteFromForm() {
             <!-- Chip versamento rapido -->
             <div class="flex items-center gap-1">
               <button
+                v-for="c in QUICK_DEPOSITS"
+                :key="c"
                 type="button"
-                class="rounded-md bg-surface-3 px-2 py-1 font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-                :title="t('savings.deposit') + ' +10 €'"
-                @click="quickAdd(goal, 1000)"
+                class="min-h-8 rounded-md bg-surface-3 px-2 py-1 font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
+                :aria-label="t('savings.quickDepositLabel', { amount: money(c), name: goal.name })"
+                @click="quickAdd(goal, c)"
               >
-                +10 €
-              </button>
-              <button
-                type="button"
-                class="rounded-md bg-surface-3 px-2 py-1 font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-                :title="t('savings.deposit') + ' +50 €'"
-                @click="quickAdd(goal, 5000)"
-              >
-                +50 €
-              </button>
-              <button
-                type="button"
-                class="rounded-md bg-surface-3 px-2 py-1 font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-                :title="t('savings.deposit') + ' +100 €'"
-                @click="quickAdd(goal, 10000)"
-              >
-                +100 €
+                +{{ moneyWhole(c) }}
               </button>
             </div>
 
@@ -555,26 +568,27 @@ function onDeleteFromForm() {
               <button
                 type="button"
                 class="icon-btn text-accent font-medium text-xs px-2 w-auto h-7 rounded-md bg-accent-soft hover:bg-accent-soft/80"
+                :aria-label="t('savings.depositNamed', { name: goal.name })"
                 @click="openDepositModal(goal)"
               >
-                <i class="fa-solid fa-wallet mr-1 text-[11px]"></i>
+                <i class="fa-solid fa-wallet mr-1 text-[11px]" aria-hidden="true"></i>
                 {{ t('savings.deposit') }}
               </button>
               <button
                 type="button"
                 class="icon-btn text-ink-3 hover:text-ink"
-                :aria-label="t('common.edit')"
+                :aria-label="t('savings.editNamed', { name: goal.name })"
                 @click="openEditGoal(goal)"
               >
-                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
               </button>
               <button
                 type="button"
                 class="icon-btn text-negative-light hover:text-negative"
-                :aria-label="t('common.delete')"
+                :aria-label="t('savings.deleteNamed', { name: goal.name })"
                 @click="deleteGoal(goal)"
               >
-                <i class="fa-solid fa-trash-can text-xs"></i>
+                <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
               </button>
             </div>
           </div>

@@ -8,12 +8,14 @@ import { toCents } from '@/utils/money'
 import BaseModal from './BaseModal.vue'
 import { useDirty } from '@/composables/useDirty'
 import SubmitButton from './SubmitButton.vue'
+import FieldError from './FieldError.vue'
+import { useFormErrors } from '@/composables/useFormErrors'
 
 const props = defineProps<{ open: boolean; goal: SavedGoal | null }>()
 const emit = defineEmits<{ close: [] }>()
 
 const formId = useId()
-const { t, money, amountInput } = useFormat()
+const { t, money, moneyWhole, amountInput } = useFormat()
 const finance = useFinanceStore()
 const ui = useUiStore()
 
@@ -25,7 +27,10 @@ const form = reactive({
 })
 
 const { dirty, reset: resetDirty } = useDirty(form, () => props.open)
-const error = ref('')
+const fe = useFormErrors(form)
+const formEl = ref<HTMLFormElement | null>(null)
+/** Importi da aggiungere con un tocco al campo. */
+const QUICK_AMOUNTS = [1000, 5000, 10000]
 
 const remaining = computed(() => (props.goal ? calculateRemainingAmount(props.goal) : 0))
 
@@ -33,7 +38,7 @@ watch(
   () => props.open,
   (open) => {
     if (!open) return
-    error.value = ''
+    fe.clear()
     form.action = 'deposit'
     form.amount = ''
     resetDirty()
@@ -43,7 +48,7 @@ watch(
 
 function setAction(a: ActionType) {
   form.action = a
-  error.value = ''
+  fe.clear()
 }
 
 function setQuickAmount(cents: number) {
@@ -56,15 +61,14 @@ function addQuickAmount(cents: number) {
 }
 
 function submit() {
-  const cents = toCents(form.amount)
   if (!props.goal) return
-  if (cents === null || cents <= 0) {
-    error.value = t('savings.invalidAmount')
-    return
+  fe.clear()
+  const cents = fe.amount('amount', form.amount)
+  if (cents !== null && form.action === 'withdraw' && cents > props.goal.currentAmount) {
+    fe.set('amount', t('savings.withdrawExceeds', { max: money(props.goal.currentAmount) }))
   }
-
-  if (form.action === 'withdraw' && cents > props.goal.currentAmount) {
-    error.value = t('savings.withdrawExceeds', { max: money(props.goal.currentAmount) })
+  if (cents === null || fe.hasErrors()) {
+    void fe.focusFirst(formEl.value)
     return
   }
 
@@ -85,9 +89,10 @@ function submit() {
     :dirty="dirty"
     :form-id="formId"
     :title="`${t('savings.depositOrWithdraw')} · ${goal?.name ?? ''}`"
+    initial-focus="[data-field=amount]"
     @close="emit('close')"
   >
-    <form :id="formId" class="space-y-4" @submit.prevent="submit">
+    <form :id="formId" ref="formEl" novalidate class="space-y-4" @submit.prevent="submit">
       <!-- Info stato attuale -->
       <div v-if="goal" class="rounded-lg bg-surface-2 p-3 text-xs space-y-1">
         <div class="flex justify-between text-ink-3">
@@ -103,15 +108,16 @@ function submit() {
           <span class="font-semibold">{{ money(remaining) }}</span>
         </div>
         <div v-else-if="goal.currentAmount >= goal.targetAmount" class="flex items-center gap-1 font-semibold text-accent pt-0.5">
-          <i class="fa-solid fa-champagne-glasses text-[11px]"></i>
+          <i class="fa-solid fa-champagne-glasses text-[11px]" aria-hidden="true"></i>
           <span>{{ t('savings.completedNotice') }}</span>
         </div>
       </div>
 
       <!-- Selettore operazione -->
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2" role="group" :aria-label="t('savings.depositOrWithdraw')">
         <button
           type="button"
+          :aria-pressed="form.action === 'deposit'"
           class="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors border"
           :class="
             form.action === 'deposit'
@@ -120,11 +126,12 @@ function submit() {
           "
           @click="setAction('deposit')"
         >
-          <i class="fa-solid fa-arrow-down text-xs"></i>
+          <i class="fa-solid fa-arrow-down text-xs" aria-hidden="true"></i>
           {{ t('savings.deposit') }}
         </button>
         <button
           type="button"
+          :aria-pressed="form.action === 'withdraw'"
           class="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors border"
           :class="
             form.action === 'withdraw'
@@ -133,7 +140,7 @@ function submit() {
           "
           @click="setAction('withdraw')"
         >
-          <i class="fa-solid fa-arrow-up text-xs"></i>
+          <i class="fa-solid fa-arrow-up text-xs" aria-hidden="true"></i>
           {{ t('savings.withdraw') }}
         </button>
       </div>
@@ -143,36 +150,26 @@ function submit() {
         <span class="field-label">{{ t('common.amount') }}</span>
         <input
           v-model="form.amount"
-          required
+          v-bind="fe.attrs('amount')"
           inputmode="decimal"
+          autocomplete="off"
           class="field text-lg font-semibold"
           placeholder="0,00"
-          autofocus
         />
+        <FieldError :id="fe.errorId('amount')" :message="fe.errors.amount" />
       </label>
 
       <!-- Chip importi rapidi -->
       <div v-if="form.action === 'deposit'" class="flex flex-wrap items-center gap-1.5 pt-0.5">
         <button
+          v-for="c in QUICK_AMOUNTS"
+          :key="c"
           type="button"
-          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="addQuickAmount(1000)"
+          class="min-h-8 rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
+          :aria-label="t('savings.addToAmount', { amount: money(c) })"
+          @click="addQuickAmount(c)"
         >
-          +10 €
-        </button>
-        <button
-          type="button"
-          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="addQuickAmount(5000)"
-        >
-          +50 €
-        </button>
-        <button
-          type="button"
-          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="addQuickAmount(10000)"
-        >
-          +100 €
+          +{{ moneyWhole(c) }}
         </button>
         <button
           v-if="remaining > 0"
@@ -186,20 +183,14 @@ function submit() {
 
       <div v-else-if="goal && goal.currentAmount > 0" class="flex flex-wrap items-center gap-1.5 pt-0.5">
         <button
-          v-if="goal.currentAmount >= 1000"
+          v-for="c in QUICK_AMOUNTS.filter((c) => c <= goal!.currentAmount && c < 10000)"
+          :key="c"
           type="button"
-          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="addQuickAmount(1000)"
+          class="min-h-8 rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
+          :aria-label="t('savings.addToAmount', { amount: money(c) })"
+          @click="addQuickAmount(c)"
         >
-          +10 €
-        </button>
-        <button
-          v-if="goal.currentAmount >= 5000"
-          type="button"
-          class="rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-surface-4 transition-colors"
-          @click="addQuickAmount(5000)"
-        >
-          +50 €
+          +{{ moneyWhole(c) }}
         </button>
         <button
           type="button"
@@ -209,8 +200,6 @@ function submit() {
           {{ t('savings.withdrawAll') }} ({{ money(goal.currentAmount) }})
         </button>
       </div>
-
-      <p v-if="error" class="text-xs text-negative">{{ error }}</p>
 
       <div class="pt-2">
         <SubmitButton

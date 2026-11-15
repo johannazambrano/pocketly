@@ -50,6 +50,9 @@ export function useFormat() {
     t,
     locale,
     money: (cents: Cents) => formatCents(cents, intl.value),
+    /** Un importo in euro interi, per i pulsanti con cifre tonde ("+10 €" / "+€10"): niente decimali inutili. */
+    moneyWhole: (cents: Cents) =>
+      new Intl.NumberFormat(intl.value, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(cents / 100)),
     /** Un importo da mettere in un campo da modificare: "13,00", non "13.00". */
     amountInput: (cents: Cents) => centsToInput(cents, intl.value),
     date: (d: IsoDate) => formatDate(d, intl.value),
