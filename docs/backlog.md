@@ -13,11 +13,11 @@ collegamento, senza ripeterne il testo.
 
 | ID | Attività | Stato | Priorità | Chi |
 |---|---|---|---|---|
-| PKT-01 | Filtro del mese nelle Entrate | fatto nel ramo, da unire | media | Jonny |
+| PKT-01 | Filtro del mese nelle Entrate | fatto | — | Jonny |
 | PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
-| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di due decisioni | alta | Johanna |
+| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di due decisioni (ramo già in `develop`) | alta | Johanna |
 | PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
@@ -49,7 +49,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 ---
 
 ### PKT-01 — Filtro del mese nelle Entrate
-- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny
+- **Stato:** fatto · **Chi:** Jonny
 - **Perché:** la pagina Variabili si filtra per mese, le Entrate mostrano sempre tutto l'anno. Vedi
   [known-issues.md, punto 1](known-issues.md#1-disallineamento-ui-filtro-mese-in-incomeview).
 - **Fatto quando:** le Entrate hanno lo stesso selettore del periodo di Variabili; `known-issues.md` aggiornato.
@@ -57,6 +57,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-13 aperta (Jonny).
   - 2026-11-15 il selettore c'è già in `feature/funzionalita-strategiche`: si chiude con PKT-05.
   - 2026-11-15 nel ramo l'anno compare solo nel selettore della pagina (`2322033`).
+  - 2026-11-15 in `develop` con PKT-05 (`d95cb45`).
 
 ### PKT-02 — Il mese del Budget segue quello scelto nelle altre pagine
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -96,7 +97,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     (gli inserimenti rapidi sono un dato nuovo che si sincronizza).
 
 ### PKT-05 — Rivedere e unire `feature/funzionalita-strategiche`
-- **Stato:** in attesa di due decisioni · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** in attesa di due decisioni (ramo già in `develop`) · **Priorità:** alta · **Chi:** Johanna
 - **Perché:** è il ramo più grande (ricerca globale, esportazione CSV ed Excel, entrate con note e tag,
   salvadanai, confronto tra periodi, modelli di spesa). Una prima revisione è del 2026-11-12; da allora sono
   arrivati altri commit.
@@ -113,6 +114,8 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     rotte per nome ed evidenziazione che si toglie (`0db5a22`, `af59374`); colori e Frequenti (`f21f9c2`); periodo
     di Entrate (`2322033`); esportazione con gli addebiti cambiati (`32d3077`); moduli e accessibilità dei
     salvadanai con «Annulla» (`962f8dd`); confronto leggibile al telefono (`d17aba4`).
+  - 2026-11-15 in `develop` (`d95cb45`). Si chiude dopo le due decisioni. Prima di pubblicare: aggiornare l'app su
+    tutti i telefoni (dati nuovi che si sincronizzano: salvadanai e loro movimenti, note e tag delle entrate).
 
 ### PKT-06 — Pubblicare su Proxmox e provare sui telefoni
 - **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
