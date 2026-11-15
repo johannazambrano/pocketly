@@ -196,6 +196,19 @@ export const useFinanceStore = defineStore('finance', () => {
 
   // --- movimenti ---------------------------------------------------------
 
+  /**
+   * Categoria e metodo da cui parte una voce nuova: quelli dell'ultima voce aggiunta dello stesso tipo (le voci nuove
+   * vanno in fondo all'elenco), se esistono ancora; altrimenti i primi dell'elenco. Chi registra spesso la stessa cosa
+   * non deve cambiarli ogni volta, e non si salva "il primo della lista" senza volerlo.
+   */
+  function lastUsedTags(source: 'oneTime' | 'income' | 'recurring'): { categoryId: string; paymentMethodId: string } {
+    const list = source === 'oneTime' ? data.value.oneTimeExpenses : source === 'income' ? data.value.incomes : data.value.recurringExpenses
+    const last = list.at(-1)
+    const pick = (kind: TagKind, id: string | undefined) =>
+      (id && data.value[kind].some((t) => t.id === id) ? id : data.value[kind][0]?.id) ?? ''
+    return { categoryId: pick('categories', last?.categoryId), paymentMethodId: pick('paymentMethods', last?.paymentMethodId) }
+  }
+
   function saveOneTime(item: WithOptionalId<OneTimeExpense>) {
     upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
     selectedYear.value = yearOf(item.date)
@@ -433,6 +446,7 @@ export const useFinanceStore = defineStore('finance', () => {
     simulationsOfYear,
     loans,
     tag,
+    lastUsedTags,
     saveOneTime,
     saveIncome,
     saveRecurring,
