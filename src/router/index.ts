@@ -20,7 +20,7 @@ export const router = createRouter({
     { path: '/', name: 'dashboard', component: DashboardView, meta: { periodInPage: true } },
     { path: '/una-tantum', name: 'onetime', component: () => import('@/views/OneTimeView.vue'), meta: { periodInPage: true } },
     { path: '/ricorrenti', name: 'recurring', component: () => import('@/views/RecurringView.vue') },
-    { path: '/entrate', name: 'income', component: () => import('@/views/IncomeView.vue') },
+    { path: '/entrate', name: 'income', component: () => import('@/views/IncomeView.vue'), meta: { periodInPage: true } },
     { path: '/budget', name: 'budget', component: () => import('@/views/BudgetView.vue') },
     { path: '/prestiti', name: 'loans', component: () => import('@/views/LoansView.vue') },
     { path: '/previsioni', name: 'forecast', component: () => import('@/views/ForecastView.vue') },
