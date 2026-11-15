@@ -8,12 +8,12 @@
  * - "Income"    -> incomes (stessa regola per la data).
  * - "Recurring" -> recurringExpenses. Inizio = "Data Inizio", altrimenti il primo mese elencato in "Mese".
  *                  Se l'ultimo mese elencato non è dicembre la ricorrenza termina alla fine di quel mese.
- * - Categorie e metodi di pagamento: dal foglio Settings più quelli usati nei dati.
- * - Non supportati e quindi ignorati: Tag, Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
+ * - Categorie, metodi di pagamento e tag: dal foglio Settings più quelli usati nei dati.
+ * - Non supportati e quindi ignorati: Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
  */
 import type { FinanceData, Frequency, Income, OneTimeExpense, RecurringExpense, Tag } from '@/types/models'
 import { defaultForecastSettings } from '@/domain/defaults'
-import { PALETTE } from '@/utils/colors'
+import { harmonizedColors } from '@/utils/colors'
 import { uuidv5 } from '@/utils/uuidv5'
 import { isCellDate, readWorkbook, type CellValue, type Sheet, type Workbook } from './xlsx/workbook'
 
@@ -33,7 +33,6 @@ export type ImportWarningCode =
   | 'monthUnknown'
   | 'missingDate'
   | 'dateFromMonth'
-  | 'tagIgnored'
   | 'recurringIncomplete'
   | 'frequencyUnsupported'
   | 'recurringNoStart'
@@ -48,6 +47,7 @@ export interface ImportWarning {
 export interface ExcelImportStats {
   categories: number
   paymentMethods: number
+  tags: number
   oneTimeExpenses: number
   recurringExpenses: number
   incomes: number
@@ -84,6 +84,13 @@ function clean(v: CellValue | undefined): string {
   return String(v).trim()
 }
 
+function parseTagNames(value: CellValue | undefined): string[] {
+  return clean(value)
+    .split(/[,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
 const pad = (n: number, w = 2) => String(n).padStart(w, '0')
 const iso = (y: number, m: number, d: number) => `${pad(y, 4)}-${pad(m + 1)}-${pad(d)}`
 const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
@@ -109,10 +116,7 @@ class Tags {
   readonly items: Tag[] = []
   private readonly byKey = new Map<string, Tag>()
 
-  constructor(
-    private readonly prefix: string,
-    private readonly offset: number,
-  ) {}
+  constructor(private readonly prefix: string) {}
 
   add(name: string): string {
     const key = name.toLowerCase()
@@ -121,12 +125,29 @@ class Tags {
       tag = {
         id: stableId(`${this.prefix}:${key}`),
         name,
-        color: PALETTE[(this.items.length + this.offset) % PALETTE.length]!,
+        // Il colore si sceglie alla fine, quando ci sono tutte le voci (`colorize`).
+        color: '',
       }
       this.items.push(tag)
       this.byKey.set(key, tag)
     }
     return tag.id
+  }
+}
+
+/**
+ * Colori in equilibrio come nell'app: categorie, poi metodi di pagamento, poi tag, ognuno con la tinta più lontana
+ * da quelle già date (anche degli altri elenchi), "Altro" in grigio. Così due voci non hanno lo stesso colore.
+ */
+function colorize(lists: Tags[]): void {
+  const given: string[] = []
+  for (const list of lists) {
+    const colors = harmonizedColors(
+      list.items.map((t) => t.name),
+      given,
+    )
+    list.items.forEach((t, i) => (t.color = colors[i]!))
+    given.push(...colors)
   }
 }
 
@@ -168,8 +189,9 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
   const recurringSheet = findSheet(wb, 'recurring')
   if (!oneTimeSheet && !incomeSheet && !recurringSheet) throw new NotExpenseTrackerError()
 
-  const categories = new Tags('cat', 0)
-  const payments = new Tags('pm', 8)
+  const categories = new Tags('cat')
+  const payments = new Tags('pm')
+  const tags = new Tags('tag')
 
   const settings = findSheet(wb, 'settings')
   if (settings) {
@@ -177,6 +199,14 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       const row = settings.rows.get(n) ?? []
       if (clean(row[0])) categories.add(clean(row[0]))
       if (clean(row[3])) payments.add(clean(row[3]))
+    }
+    // Tag: colonna N, solo se in N3 c'è l'intestazione "TAG" (o "Tags") (altrimenti la colonna può contenere altro). Tutta la
+    // colonna dalla riga 4, saltando le celle vuote.
+    if (/^tags?$/i.test(clean(settings.rows.get(3)?.[13]))) {
+      for (let n = 4; n <= settings.maxRow; n++) {
+        const tag = clean(settings.rows.get(n)?.[13])
+        if (tag) tags.add(tag)
+      }
     }
   }
 
@@ -227,6 +257,11 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       if (!date) continue
       const key = name.toLowerCase()
       const k = occurrence(`${date}\u0000${key}\u0000${amount}`)
+      const tagIds: string[] = []
+      for (const tagName of parseTagNames(r.Tag)) {
+        const id = tags.add(tagName)
+        if (!tagIds.includes(id)) tagIds.push(id)
+      }
       oneTime.push({
         id: stableId(`ot:${date}:${key}:${amount}:${k}`),
         name,
@@ -235,9 +270,8 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
         categoryId: categories.add(clean(r.Categoria) || 'Other'),
         paymentMethodId: payments.add(clean(r['Metodo Pagamento']) || 'Other'),
         notes: clean(r.Note),
-        tagIds: [],
+        tagIds,
       })
-      if (clean(r.Tag)) warn('tagIgnored', { row: n, tag: clean(r.Tag) })
     }
   }
 
@@ -318,11 +352,13 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     if (filled) warn('loansSkipped', { count: filled })
   }
 
+  colorize([categories, payments, tags])
+
   const data: FinanceData = {
     schemaVersion: 2,
     categories: categories.items,
     paymentMethods: payments.items,
-    tags: [],
+    tags: tags.items,
     oneTimeExpenses: oneTime,
     recurringExpenses: recurring,
     incomes,
@@ -337,6 +373,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     stats: {
       categories: data.categories.length,
       paymentMethods: data.paymentMethods.length,
+      tags: data.tags.length,
       oneTimeExpenses: oneTime.length,
       recurringExpenses: recurring.length,
       incomes: incomes.length,
