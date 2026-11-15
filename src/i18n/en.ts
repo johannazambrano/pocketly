@@ -607,6 +607,7 @@ const en: typeof it = {
     targetLabel: 'Target',
     remainingLabel: 'Remaining',
     recommendedQuota: 'Recommended monthly quota',
+    overdueOutsideQuota: 'Overdue goals still need another {amount}',
     quotaPerMonth: '{amount} / mo',
     monthsLeft: '1 month left | {n} months left',
     status: {

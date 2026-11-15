@@ -396,6 +396,9 @@ function onDeleteFromForm() {
             {{ money(summary.totalMonthlyQuota) }}
             <span class="text-xs font-normal text-ink-4">/ {{ t('common.month').toLowerCase() }}</span>
           </p>
+          <p v-if="summary.overdueRemaining > 0" class="text-xs text-ink-4">
+            {{ t('savings.overdueOutsideQuota', { amount: money(summary.overdueRemaining) }) }}
+          </p>
 
           <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
             <span class="rounded-full bg-surface-3 px-2.5 py-0.5 font-medium text-ink-2">

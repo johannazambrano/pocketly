@@ -35,8 +35,10 @@ export interface SavingsSummary {
   totalCurrent: Cents
   /** Importo complessivo ancora mancante in centesimi */
   totalRemaining: Cents
-  /** Somma delle quote mensili consigliate per gli obiettivi non ancora completati */
+  /** Somma delle quote mensili consigliate per gli obiettivi attivi (gli scaduti non hanno più mesi davanti) */
   totalMonthlyQuota: Cents
+  /** Quanto manca agli obiettivi scaduti: non è una quota mensile, si mostra a parte */
+  overdueRemaining: Cents
   /** Progresso globale pesato (da 0 a 1) */
   overallProgress: number
   /** Conteggio obiettivi completati (currentAmount >= targetAmount) */
@@ -116,6 +118,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
   let totalCurrent: Cents = 0
   let totalRemaining: Cents = 0
   let totalMonthlyQuota: Cents = 0
+  let overdueRemaining: Cents = 0
   let completedCount = 0
   let activeCount = 0
   let overdueCount = 0
@@ -131,7 +134,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
       completedCount++
     } else if (st === 'overdue') {
       overdueCount++
-      totalMonthlyQuota += remaining
+      overdueRemaining += remaining
     } else {
       activeCount++
       totalMonthlyQuota += calculateSavingsQuota(g, today)
@@ -145,6 +148,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
     totalCurrent,
     totalRemaining,
     totalMonthlyQuota,
+    overdueRemaining,
     overallProgress,
     completedCount,
     activeCount,

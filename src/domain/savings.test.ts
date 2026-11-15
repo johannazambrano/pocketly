@@ -138,6 +138,7 @@ describe('savings domain', () => {
         totalCurrent: 0,
         totalRemaining: 0,
         totalMonthlyQuota: 0,
+        overdueRemaining: 0,
         overallProgress: 0,
         completedCount: 0,
         activeCount: 0,
@@ -161,7 +162,9 @@ describe('savings domain', () => {
       expect(summary.totalTarget).toBe(200000) // 500 + 1200 + 300
       expect(summary.totalCurrent).toBe(120000) // 500 + 600 + 100
       expect(summary.totalRemaining).toBe(80000) // 0 + 600 + 200
-      expect(summary.totalMonthlyQuota).toBe(30000) // 0 + 10000 + 20000
+      // Lo scaduto non entra nella quota al mese: i 200 € che gli mancano stanno a parte
+      expect(summary.totalMonthlyQuota).toBe(10000)
+      expect(summary.overdueRemaining).toBe(20000)
       expect(summary.overallProgress).toBe(0.6) // 120000 / 200000
       expect(summary.completedCount).toBe(1)
       expect(summary.activeCount).toBe(1)

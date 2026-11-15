@@ -605,6 +605,7 @@ export default {
     targetLabel: 'Obiettivo',
     remainingLabel: 'Mancano',
     recommendedQuota: 'Quota mensile consigliata',
+    overdueOutsideQuota: 'In più mancano {amount} agli obiettivi scaduti',
     quotaPerMonth: '{amount} / mese',
     monthsLeft: 'manca 1 mese | mancano {n} mesi',
     status: {
