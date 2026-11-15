@@ -15,9 +15,9 @@ collegamento, senza ripeterne il testo.
 |---|---|---|---|---|
 | PKT-01 | Filtro del mese nelle Entrate | fatto nel ramo, da unire | media | Jonny |
 | PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
-| PKT-03 | Scegliere tra inserimenti rapidi e modelli di spesa | da fare | alta | Johanna, Jonny |
-| PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | in attesa di PKT-03 | alta | Johanna |
-| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di PKT-03 | alta | Johanna |
+| PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
+| PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | da fare | alta | Johanna |
+| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | da fare | alta | Johanna |
 | PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
@@ -29,14 +29,17 @@ Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, 
 
 ## Come si usa
 
+I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si pubblica (è il ramo che
+`update.sh` porta sul server).
+
 1. **Le attività non si spostano.** Restano in ordine di numero; cambia solo la riga `Stato` (e la stessa riga
    del riepilogo). Spostare blocchi tra sezioni fa andare in conflitto i rami che toccano il file insieme.
 2. **Nuova attività:** il numero successivo (`PKT-12`, `PKT-13`…), una riga nel riepilogo e un blocco qui sotto
    con `Stato`, `Perché`, `Fatto quando` e `Storia`. Per un difetto già descritto in
    [known-issues.md](known-issues.md) basta il collegamento.
 3. **Prendere un'attività:** si mette `in corso` e il proprio nome con un piccolo commit **direttamente su
-   `main`**, così gli altri lo vedono subito e non la prendono in due.
-4. **Chiudere un'attività:** `fatto` (o `fatto nel ramo, da unire` se il ramo non è ancora in `main`) nel ramo
+   `develop`**, così gli altri lo vedono subito e non la prendono in due.
+4. **Chiudere un'attività:** `fatto` (o `fatto nel ramo, da unire` se il ramo non è ancora in `develop`) nel ramo
    del lavoro, nello stesso commit della modifica, con una riga in `Storia`: data, cosa e commit.
 5. **Storico:** le attività chiuse restano qui. A fine anno quelle `fatto` e `annullato` passano in
    `docs/archivio/attivita-ANNO.md`, lasciando nel riepilogo solo quelle aperte.
@@ -63,28 +66,35 @@ Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, 
 - **Storia:**
   - 2026-11-13 aperta (Jonny).
 
-### PKT-03 — Scegliere tra inserimenti rapidi e modelli di spesa
-- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna, Jonny
-- **Perché:** `feature/inserimenti-rapidi` (spese frequenti con un tocco) e il commit «duplicazione rapida e chip
-  template spese frequenti» di `feature/funzionalita-strategiche` fanno quasi la stessa cosa. I due rami toccano
-  20 file in comune, compresi formato dei dati, migrazione e sincronizzazione: unirli entrambi vorrebbe dire due
-  funzioni doppie e due cambi del formato dei dati.
-- **Fatto quando:** resta una sola funzione e l'altra è tolta dal suo ramo.
+### PKT-03 — Inserimenti rapidi e Frequenti: dove sta ciascuno
+- **Stato:** fatto · **Chi:** Johanna, Jonny
+- **Perché:** sono due funzioni diverse. I «Frequenti» di `feature/funzionalita-strategiche` sono suggerimenti
+  automatici che compilano il modulo; gli inserimenti rapidi di `feature/inserimenti-rapidi` sono scorciatoie
+  scelte da chi usa l'app, salvate e sincronizzate, che registrano la spesa con un tocco. Unite così come sono,
+  però, mettevano nel modulo «Nuova spesa» due righe di pulsanti quasi uguali, spesso con le stesse voci.
+- **Decisione:** ognuno al suo posto. Nel modulo «Nuova spesa» solo i Frequenti; gli inserimenti rapidi solo
+  nella barra di Dashboard e Variabili. Nel modulo resta la casella per salvare una spesa come rapido.
 - **Storia:**
   - 2026-11-15 aperta (revisione dei rami di Jonny).
+  - 2026-11-15 chiarito che non sono doppioni; scelta la soluzione «ognuno al suo posto» (Johanna, Jonny). Il
+    lavoro si fa in PKT-04: togliere la barra dei rapidi dal modulo.
+  - 2026-11-15 barra tolta dal modulo in `feature/inserimenti-rapidi` (`5ba2035`).
 
 ### PKT-04 — Rivedere e unire `feature/inserimenti-rapidi`
-- **Stato:** in attesa di PKT-03 · **Priorità:** alta · **Chi:** Johanna
-- **Fatto quando:** revisione fatta, correzioni fatte, ramo in `main`.
+- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
+- **Fatto quando:** revisione fatta, correzioni fatte, barra dei rapidi tolta dal modulo «Nuova spesa» (PKT-03),
+  ramo in `develop`.
 - **Storia:**
   - 2026-11-15 aperta.
+  - 2026-11-15 revisione: da correggere l'ordine dei rapidi che si perde con la sincronizzazione, i conflitti con
+    i P2 della critique 12 (modulo dei rapidi da allineare agli altri moduli) e l'avviso «Annulla» che dura 6 s.
 
 ### PKT-05 — Rivedere e unire `feature/funzionalita-strategiche`
-- **Stato:** in attesa di PKT-03 · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
 - **Perché:** è il ramo più grande (ricerca globale, esportazione CSV ed Excel, entrate con note e tag,
   salvadanai, confronto tra periodi, modelli di spesa). Una prima revisione è del 2026-11-12; da allora sono
   arrivati altri commit.
-- **Fatto quando:** revisione aggiornata, correzioni fatte, ramo in `main`; chiude anche PKT-01.
+- **Fatto quando:** revisione aggiornata, correzioni fatte, ramo in `develop`; chiude anche PKT-01.
 - **Storia:**
   - 2026-11-12 prima revisione.
   - 2026-11-15 aperta.
