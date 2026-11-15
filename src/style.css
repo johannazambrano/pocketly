@@ -558,3 +558,25 @@
   color: var(--color-accent-strongest);
   box-shadow: none;
 }
+
+/*
+ * Un campo con un errore (`aria-invalid`, vedi `useFormErrors`): bordo e anello nel colore dell'errore, su ogni
+ * piattaforma. `:root:root` per stare sopra le regole dei fogli per piattaforma qui sopra, che tolgono il bordo.
+ */
+:root:root .field[aria-invalid='true'] {
+  border-color: var(--color-negative);
+  box-shadow: 0 0 0 1px var(--color-negative);
+}
+
+/*
+ * L'importo in testa ai moduli di spesa ed entrata: è la prima cosa che si scrive, quindi più grande degli altri campi,
+ * con le cifre allineate.
+ */
+:root:root .field.field-amount {
+  min-height: 3.25rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}

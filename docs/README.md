@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-10
+verified: 2026-11-13
 ---
 
 # Indice della Documentazione di Pocketly
@@ -25,6 +25,7 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Voglio **aggiungere una nuova schermata/vista** | [Guida: Aggiungere una Vista](guide/aggiungere-una-vista.md) |
 | Voglio **aggiungere un nuovo campo** a una transazione o modello | [Guida: Aggiungere un Campo ai Dati](guide/aggiungere-un-campo-ai-dati.md) |
 | Voglio eseguire i **test** o preparare una nuova build | [Guida: Test e Release](guide/test-e-release.md) |
+| Voglio vedere **cosa c'è da fare** o prendere in carico un task | [Backlog del Progetto](backlog.md) |
 | Voglio verificare i **limiti o bug noti** dell'applicazione | [Stato e Difetti Noti](known-issues.md) |
 | Voglio configurare il **deploy su Proxmox LXC con Nginx** | [Deploy Proxmox](architettura/deploy.md) |
 
@@ -38,6 +39,7 @@ docs/
 ├── panoramica.md                      <-- Visione d'insieme e flussi utente ad alto livello
 ├── NOTIFICHE.md                       <-- Guida completa notifiche locali e push
 ├── IMPORTA_DA_EXCEL.md                <-- Istruzioni migrazione dati da fogli Excel
+├── backlog.md                         <-- Attività da fare, priorità e assegnatari (umani + IA)
 ├── known-issues.md                    <-- Registro difetti aperti verificati sul codice
 ├── architettura/
 │   ├── frontend.md                    <-- Strati Vue 3, Pinia, routing, i18n, PWA

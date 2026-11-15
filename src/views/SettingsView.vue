@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useBackupStore } from '@/stores/backup'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
@@ -36,7 +37,12 @@ const build = computed(() =>
 )
 
 const persistent = ref<boolean | null>(null)
+const route = useRoute()
+/** Riquadro del backup: l'avviso «Vai al backup» porta qui (`/impostazioni#backup`) e lo mette a fuoco. */
+const backupCard = ref<HTMLElement | null>(null)
 onMounted(async () => {
+  // Lo scorrimento lo fa il router (scrollBehavior con l'ancora); qui solo il fuoco, per tastiera e lettore di schermo.
+  if (route.hash === '#backup') backupCard.value?.focus({ preventScroll: true })
   try {
     persistent.value = (await navigator.storage?.persisted?.()) ?? false
   } catch {
@@ -202,7 +208,7 @@ async function importBackup(event: Event) {
 // --- importazione da Excel ------------------------------------------------
 
 const excelPreview = ref<ExcelImportResult | null>(null)
-const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods']
+const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods', 'tags']
 
 function excelErrorKey(e: unknown): string {
   if (e instanceof NotExpenseTrackerError) return 'excelImport.notTracker'
@@ -261,8 +267,8 @@ function changeLocale(code: LocaleCode) {
     <PageHeader :title="t('settings.title')" />
 
     <div class="lg:columns-2 lg:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2">
+      <div id="backup" ref="backupCard" tabindex="-1" aria-labelledby="backup-title" class="card space-y-3 focus:outline-none">
+        <h3 id="backup-title" class="text-sm font-semibold text-ink-2">
           <i class="fa-solid fa-cloud-arrow-down mr-1 text-accent-icon"></i> {{ t('settings.backupTitle') }}
         </h3>
         <p class="text-xs text-ink-4">{{ t('settings.backupHint') }}</p>

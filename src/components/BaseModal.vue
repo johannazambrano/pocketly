@@ -25,7 +25,11 @@ import { useAppearanceStore } from '@/stores/appearance'
  * `formId`: l'id del modulo dentro la finestra. Su iPhone la barra del foglio diventa "Annulla · titolo · Fine", con
  * Fine che invia quel modulo (come nelle app Apple); su Android il ✕ sparisce perché "Annulla" sta in fondo al modulo.
  */
-const props = defineProps<{ open: boolean; title: string; dirty?: boolean; formId?: string }>()
+/**
+ * `initialFocus`: selettore del campo da cui partire all'apertura invece del titolo (l'importo di una spesa nuova:
+ * chi registra al volo scrive subito, con la tastiera già aperta).
+ */
+const props = defineProps<{ open: boolean; title: string; dirty?: boolean; formId?: string; initialFocus?: string }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 const ui = useUiStore()
@@ -86,7 +90,8 @@ function onKey(e: KeyboardEvent) {
 
 /**
  * All'apertura il focus va sul titolo della finestra: il lettore di schermo annuncia dove si è, e sul telefono non si
- * apre la tastiera da sola. Alla chiusura torna sull'elemento da cui si era aperta, se c'è ancora.
+ * apre la tastiera da sola. Con `initialFocus` va invece su quel campo (la finestra si annuncia comunque con il suo
+ * nome, da `aria-labelledby`). Alla chiusura torna sull'elemento da cui si era aperta, se c'è ancora.
  */
 let opener: HTMLElement | null = null
 let isOpen = false
@@ -100,7 +105,8 @@ async function onOpen() {
   layer.value = 50 + stack.length
   setAppInert(true)
   await nextTick()
-  heading.value?.focus()
+  const field = props.initialFocus ? dialog.value?.querySelector<HTMLElement>(props.initialFocus) : null
+  ;(field ?? heading.value)?.focus()
 }
 function onClose() {
   if (!isOpen) return
