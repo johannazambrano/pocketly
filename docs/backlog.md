@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-15
+verified: 2026-11-16
 ---
 
 # Backlog di Pocketly
@@ -24,6 +24,10 @@ collegamento, senza ripeterne il testo.
 | PKT-09 | Critique 12 della dashboard: P1 e P2 | fatto | — | Johanna |
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
+| PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
+| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | da fare | media | libero |
+| PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
+| PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -166,3 +170,31 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-13 tag da Settings e da One-time (`52bed8f`, Jonny).
   - 2026-11-15 colonna N letta solo con l'intestazione «TAG», colori come nell'app anche nello script Python
     (`2250894`); in `main` (`384514e`).
+
+### PKT-12 — Progettare l'autenticazione nell'app
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** definire un meccanismo di autenticazione per l'app in linea con l'architettura di Pocketly.
+- **Fatto quando:** progetto dell'autenticazione completato e documentato (requisiti, flussi, sessione/credenziali, impatti su dati locali, sync e server); eventuali attività di sviluppo aperte nel backlog.
+- **Storia:**
+  - 2026-11-16 aperta.
+
+### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** valutare se l'app è scalabile rispetto alla crescita di dati, dispositivi e utilizzo ed eventualmente progettare la scalabilità.
+- **Fatto quando:** analisi di scalabilità completata e documentata con eventuali limiti individuati e progetto evolutivo; eventuali attività operative aperte nel backlog.
+- **Storia:**
+  - 2026-11-16 aperta.
+
+### PKT-14 — Analisi di sicurezza ed eventuali fix
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** eseguire un'analisi di sicurezza dell'app (frontend, crittografia, sync, notifiche, backend e deploy) e applicare gli eventuali fix necessari.
+- **Fatto quando:** analisi di sicurezza completata e documentata; eventuali fix applicati e verificati (o tracciati in attività dedicate se richiedono interventi ampi).
+- **Storia:**
+  - 2026-11-16 aperta.
+
+### PKT-15 — Analisi per migliorare la struttura attuale dell'app
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** analizzare la struttura attuale dell'app per individuare possibili miglioramenti architetturali, organizzativi e di manutenibilità.
+- **Fatto quando:** analisi completata e documentata con proposte concrete di miglioramento e relativi task operativi aperti nel backlog.
+- **Storia:**
+  - 2026-11-16 aperta.
