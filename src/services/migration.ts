@@ -89,12 +89,12 @@ const V1_FREQUENCIES: Record<string, Frequency> = {
   Annual: 'annual',
 }
 
-/** Converte i dati del prototipo HTML (backup JSON o localStorage) nello schema v2. */
+/** Converte i dati del prototipo HTML (backup JSON o localStorage) nel formato corrente. */
 export function migrateV1(raw: Obj): FinanceData {
   const categories = new TagRegistry(raw.categories)
   const payments = new TagRegistry(raw.paymentMethods)
   const data: FinanceData = {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: categories.tags,
     paymentMethods: payments.tags,
     tags: [],
@@ -266,7 +266,7 @@ function normalizeV2(raw: Obj): FinanceData {
   }
 
   return {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories,
     paymentMethods: normalizeTags(raw.paymentMethods),
     tags: normalizeTags(raw.tags),
@@ -368,7 +368,8 @@ function normalizeV2(raw: Obj): FinanceData {
 
 /**
  * Accetta qualsiasi formato di dati noto e lo porta allo schema corrente:
- * - schema v2 (questa app);
+ * - formato 2 e 3 dell'app (il 3 ha in più solo campi facoltativi: lo stesso `normalizeV2` li legge tutti e due e
+ *   scrive il 3);
  * - prototipo multi-anno (`finances_tracker_multiyr`, con `years`);
  * - prototipo mono-anno più vecchio (`finances_tracker_2026`).
  */
@@ -377,7 +378,7 @@ export function parseBackup(raw: unknown): FinanceData {
   if (typeof raw.schemaVersion === 'number' && raw.schemaVersion > CURRENT_SCHEMA_VERSION) {
     throw new NewerFormatError(raw.schemaVersion)
   }
-  if (raw.schemaVersion === 2) return normalizeV2(raw)
+  if (raw.schemaVersion === 2 || raw.schemaVersion === 3) return normalizeV2(raw)
   if (isObj(raw.years)) return migrateV1(raw)
   if (Array.isArray(raw.oneTimeExpenses)) {
     return migrateV1({ categories: raw.categories, paymentMethods: raw.paymentMethods, years: { '2026': raw } })

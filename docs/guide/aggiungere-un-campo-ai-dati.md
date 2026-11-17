@@ -50,11 +50,12 @@ Se il nuovo campo appartiene alla radice di `FinanceData` o a una configurazione
 
 ## 3. Gestire la Normalizzazione in `src/services/migration.ts`
 
-Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da IndexedDB, da file JSON o dal server: `parseBackup` instrada verso `normalizeV2` (schema v2) o `migrateV1` (prototipi). `normalizeV2` ricostruisce ogni voce campo per campo, quindi **un campo non elencato lì viene scartato** al primo caricamento.
+Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da IndexedDB, da file JSON o dal server: `parseBackup` instrada verso `normalizeV2` (formati 2 e 3) o `migrateV1` (prototipi). `normalizeV2` ricostruisce ogni voce campo per campo, quindi **un campo non elencato lì viene scartato** al primo caricamento.
 
 1. Se il campo è aggiunto a una transazione o entità, aggiungilo nella mappatura corrispondente dentro `normalizeV2` (per le spese una tantum è la callback passata a `valid<OneTimeExpense>` per `oneTimeExpenses`); per le impostazioni globali usa `normalizeForecast` o `normalizeBudget`, per categorie, metodi e tag `normalizeTags`. Se il campo ha senso anche per i dati dei prototipi, valuta `migrateV1`.
 2. Assicurati che se il campo è assente nel JSON (es. backup vecchio dell'utente), venga assegnato un fallback sicuro (es. `receiptUrl: typeof raw.receiptUrl === 'string' ? raw.receiptUrl : undefined`).
-3. **Scrivi un test unitario** in `src/services/migration.test.ts` che verifichi:
+3. **Alza `CURRENT_SCHEMA_VERSION`** in `src/types/models.ts` (e accetta il numero nuovo in `parseBackup`) se un'app già pubblicata scarterebbe il campo: alla prima modifica lo cancellerebbe anche sul server e sugli altri dispositivi. Con il numero più alto l'app vecchia si ferma su «da aggiornare» invece di sincronizzare. Vedi [Dati e sincronizzazione](../architettura/dati-e-sincronizzazione.md#protezione-versioni-più-recenti-newerformaterror).
+4. **Scrivi un test unitario** in `src/services/migration.test.ts` che verifichi:
    - Che un vecchio backup privo del campo venga importato con successo senza errori.
    - Che un backup con il nuovo campo preservi correttamente il valore.
 

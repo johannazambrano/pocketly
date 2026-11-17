@@ -33,7 +33,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
-| [`src/types/models.ts`](../../src/types/models.ts) | Modello dati TypeScript (schema v2): `FinanceData`, `Cents`, `IsoDate`, `Id`, `OneTimeExpense`, `QuickExpense`, `RecurringExpense`, `Income`, `Loan`, `Repayment`, `Simulation`, `ForecastSettings`, `BudgetSettings` | `services/migration.test.ts` | [modello-dati.md](./modello-dati.md) |
+| [`src/types/models.ts`](../../src/types/models.ts) | Modello dati TypeScript (formato 3, `CURRENT_SCHEMA_VERSION`): `FinanceData`, `Cents`, `IsoDate`, `Id`, `OneTimeExpense`, `QuickExpense`, `RecurringExpense`, `Income`, `Loan`, `Repayment`, `Simulation`, `ForecastSettings`, `BudgetSettings` | `services/migration.test.ts` | [modello-dati.md](./modello-dati.md) |
 
 ---
 
@@ -132,7 +132,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/services/storage.ts`](../../src/services/storage.ts) | Interfaccia `DataStore` e implementazione `deviceDataStore` per salvataggio su IndexedDB | — | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/backup.ts`](../../src/services/backup.ts) | Esportazione/importazione file di backup (JSON in chiaro o cifrato con password) | [`src/services/backup.test.ts`](../../src/services/backup.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/backupCrypto.ts`](../../src/services/backupCrypto.ts) | Crittografia client-side: PBKDF2 + AES-GCM 256 via Web Crypto API nativa | [`src/services/backup.test.ts`](../../src/services/backup.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
-| [`src/services/migration.ts`](../../src/services/migration.ts) | Migrazione schemi (v1 -> v2) e parsing difensivo `parseBackup` contro dati malformati | [`src/services/migration.test.ts`](../../src/services/migration.test.ts) | [modello-dati.md](./modello-dati.md) |
+| [`src/services/migration.ts`](../../src/services/migration.ts) | Migrazione dei formati (prototipi -> corrente, 2 -> 3) e parsing difensivo `parseBackup` contro dati malformati; `NewerFormatError` per i formati più nuovi | [`src/services/migration.test.ts`](../../src/services/migration.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/services/excelImport.ts`](../../src/services/excelImport.ts) | Parsing client-side di file Excel `.xlsx` e conversione diretta in voci Pocketly | [`src/services/excelImport.test.ts`](../../src/services/excelImport.test.ts) | [IMPORTA_DA_EXCEL.md](../IMPORTA_DA_EXCEL.md) |
 | [`src/services/csvExport.ts`](../../src/services/csvExport.ts) | Esportazione dei movimenti in formato CSV con BOM UTF-8 per Excel e supporto Web Share | [`src/services/csvExport.test.ts`](../../src/services/csvExport.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/exportData.ts`](../../src/services/exportData.ts) | Esportazione tabellare strutturata per sezioni in Excel (.xlsx a più fogli) e CSV; testi (promemoria, addebiti saltati o cambiati) dalle traduzioni dell'app nella lingua scelta; le parti di una ricorrente divisa restano in fila | [`src/services/exportData.test.ts`](../../src/services/exportData.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
