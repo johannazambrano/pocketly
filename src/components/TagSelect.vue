@@ -10,7 +10,7 @@ const finance = useFinanceStore()
   <label class="block">
     <span class="field-label">{{ label }}</span>
     <select v-model="model" required class="field">
-      <option v-for="tag in finance.data[kind]" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
+      <option v-for="tag in finance.sortedTags[kind]" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
     </select>
   </label>
 </template>
