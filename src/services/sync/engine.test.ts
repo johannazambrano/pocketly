@@ -254,3 +254,24 @@ describe('formato dei dati', () => {
     expect(b.data.schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
   })
 })
+
+describe('aggiornamento dell\'app', () => {
+  it('la prima sincronizzazione dopo l\'aggiornamento non annulla le modifiche fatte su un altro dispositivo', async () => {
+    const server = new FakeServer()
+    const income = { id: 'i1', name: 'Stipendio', amount: 100000, date: '2026-11-01', categoryId: 'cat', paymentMethodId: 'pm' }
+    const gone = { ...income, id: 'i2', name: 'Rimborso' }
+    // Dati come li scriveva l'app precedente: entrate senza note e tag.
+    const old = { ...emptyData(), schemaVersion: 2, incomes: [income, gone] } as unknown as FinanceData
+    const a = new Device(server, structuredClone(old))
+    await a.connect()
+    const b = new Device(server, structuredClone(old))
+    await b.connect()
+    // Sull'altro dispositivo (ancora con l'app precedente) un'entrata cambia e una sparisce.
+    b.data.incomes = [{ ...income, amount: 120000 }] as FinanceData['incomes']
+    await b.sync()
+    // Questo dispositivo si aggiorna: al riavvio i dati salvati passano al formato corrente, la base no.
+    a.data = parseBackup(JSON.parse(JSON.stringify(a.data)))
+    await a.sync()
+    expect(a.data.incomes.map((i) => [i.id, i.amount])).toEqual([['i1', 120000]])
+  })
+})
