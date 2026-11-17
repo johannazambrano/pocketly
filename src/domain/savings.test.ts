@@ -173,6 +173,17 @@ describe('savings domain', () => {
       expect(summary.overdueCount).toBe(1)
       expect(summary.totalCount).toBe(3)
     })
+
+    it('nel progresso complessivo un salvadanaio oltre l\'obiettivo non copre quelli indietro', () => {
+      const goals: SavedGoal[] = [
+        makeGoal({ id: '1', name: 'Oltre', targetAmount: 10000, currentAmount: 20000, targetDate: '2026-12-01' }),
+        makeGoal({ id: '2', name: 'Vuoto', targetAmount: 10000, currentAmount: 0, targetDate: '2026-12-01' }),
+      ]
+      const summary = savingsSummary(goals, TODAY)
+      expect(summary.overallProgress).toBe(0.5)
+      expect(summary.totalCurrent).toBe(20000)
+      expect(summary.totalRemaining).toBe(10000)
+    })
   })
 
   describe('sortSavingsGoals', () => {
