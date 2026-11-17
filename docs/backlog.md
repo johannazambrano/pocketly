@@ -28,6 +28,8 @@ collegamento, senza ripeterne il testo.
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | da fare | media | libero |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
+| PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
+| PKT-17 | Categorie, metodi e tag in ordine alfabetico | da fare | alta | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -199,3 +201,48 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** analisi completata e documentata con proposte concrete di miglioramento e relativi task operativi aperti nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+
+### PKT-16 — Impostazioni divise per argomento
+- **Stato:** da decidere · **Priorità:** media · **Chi:** libero
+- **Perché:** la pagina Impostazioni è un’unica lista di riquadri (backup, sincronizzazione, notifiche, import da
+  Excel, esportazione, inserimenti rapidi, categorie, metodi di pagamento, tag, lingua, aspetto, aggiornamenti,
+  privacy): al telefono va scorsa a lungo per trovare una funzione, e sul PC le due colonne mescolano argomenti
+  diversi. Categorie, metodi e tag sono tre liste lunghe una sotto l’altra, senza ricerca né ordine.
+- **Proposta (da decidere):** un indice con le voci raggruppate, ognuna apre una sua pagina, come le impostazioni di
+  iPhone e Android. Sul PC indice a sinistra e pagina a destra.
+  1. **Dati e backup:** backup, import da Excel, esportazione Excel/CSV.
+  2. **Sincronizzazione:** server, stato, disconnessione.
+  3. **Notifiche:** promemoria delle ricorrenti.
+  4. **Categorie**, 5. **Metodi di pagamento**, 6. **Tag:** una pagina ciascuno (vedi sotto).
+  7. **Inserimenti rapidi.**
+  8. **Aspetto e lingua:** stile, tema, lingua.
+  9. **Informazioni:** aggiornamenti dell'app, privacy.
+
+  Nelle pagine di categorie, metodi e tag: elenco in ordine alfabetico, campo per cercare quando le voci sono
+  tante, accanto a ogni voce quante spese la usano; tocco sulla voce per rinominarla, cambiarne il colore o
+  eliminarla (in un foglio dal basso al telefono, invece dei pulsanti su ogni riga); «Aggiungi» in cima.
+
+  Ogni voce dell'indice mostra una riga di stato (es. «Ultimo backup 3 giorni fa», «Sincronizzato»), così molte
+  cose si vedono senza aprirle. Pagine figlie con un indirizzo proprio (es. `/impostazioni/dati`): si possono
+  collegare (l'avviso del backup porta a `/impostazioni/dati#backup`, PKT-10) e il «Indietro» funziona.
+- **Alternative:** schede in cima alla pagina (più semplici, ma al telefono 5-6 schede non entrano e si sommano alla
+  barra in basso); riquadri che si aprono e chiudono nella stessa pagina (poco lavoro, ma la pagina resta lunga e
+  non si collega a una sezione).
+- **Fatto quando:** scelta la soluzione; Impostazioni divise per argomento su iPhone, Android e PC; categorie,
+  metodi e tag con una pagina ciascuno, ordinati e cercabili; l'avviso del backup porta ancora al riquadro giusto;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-17 aperta (Johanna).
+
+### PKT-17 — Categorie, metodi e tag in ordine alfabetico
+- **Stato:** da fare · **Priorità:** alta · **Chi:** libero
+- **Perché:** nei menu dei moduli (spesa, entrata, ricorrente, inserimenti rapidi), nei filtri e in Impostazioni
+  categorie, metodi di pagamento e tag compaiono nell’ordine in cui sono stati creati: con molte voci quella
+  cercata non si trova a colpo d’occhio. Solo la pagina Budget le ordina già.
+- **Come:** un solo elenco ordinato nello store (ordine alfabetico che segue la lingua dell’app, senza badare a
+  maiuscole e accenti), usato da tutti i menu al posto dell’elenco grezzo. I dati salvati non cambiano, quindi
+  sincronizzazione e backup non sono toccati.
+- **Fatto quando:** ogni menu, filtro ed elenco mostra le voci in ordine alfabetico; un test lo verifica;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-17 aperta (Johanna).
