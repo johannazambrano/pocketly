@@ -140,6 +140,14 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     in `develop` con `274bfef`. Senza, un telefono rimasto alla versione di `main` scartava salvadanai, rapidi e
     note e tag delle entrate, e alla prima modifica li cancellava anche dal server. Ora si ferma su «aggiorna
     l'app» finché non si ricarica: dopo la pubblicazione ricaricare l'app su tutti i telefoni.
+  - 2026-11-17 revisione del codice di `develop` rispetto a `main`: 9 correzioni nel ramo `fix/revisione-develop`,
+    in `develop` con `caa0c46`. Base della sincronizzazione al formato corrente, così il primo giro dopo
+    l'aggiornamento non annulla le modifiche fatte altrove (`883cfd8`); salvadanai sotto zero (`02a5a65`) e
+    cancellati mentre altrove ci si versava (`3067b5d`); Ctrl+K sopra un modulo (`58262f8`); progresso complessivo
+    dei salvadanai (`5a79d25`); `.xlsx` con caratteri invisibili (`310dba4`) e CSV letti come formule (`23340d6`);
+    promemoria del backup con i soli rapidi (`6267392`); schede del Budget per i lettori di schermo (`ad6a404`).
+    Restano fuori `csvExport.ts` (`PKT-19`) e i filtri dei tag copiati tra Entrate e Spese (da riordinare con
+    `PKT-15`).
 
 ### PKT-07 — Conti con saldo iniziale e prestiti nel saldo
 - **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
