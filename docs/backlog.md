@@ -25,7 +25,7 @@ collegamento, senza ripeterne il testo.
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
-| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto nel ramo, da unire | — | Jonny |
+| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
@@ -186,7 +186,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
-- **Stato:** fatto nel ramo, da unire · **Chi:** Jonny
+- **Stato:** fatto · **Chi:** Jonny
 - **Perché:** valutare se l'app è scalabile rispetto alla crescita di dati, dispositivi e utilizzo ed eventualmente progettare la scalabilità.
 - **Risultato:** analisi completa, review sul codice e specifiche tecniche operative documentate in [Analisi e Progetto di Scalabilità](architettura/scalabilita.md). Per uso personale/familiare l'architettura attuale è adeguata; per i miglioramenti e i limiti individuati è stata aperta `PKT-18` (oltre al coordinamento con `PKT-12` per il multi-tenant).
 - **Fatto quando:** analisi di scalabilità completata e documentata con eventuali limiti individuati e progetto evolutivo; eventuali attività operative aperte nel backlog.
@@ -194,6 +194,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
   - 2026-11-17 presa in carico (`542241c`, Jonny).
   - 2026-11-17 completata nel ramo `docs/scalabilita` (Jonny): redatta [scalabilita.md](architettura/scalabilita.md) con le specifiche tecniche complete, aggiornato [README.md](README.md) e aperta `PKT-18` con link diretto all'analisi.
+  - 2026-11-17 in `develop` con `5e53524` (ramo `docs/scalabilita`, commit `0c3a83e`).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
