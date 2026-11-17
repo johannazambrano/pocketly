@@ -25,11 +25,12 @@ collegamento, senza ripeterne il testo.
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
-| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | in corso | media | Jonny |
+| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto nel ramo, da unire | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | da fare | alta | libero |
+| PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -181,12 +182,14 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
-- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
+- **Stato:** fatto nel ramo, da unire · **Chi:** Jonny
 - **Perché:** valutare se l'app è scalabile rispetto alla crescita di dati, dispositivi e utilizzo ed eventualmente progettare la scalabilità.
+- **Risultato:** analisi completa, review sul codice e specifiche tecniche operative documentate in [Analisi e Progetto di Scalabilità](architettura/scalabilita.md). Per uso personale/familiare l'architettura attuale è adeguata; per i miglioramenti e i limiti individuati è stata aperta `PKT-18` (oltre al coordinamento con `PKT-12` per il multi-tenant).
 - **Fatto quando:** analisi di scalabilità completata e documentata con eventuali limiti individuati e progetto evolutivo; eventuali attività operative aperte nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
-  - 2026-11-17 presa in carico (Jonny).
+  - 2026-11-17 presa in carico (`542241c`, Jonny).
+  - 2026-11-17 completata nel ramo `docs/scalabilita` (Jonny): redatta [scalabilita.md](architettura/scalabilita.md) con le specifiche tecniche complete, aggiornato [README.md](README.md) e aperta `PKT-18` con link diretto all'analisi.
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -246,3 +249,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-17 aperta (Johanna).
+
+### PKT-18 — Implementazione piano di scalabilità (da PKT-13)
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** dare seguito ai miglioramenti e ai limiti individuati nell'analisi di scalabilità (`PKT-13`) prima che la crescita di dati o dispositivi crei rallentamenti. Vedi il piano e le specifiche tecniche complete in [Analisi e Progetto di Scalabilità](architettura/scalabilita.md).
+- **Come partire:** chi prende in carico l'attività può suddividerla in sotto-task operativi a partire dalle fasi e dalle specifiche della [Sezione 4 di scalabilita.md](architettura/scalabilita.md#4-specifiche-tecniche-per-limplementazione-guida-operativa) (quick wins server/client a zero breaking changes, ricerca/liste lunghe, compressione payload cifrati, evoluzione multi-tenant coordinata con `PKT-12`).
+- **Fatto quando:** gli interventi prioritari (o i rispettivi sotto-task aperti) sono implementati, testati e documentati; analisi di scalabilità aggiornata.
+- **Storia:**
+  - 2026-11-17 aperta da analisi PKT-13 (Jonny).
