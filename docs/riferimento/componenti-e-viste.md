@@ -157,9 +157,9 @@ Gli errori stanno sotto il campo sbagliato, non in fondo al modulo: i moduli han
 
 ### Tag, Categorie e Metodi
 - **`TagBadge.vue`**: Pillola colorata che visualizza il nome di una categoria, metodo o tag recuperando dinamicamente il colore associato. Fondo e testo vengono da `badgeColors`, quindi restano leggibili anche con un colore scelto a mano. Con `clickable` è un vero `<button>` (raggiungibile da tastiera e toccabile dentro le righe che si aprono al tocco).
-- **`TagSelect.vue`**: Menu a tendina uniforme per la selezione rapida di categorie o metodi di pagamento.
-- **`TagInput.vue`**: Componente combinato per associare tag multipli a una transazione o crearne di nuovi all'istante.
-- **`TagManager.vue`**: Interfaccia di amministrazione delle liste anagrafiche (aggiunta con il colore più lontano da quelli usati, scelta del colore a mano o casuale tra le tinte ammesse, cancellazione sicura con controllo riferimenti orfani).
+- **`TagSelect.vue`**: Menu a tendina uniforme per la selezione rapida di categorie o metodi di pagamento, in ordine alfabetico (`finance.sortedTags`).
+- **`TagInput.vue`**: Componente combinato per associare tag multipli a una transazione o crearne di nuovi all'istante; i tag da scegliere sono in ordine alfabetico.
+- **`TagManager.vue`**: Interfaccia di amministrazione delle liste anagrafiche, in ordine alfabetico (aggiunta con il colore più lontano da quelli usati, scelta del colore a mano o casuale tra le tinte ammesse, cancellazione sicura con controllo riferimenti orfani).
 
 ### Impostazioni, Notifiche e Sync
 - **`SyncSettings.vue`**: Gestione del collegamento al server di sincronizzazione, visualizzazione stato ETag, disconnessione pulita con revoca di iscrizione e promemoria dal server (`leaveServer`).

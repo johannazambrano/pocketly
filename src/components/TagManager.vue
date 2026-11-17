@@ -11,7 +11,7 @@ const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
 
-const tags = computed(() => finance.data[props.kind])
+const tags = computed(() => finance.sortedTags[props.kind])
 const newName = ref('')
 
 function add() {

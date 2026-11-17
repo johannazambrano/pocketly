@@ -103,7 +103,7 @@ function addSimulation() {
             <p class="field-label">{{ t('forecast.estimateCategories') }}</p>
             <div class="flex flex-wrap gap-2">
               <label
-                v-for="c in finance.data.categories"
+                v-for="c in finance.sortedTags.categories"
                 :key="c.id"
                 class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-medium focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon"
                 :class="chosenCategories.has(c.id) ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"

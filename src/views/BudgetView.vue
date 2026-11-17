@@ -72,7 +72,7 @@ const monthLabel = computed(() => `${month(monthIndex.value)} ${year.value}`)
 const b = computed(() => budgetMonth(finance.data, year.value, monthIndex.value, finance.today))
 const isCurrent = computed(() => b.value.daysLeft !== null)
 const hasLimits = computed(() => b.value.lines.length > 0)
-const categories = computed(() => [...finance.data.categories].sort((a, c) => a.name.localeCompare(c.name)))
+const categories = computed(() => finance.sortedTags.categories)
 
 const TEXT: Record<BudgetStatus, string> = { ok: 'text-accent', warning: 'text-caution-icon', over: 'text-negative' }
 

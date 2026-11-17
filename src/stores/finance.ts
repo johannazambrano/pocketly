@@ -23,6 +23,8 @@ import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
 import { savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
+import { sortTagsByName } from '@/domain/tags'
+import { LOCALES, i18n } from '@/i18n'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
 import { addDays, lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
@@ -213,6 +215,20 @@ export const useFinanceStore = defineStore('finance', () => {
     paymentMethods: new Map(data.value.paymentMethods.map((t) => [t.id, t])),
     tags: new Map(data.value.tags.map((t) => [t.id, t])),
   }))
+
+  /**
+   * Categorie, metodi e tag in ordine alfabetico nella lingua dell'app: menu, filtri e Impostazioni li leggono da
+   * qui invece che da `data` (che li tiene nell'ordine di creazione, e così restano salvati e sincronizzati).
+   */
+  const sortedTags = computed(() => {
+    const locale = i18n.global.locale.value
+    const intl = LOCALES.find((l) => l.code === locale)?.intl ?? locale
+    return {
+      categories: sortTagsByName(data.value.categories, intl),
+      paymentMethods: sortTagsByName(data.value.paymentMethods, intl),
+      tags: sortTagsByName(data.value.tags, intl),
+    }
+  })
 
   function tag(kind: TagKind, id: Id): Tag | undefined {
     return tagMaps.value[kind].get(id)
@@ -554,6 +570,7 @@ export const useFinanceStore = defineStore('finance', () => {
     savingsGoals,
     savingsSummaryData,
     quickExpenses,
+    sortedTags,
     tag,
     lastUsedTags,
     saveOneTime,
