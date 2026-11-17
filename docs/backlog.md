@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-16
+verified: 2026-11-17
 ---
 
 # Backlog di Pocketly
@@ -25,7 +25,7 @@ collegamento, senza ripeterne il testo.
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
-| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | da fare | media | libero |
+| PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | in corso | media | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
@@ -181,11 +181,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
 - **Perché:** valutare se l'app è scalabile rispetto alla crescita di dati, dispositivi e utilizzo ed eventualmente progettare la scalabilità.
 - **Fatto quando:** analisi di scalabilità completata e documentata con eventuali limiti individuati e progetto evolutivo; eventuali attività operative aperte nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-17 presa in carico (Jonny).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
