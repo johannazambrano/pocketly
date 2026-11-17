@@ -17,7 +17,7 @@ collegamento, senza ripeterne il testo.
 | PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
-| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di due decisioni (ramo già in `develop`) | alta | Johanna |
+| PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | fatto | — | Johanna |
 | PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
@@ -31,6 +31,7 @@ collegamento, senza ripeterne il testo.
 | PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
+| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -104,7 +105,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     (gli inserimenti rapidi sono un dato nuovo che si sincronizza).
 
 ### PKT-05 — Rivedere e unire `feature/funzionalita-strategiche`
-- **Stato:** in attesa di due decisioni (ramo già in `develop`) · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** è il ramo più grande (ricerca globale, esportazione CSV ed Excel, entrate con note e tag,
   salvadanai, confronto tra periodi, modelli di spesa). Una prima revisione è del 2026-11-12; da allora sono
   arrivati altri commit.
@@ -123,6 +124,8 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     salvadanai con «Annulla» (`962f8dd`); confronto leggibile al telefono (`d17aba4`).
   - 2026-11-15 in `develop` (`d95cb45`). Si chiude dopo le due decisioni. Prima di pubblicare: aggiornare l'app su
     tutti i telefoni (dati nuovi che si sincronizzano: salvadanai e loro movimenti, note e tag delle entrate).
+  - 2026-11-17 chiusa (Johanna, Jonny): le due decisioni non bloccano la pubblicazione, si pubblica com'è e si
+    decidono dopo in `PKT-19`.
 
 ### PKT-06 — Pubblicare su Proxmox e provare sui telefoni
 - **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
@@ -265,3 +268,16 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** gli interventi prioritari (o i rispettivi sotto-task aperti) sono implementati, testati e documentati; analisi di scalabilità aggiornata.
 - **Storia:**
   - 2026-11-17 aperta da analisi PKT-13 (Jonny).
+
+### PKT-19 — Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05)
+- **Stato:** da decidere · **Priorità:** bassa · **Chi:** libero
+- **Perché:** due decisioni rimaste aperte da `PKT-05`, rimandate per pubblicare intanto quello che c'è.
+  1. I soldi messi nei salvadanai oggi non riducono la cifra principale della Dashboard: chi mette da parte 200 €
+     vede ancora quei 200 € come disponibili. Si può aggiungere una riga «di cui messi da parte» o contare il
+     versamento come un'uscita. Vedi [Stato e Difetti Noti](known-issues.md) §5.
+  2. `src/services/csvExport.ts` (con il suo test) non è usato dall'app: l'esportazione passa da `exportData.ts`.
+     Va tolto o collegato.
+- **Fatto quando:** prese le due decisioni con Jonny; fatto quello che ne segue; documentazione e mappa del codice
+  aggiornate.
+- **Storia:**
+  - 2026-11-17 aperta da `PKT-05` (Johanna).
