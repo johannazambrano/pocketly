@@ -152,6 +152,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 - `deepEqual(a, b)`: comparatore strutturale ricorsivo per oggetti, array e tipi primitivi.
 - `mergeFinanceData(base, local, remote)`: unisce i due rami di modifiche.
 - Internamente (funzione non esportata `mergeIdList`) le liste di entità vengono confrontate per `id`, gestendo in modo pulito inserimenti, modifiche e cancellazioni senza bisogno di campi tombstone.
+- Dopo l'unione `repairReferences` rimette le categorie, i metodi di pagamento e i salvadanai cancellati su un dispositivo ma usati da voci aggiunte o cambiate sull'altro (es. un versamento in un salvadanaio cancellato altrove: il salvadanaio torna con i movimenti nuovi), e toglie dalle impostazioni le categorie che non esistono più.
 
 ---
 

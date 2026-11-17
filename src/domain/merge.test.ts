@@ -109,6 +109,27 @@ describe('mergeFinanceData', () => {
     expect(merged.categories.map((c) => c.id)).toEqual(['cat-food', 'cat-home'])
   })
 
+  it('ripristina un salvadanaio cancellato altrove se qui ci si è versato nel frattempo', () => {
+    const goal = { id: 'g1', name: 'Vacanze', targetAmount: 100000, targetDate: '2027-06-30', color: '#0284c7' }
+    const before = { id: 'm-old', goalId: 'g1', date: '2026-11-01', amount: 5000 }
+    const base = data({ savingsGoals: [goal], savingsMovements: [before] })
+    // Un dispositivo cancella il salvadanaio (e i suoi movimenti), l'altro ci versa 100 €.
+    const remote = data()
+    const local = clone(base)
+    local.savingsMovements.push({ id: 'm-new', goalId: 'g1', date: '2026-11-17', amount: 10000 })
+    const merged = mergeFinanceData(base, local, remote)
+    expect(merged.savingsGoals.map((g) => g.id)).toEqual(['g1'])
+    expect(merged.savingsMovements.map((m) => m.id)).toEqual(['m-new'])
+  })
+
+  it('un salvadanaio cancellato senza versamenti nuovi resta cancellato', () => {
+    const goal = { id: 'g1', name: 'Vacanze', targetAmount: 100000, targetDate: '2027-06-30', color: '#0284c7' }
+    const base = data({ savingsGoals: [goal], savingsMovements: [{ id: 'm-old', goalId: 'g1', date: '2026-11-01', amount: 5000 }] })
+    const merged = mergeFinanceData(base, data(), clone(base))
+    expect(merged.savingsGoals).toEqual([])
+    expect(merged.savingsMovements).toEqual([])
+  })
+
   it('toglie dalle impostazioni le categorie cancellate e non più usate', () => {
     const base = data({ budget: { limits: { 'cat-home': 50000 } }, forecast: { estimateIncome: true, incomeCategoryIds: ['cat-home'] } })
     const local = clone(base)
