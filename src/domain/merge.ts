@@ -145,11 +145,25 @@ function repairReferences(data: FinanceData, ...sources: FinanceData[]): Finance
     }
   }
 
+  // Un salvadanaio cancellato su un dispositivo mentre sull'altro ci si versava: torna, con i movimenti arrivati
+  // dopo (quelli di prima li ha tolti chi l'ha cancellato), invece di lasciare il versamento senza salvadanaio.
+  const goals = [...(data.savingsGoals ?? [])]
+  const knownGoals = new Set(goals.map((g) => g.id))
+  for (const m of data.savingsMovements ?? []) {
+    if (knownGoals.has(m.goalId)) continue
+    const goal = sources.map((s) => (s.savingsGoals ?? []).find((g) => g.id === m.goalId)).find(Boolean)
+    if (goal) {
+      goals.push(goal)
+      knownGoals.add(goal.id)
+    }
+  }
+
   const limits = Object.fromEntries(Object.entries(data.budget.limits).filter(([id]) => known.categories.has(id)))
   return {
     ...data,
     categories: lists.categories,
     paymentMethods: lists.paymentMethods,
+    savingsGoals: goals,
     forecast: { ...data.forecast, incomeCategoryIds: data.forecast.incomeCategoryIds.filter((id) => known.categories.has(id)) },
     budget: { ...data.budget, limits },
   }

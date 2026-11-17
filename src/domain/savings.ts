@@ -22,6 +22,17 @@ export function savedAmounts(movements: SavingsMovement[]): Map<string, Cents> {
   return totals
 }
 
+/**
+ * L'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. Di solito è `change`
+ * stesso; se la somma dei movimenti è sotto zero (due prelievi fatti su due dispositivi prima di sincronizzare),
+ * l'app mostra 0 e il movimento copre anche quel buco: un versamento di 30 € porta il salvadanaio a 30 €, non lo
+ * lascia a 0 € in silenzio.
+ */
+export function movementFor(movements: SavingsMovement[], goalId: string, change: Cents): Cents {
+  const raw = movements.reduce((sum, m) => (m.goalId === goalId ? sum + m.amount : sum), 0)
+  return raw < 0 ? change - raw : change
+}
+
 /** Aggiunge a ogni salvadanaio l'importo accantonato. */
 export function withSavedAmounts(goals: SavingsGoal[], movements: SavingsMovement[]): SavedGoal[] {
   const totals = savedAmounts(movements)
@@ -39,7 +50,10 @@ export interface SavingsSummary {
   totalMonthlyQuota: Cents
   /** Quanto manca agli obiettivi scaduti: non è una quota mensile, si mostra a parte */
   overdueRemaining: Cents
-  /** Progresso globale pesato (da 0 a 1) */
+  /**
+   * Progresso globale pesato (da 0 a 1): ogni salvadanaio conta al massimo il suo obiettivo, così quello che uno ha in
+   * più non fa sembrare a buon punto gli altri.
+   */
   overallProgress: number
   /** Conteggio obiettivi completati (currentAmount >= targetAmount) */
   completedCount: number
@@ -119,6 +133,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
   let totalRemaining: Cents = 0
   let totalMonthlyQuota: Cents = 0
   let overdueRemaining: Cents = 0
+  let reachedTowardsTargets: Cents = 0
   let completedCount = 0
   let activeCount = 0
   let overdueCount = 0
@@ -126,6 +141,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
   for (const g of goals) {
     totalTarget += g.targetAmount
     totalCurrent += g.currentAmount
+    reachedTowardsTargets += Math.min(Math.max(0, g.currentAmount), g.targetAmount)
     const remaining = calculateRemainingAmount(g)
     totalRemaining += remaining
 
@@ -141,7 +157,7 @@ export function savingsSummary(goals: SavedGoal[], today: IsoDate): SavingsSumma
     }
   }
 
-  const overallProgress = totalTarget > 0 ? Math.min(1, Math.max(0, totalCurrent / totalTarget)) : 0
+  const overallProgress = totalTarget > 0 ? Math.min(1, reachedTowardsTargets / totalTarget) : 0
 
   return {
     totalTarget,

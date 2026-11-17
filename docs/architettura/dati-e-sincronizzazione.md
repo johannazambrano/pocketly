@@ -114,7 +114,7 @@ Se i dati presenti sul server o in un file di backup importato presentano uno `s
 ## 4. Algoritmo di Merge a Tre Vie (`src/domain/merge.ts`)
 
 L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è una funzione pura e deterministica che opera su tre elementi:
-1. `base`: lo snapshot dei dati all'ultima sincronizzazione riuscita.
+1. `base`: lo snapshot dei dati all'ultima sincronizzazione riuscita. Prima di ogni giro `syncOnce` lo fa passare da `parseBackup`, come i dati locali e quelli del server: se l'ha salvato una versione precedente dell'app gli mancherebbero i campi aggiunti dopo (es. note e tag delle entrate), ogni voce sembrerebbe cambiata su questo dispositivo e nell'unione vincerebbe sulle modifiche fatte altrove.
 2. `local`: lo stato attuale sul dispositivo locale.
 3. `remote`: lo stato attuale ricevuto dal server.
 

@@ -113,7 +113,10 @@ export interface SyncContext {
  * ha scritto nel frattempo) ricomincia. Restituisce il nuovo stato da salvare.
  */
 export async function syncOnce(ctx: SyncContext): Promise<SyncState> {
-  const state = ctx.state
+  // La base passa dallo stesso controllo dei dati locali e del server: salvata da una versione precedente dell'app,
+  // le mancano i campi che `parseBackup` aggiunge (es. note e tag delle entrate). Senza, dopo un aggiornamento ogni
+  // voce sembrerebbe cambiata su questo dispositivo, e nell'unione vincerebbe sulle modifiche fatte altrove.
+  const state = { ...ctx.state, base: parseBackup(snapshot(ctx.state.base)) }
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const res = await ctx.api.pull(state.version)
     let toPush: FinanceData

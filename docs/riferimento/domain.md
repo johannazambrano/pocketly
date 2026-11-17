@@ -152,6 +152,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 - `deepEqual(a, b)`: comparatore strutturale ricorsivo per oggetti, array e tipi primitivi.
 - `mergeFinanceData(base, local, remote)`: unisce i due rami di modifiche.
 - Internamente (funzione non esportata `mergeIdList`) le liste di entità vengono confrontate per `id`, gestendo in modo pulito inserimenti, modifiche e cancellazioni senza bisogno di campi tombstone.
+- Dopo l'unione `repairReferences` rimette le categorie, i metodi di pagamento e i salvadanai cancellati su un dispositivo ma usati da voci aggiunte o cambiate sull'altro (es. un versamento in un salvadanaio cancellato altrove: il salvadanaio torna con i movimenti nuovi), e toglie dalle impostazioni le categorie che non esistono più.
 
 ---
 
@@ -175,7 +176,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 ## 6. Promemoria Backup (`backupReminder.ts`)
 
 - `isReminderDue(meta, currentHash, hasData, now)`:
-  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
+  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`: spese, entrate, ricorrenti, prestiti, salvadanai o inserimenti rapidi), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
 
 ---
 
@@ -188,7 +189,8 @@ Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi
 - `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.
 - `calculateGoalProgress(goal)`: calcola la percentuale di avanzamento normalizzata tra 0 e 1.
 - `goalStatus(goal, today)`: determina lo stato dell'obiettivo tra `'completed'` (raggiunto o superato), `'overdue'` (data superata e saldo inferiore al target) e `'active'` (in corso nei tempi).
-- `savingsSummary(goals, today)`: produce metriche aggregate complete (totale target, totale accantonato, totale residuo, somma delle quote mensili dei soli obiettivi attivi, quanto manca agli obiettivi scaduti in `overdueRemaining`, progresso complessivo ponderato e conteggi per stato). Uno scaduto non entra nella quota mensile: non ha più mesi davanti, e sommarne tutto il mancante darebbe una cifra «al mese» falsa.
+- `savingsSummary(goals, today)`: produce metriche aggregate complete (totale target, totale accantonato, totale residuo, somma delle quote mensili dei soli obiettivi attivi, quanto manca agli obiettivi scaduti in `overdueRemaining`, progresso complessivo ponderato, in cui ogni salvadanaio conta al massimo il suo obiettivo, e conteggi per stato). Uno scaduto non entra nella quota mensile: non ha più mesi davanti, e sommarne tutto il mancante darebbe una cifra «al mese» falsa.
+- `movementFor(movements, goalId, change)`: l'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. `savedAmounts` non mostra mai meno di zero, ma la somma dei movimenti può andarci (due prelievi su due dispositivi prima di sincronizzare): in quel caso il movimento copre anche il buco, così un versamento o l'importo scritto nel modulo arrivano davvero. Lo usa `finance.addSavingsMovement`.
 - `sortSavingsGoals(goals, today)`: ordina la lista degli obiettivi dando priorità a quelli scaduti, poi a quelli attivi con scadenza più prossima, collocando i completati in fondo.
 
 ## 8. Ordine di categorie, metodi e tag (`tags.ts`)

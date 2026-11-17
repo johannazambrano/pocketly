@@ -66,7 +66,7 @@ Il modulo `migration.ts` ripulisce e convalida qualsiasi dato proveniente da Ind
 L'algoritmo `mergeFinanceData` è generico (`mergeValue`): non elenca i campi di `FinanceData`.
 - Qualsiasi elenco di voci con `id` viene unito voce per voce con `mergeIdList`, che tratta ogni voce come un'unità. Se il nuovo campo è dentro un'entità con ID, il merge funziona automaticamente.
 - Anche una **nuova collezione di entità** o una **nuova proprietà alla radice** viene unita senza registrarla: gli oggetti si uniscono chiave per chiave, gli elenchi di stringhe come insiemi (`mergeStringSet`), gli altri valori con `conflict` (vince questo dispositivo).
-- Va toccato `merge.ts` solo se il campo punta a una categoria o a un metodo di pagamento con un nome diverso da `categoryId`/`paymentMethodId` (`TAG_REFS`) o se è un'impostazione che va ripulita in `repairReferences`. In quel caso aggiungi un test in `src/domain/merge.test.ts`.
+- Va toccato `merge.ts` solo se il campo punta a una categoria o a un metodo di pagamento con un nome diverso da `categoryId`/`paymentMethodId` (`TAG_REFS`) o se è un'impostazione che va ripulita in `repairReferences` (che rimette anche le categorie, i metodi e i salvadanai cancellati altrove ma ancora usati da voci nuove). In quel caso aggiungi un test in `src/domain/merge.test.ts`.
 
 ---
 

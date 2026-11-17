@@ -5,6 +5,8 @@ import {
   calculateRemainingAmount,
   calculateSavingsQuota,
   goalStatus,
+  movementFor,
+  savedAmounts,
   savingsSummary,
   sortSavingsGoals,
   withSavedAmounts,
@@ -171,6 +173,17 @@ describe('savings domain', () => {
       expect(summary.overdueCount).toBe(1)
       expect(summary.totalCount).toBe(3)
     })
+
+    it('nel progresso complessivo un salvadanaio oltre l\'obiettivo non copre quelli indietro', () => {
+      const goals: SavedGoal[] = [
+        makeGoal({ id: '1', name: 'Oltre', targetAmount: 10000, currentAmount: 20000, targetDate: '2026-12-01' }),
+        makeGoal({ id: '2', name: 'Vuoto', targetAmount: 10000, currentAmount: 0, targetDate: '2026-12-01' }),
+      ]
+      const summary = savingsSummary(goals, TODAY)
+      expect(summary.overallProgress).toBe(0.5)
+      expect(summary.totalCurrent).toBe(20000)
+      expect(summary.totalRemaining).toBe(10000)
+    })
   })
 
   describe('sortSavingsGoals', () => {
@@ -184,5 +197,23 @@ describe('savings domain', () => {
 
       expect(sorted.map((g) => g.id)).toEqual(['overdue', 'activeSoon', 'activeLater', 'completed'])
     })
+  })
+})
+
+describe('movementFor', () => {
+  const mv = (goalId: string, amount: number) => ({ id: `${goalId}-${amount}`, goalId, date: '2026-11-01', amount })
+
+  it('di solito registra la variazione così com\'è', () => {
+    expect(movementFor([mv('g', 5000)], 'g', 3000)).toBe(3000)
+    expect(movementFor([mv('g', 5000)], 'g', -2000)).toBe(-2000)
+    expect(movementFor([], 'g', 1000)).toBe(1000)
+  })
+
+  it('sotto zero copre anche il buco, così il salvadanaio arriva all\'importo che si vede più la variazione', () => {
+    // Due prelievi da 50 € su 50 € fatti su due dispositivi: somma -50 €, si vede 0 €.
+    const movements = [mv('g', 5000), mv('g', -5000), { ...mv('g', -5000), id: 'altro' }, mv('h', -9000)]
+    const amount = movementFor(movements, 'g', 3000)
+    expect(amount).toBe(8000)
+    expect(savedAmounts([...movements, mv('g', amount)]).get('g')).toBe(3000)
   })
 })

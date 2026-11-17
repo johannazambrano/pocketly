@@ -8,6 +8,10 @@
 let openCount = 0
 /** Le finestre aperte, dall'ultima in cima: solo quella in cima risponde a Esc e tiene il Tab. */
 const stack: symbol[] = []
+/** C'è almeno una finestra aperta (es. per non aprire la ricerca sopra un modulo con Ctrl+K). */
+export function isAnyModalOpen(): boolean {
+  return openCount > 0
+}
 function setAppInert(on: boolean) {
   const app = document.getElementById('app')
   if (app) app.inert = on

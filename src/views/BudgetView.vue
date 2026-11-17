@@ -189,7 +189,7 @@ function onDeleteFromForm() {
     <!-- Intestazione pagina con selettore mese o pulsante nuovo salvadanaio -->
     <PageHeader :title="activeTab === 'savings' ? t('savings.title') : t('budget.title')">
       <!-- Azioni per tab Budget Mensile -->
-      <div v-if="activeTab === 'budget'" id="panel-budget" role="tabpanel" aria-labelledby="tab-budget" class="flex items-center gap-1">
+      <div v-if="activeTab === 'budget'" class="flex items-center gap-1">
         <button
           ref="prevMonthBtn"
           type="button"
@@ -262,7 +262,13 @@ function onDeleteFromForm() {
     </div>
 
     <!-- VISTA 1: Budget Spese Mensile -->
-    <div v-if="activeTab === 'budget'" class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+    <div
+      v-if="activeTab === 'budget'"
+      id="panel-budget"
+      role="tabpanel"
+      aria-labelledby="tab-budget"
+      class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]"
+    >
       <div class="space-y-4">
         <p v-if="isWholeYear" class="px-1 text-xs text-ink-4">
           <i class="fa-solid fa-circle-info mr-1 text-ink-5"></i>{{ t('budget.wholeYearNote', { month: monthLabelInSentence }) }}

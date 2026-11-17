@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createDefaultData } from '@/domain/defaults'
 import {
+  escapeCsvField,
   executeExport,
   exportSectionToCsv,
   exportToCsvZip,
@@ -237,5 +238,16 @@ describe('exportData (archivio ZIP di CSV e singoli CSV)', () => {
 
     const rOne = await executeExport('onetime', data, { year: 2026 })
     expect(rOne.filename.endsWith('.csv')).toBe(true)
+  })
+})
+
+describe('escapeCsvField', () => {
+  it('un testo che Excel leggerebbe come formula resta testo, gli importi negativi restano numeri', () => {
+    expect(escapeCsvField('=HYPERLINK("http://x","y")', ';', ',')).toBe(`"'=HYPERLINK(""http://x"",""y"")"`)
+    expect(escapeCsvField('-2 rate', ';', ',')).toBe("'-2 rate")
+    expect(escapeCsvField('+39 333', ';', ',')).toBe("'+39 333")
+    expect(escapeCsvField('@casa', ';', ',')).toBe("'@casa")
+    expect(escapeCsvField('Caffè', ';', ',')).toBe('Caffè')
+    expect(escapeCsvField(-12.5, ';', ',')).toBe('-12,50')
   })
 })

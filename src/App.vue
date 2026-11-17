@@ -13,6 +13,7 @@ import ToastHost from '@/components/ToastHost.vue'
 import UpdatePrompt from '@/components/UpdatePrompt.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import SearchModal from '@/components/SearchModal.vue'
+import { isAnyModalOpen } from '@/components/BaseModal.vue'
 import LoadErrorScreen from '@/components/LoadErrorScreen.vue'
 
 const { t } = useI18n()
@@ -33,7 +34,10 @@ function removeQuickEdit() {
 function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
-    ui.searchOpen = !ui.searchOpen
+    // Con un modulo aperto la ricerca non si apre: scegliendo un risultato si cambierebbe pagina e il modulo si
+    // chiuderebbe senza chiedere, perdendo quello che si è scritto.
+    if (ui.searchOpen) ui.closeSearch()
+    else if (!isAnyModalOpen()) ui.searchOpen = true
   }
 }
 
