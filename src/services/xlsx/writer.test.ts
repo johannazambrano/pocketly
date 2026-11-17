@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildXlsxWorkbook, type SheetDefinition } from './writer'
+import { buildXlsxWorkbook, escapeXml, type SheetDefinition } from './writer'
 import { createZipArchive } from './zipWriter'
 import { openZip } from './zip'
 import { readWorkbook } from './workbook'
@@ -88,5 +88,13 @@ describe('writer (.xlsx)', () => {
     const s4 = wb.sheets[3]!
     expect(s4.name).toBe('Prestiti')
     expect(s4.rows.get(2)).toEqual(['Prestito Marco', 300.0, 'Dato', '2026-02-10', 100.0, 200.0, 'In corso', 'Rate'])
+  })
+})
+
+describe('escapeXml', () => {
+  it('toglie i caratteri di controllo che rendono il file illeggibile, tiene tab e a capo', () => {
+    expect(escapeXml('Spesa\u000Bcasa\u0000')).toBe('Spesacasa')
+    expect(escapeXml('riga 1\nriga 2\tfine')).toBe('riga 1\nriga 2\tfine')
+    expect(escapeXml('A & B <c>')).toBe('A &amp; B &lt;c&gt;')
   })
 })

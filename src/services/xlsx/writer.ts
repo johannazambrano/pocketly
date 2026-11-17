@@ -13,9 +13,15 @@ export interface SheetDefinition {
   rows: CellScalar[][]
 }
 
-function escapeXml(value: unknown): string {
+/**
+ * Testo pronto per l'XML del foglio. Toglie anche i caratteri di controllo che XML 1.0 non ammette (tranne tab e a
+ * capo): un nome o una nota incollati da un'altra app possono contenerne uno invisibile, ed Excel direbbe che il file
+ * è danneggiato.
+ */
+export function escapeXml(value: unknown): string {
   if (value === null || value === undefined) return ''
   return String(value)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
