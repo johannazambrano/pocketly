@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-15
+verified: 2026-11-17
 ---
 
 # Mappa del Codice
@@ -156,7 +156,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/composables/useTrendText.ts`](../../src/composables/useTrendText.ts) | Testi, icona e colori del confronto con i mesi precedenti (`tagTrends`), condivisi da `BreakdownList` e `BreakdownDetailView` | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/composables/useHighlight.ts`](../../src/composables/useHighlight.ts) | Voce aperta dalla ricerca (`?highlight=`): la porta in vista, la segna per qualche secondo e toglie il parametro dall'indirizzo | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/composables/useDirty.ts`](../../src/composables/useDirty.ts) | Tracciamento modifiche non salvate dei moduli (`useDirty`: `dirty`, `reset`), usato da `BaseModal` per chiedere conferma prima di chiudere | — | [frontend.md](../architettura/frontend.md) |
-| [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Periodo prima e dopo: mese per mese (con cambio d'anno), o anno per anno sull'anno intero | — | [frontend.md](../architettura/frontend.md) |
+| [`src/composables/useMonthStep.ts`](../../src/composables/useMonthStep.ts) | Periodo prima e dopo: mese per mese (con cambio d'anno e `effectiveMonth` opzionale per viste sempre mensili come il Budget), o anno per anno sull'anno intero | [`src/composables/useMonthStep.test.ts`](../../src/composables/useMonthStep.test.ts) | [frontend.md](../architettura/frontend.md) |
 | [`src/composables/useQuickExpenseTrigger.ts`](../../src/composables/useQuickExpenseTrigger.ts) | Azione condivisa degli inserimenti rapidi: 1-tap con toast Modifica/Annulla se importo fisso, apertura/precompilazione modulo altrimenti | — | [componenti-e-viste.md](./componenti-e-viste.md) |
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua (`setLocale`) e composable helper `useFormat` (`money`, `moneyWhole`, `amountInput`, `date`, `month`, `percent`) | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/it.ts`](../../src/i18n/it.ts) | Traduzioni in lingua italiana | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |

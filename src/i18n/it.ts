@@ -299,6 +299,7 @@ export default {
     },
     prevMonth: 'Mese precedente',
     nextMonth: 'Mese successivo',
+    wholeYearNote: 'Il budget è mensile: stai vedendo {month} (nelle altre pagine è selezionato tutto l’anno).',
     summary: 'Budget del mese',
     remaining: 'Ti restano {amount}',
     over: 'Superato di {amount}',

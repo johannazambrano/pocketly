@@ -7,6 +7,7 @@ import { useUiStore } from '@/stores/ui'
 import { useFormat } from '@/i18n'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import { budgetMonth, MIN_PACE_DAYS, suggestLimits, type BudgetStatus } from '@/domain/budget'
+import { useMonthStep, type MonthTarget } from '@/composables/useMonthStep'
 import {
   calculateGoalProgress,
   calculateMonthsRemaining,
@@ -65,9 +66,25 @@ function switchTab(tab: TabKey) {
 }
 
 // --- logica budget mensile ------------------------------------------------
-const monthIndex = ref(parseIsoDate(finance.today).month)
+const isWholeYear = computed(() => finance.selectedMonth === 'all')
+const monthIndex = computed(() => (finance.selectedMonth === 'all' ? parseIsoDate(finance.today).month : finance.selectedMonth))
 const year = computed(() => finance.selectedYear)
 const monthLabel = computed(() => `${month(monthIndex.value)} ${year.value}`)
+const monthLabelInSentence = computed(() =>
+  locale.value === 'it' ? monthLabel.value.toLocaleLowerCase('it') : monthLabel.value,
+)
+const { previous: prevMonth, next: nextMonth, go: goMonth } = useMonthStep(() => monthIndex.value)
+
+const prevMonthBtn = ref<HTMLButtonElement | null>(null)
+const nextMonthBtn = ref<HTMLButtonElement | null>(null)
+
+/** Se la freccia cliccata si disabilita al limite di `finance.years`, sposta il focus sull'altra invece di perderlo. */
+async function stepMonth(target: MonthTarget | null, fallback: HTMLButtonElement | null, event: MouseEvent) {
+  const button = event.currentTarget as HTMLButtonElement
+  if (!goMonth(target)) return
+  await nextTick()
+  if (button.disabled && fallback && !fallback.disabled) fallback.focus()
+}
 
 const b = computed(() => budgetMonth(finance.data, year.value, monthIndex.value, finance.today))
 const isCurrent = computed(() => b.value.daysLeft !== null)
@@ -174,21 +191,23 @@ function onDeleteFromForm() {
       <!-- Azioni per tab Budget Mensile -->
       <div v-if="activeTab === 'budget'" id="panel-budget" role="tabpanel" aria-labelledby="tab-budget" class="flex items-center gap-1">
         <button
+          ref="prevMonthBtn"
           type="button"
           class="icon-btn"
           :aria-label="t('budget.prevMonth')"
-          :disabled="monthIndex === 0"
-          @click="monthIndex--"
+          :disabled="!prevMonth"
+          @click="stepMonth(prevMonth, nextMonthBtn, $event)"
         >
           <i class="fa-solid fa-chevron-left"></i>
         </button>
         <span class="min-w-32 text-center text-sm font-semibold text-ink-2" aria-live="polite">{{ monthLabel }}</span>
         <button
+          ref="nextMonthBtn"
           type="button"
           class="icon-btn"
           :aria-label="t('budget.nextMonth')"
-          :disabled="monthIndex === 11"
-          @click="monthIndex++"
+          :disabled="!nextMonth"
+          @click="stepMonth(nextMonth, prevMonthBtn, $event)"
         >
           <i class="fa-solid fa-chevron-right"></i>
         </button>
@@ -245,6 +264,9 @@ function onDeleteFromForm() {
     <!-- VISTA 1: Budget Spese Mensile -->
     <div v-if="activeTab === 'budget'" class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
       <div class="space-y-4">
+        <p v-if="isWholeYear" class="px-1 text-xs text-ink-4">
+          <i class="fa-solid fa-circle-info mr-1 text-ink-5"></i>{{ t('budget.wholeYearNote', { month: monthLabelInSentence }) }}
+        </p>
         <div v-if="!hasLimits" class="card space-y-1 text-sm text-ink-4">
           <p class="font-semibold text-ink-2">{{ t('budget.emptyTitle') }}</p>
           <p>{{ t('budget.emptyHint') }}</p>

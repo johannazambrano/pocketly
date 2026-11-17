@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-16
+verified: 2026-11-17
 ---
 
 # Backlog di Pocketly
@@ -14,7 +14,7 @@ collegamento, senza ripeterne il testo.
 | ID | Attività | Stato | Priorità | Chi |
 |---|---|---|---|---|
 | PKT-01 | Filtro del mese nelle Entrate | fatto | — | Jonny |
-| PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | da fare | media | libero |
+| PKT-02 | Il mese del Budget segue quello scelto nelle altre pagine | fatto nel ramo, da unire | — | Jonny |
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
 | PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | in attesa di due decisioni (ramo già in `develop`) | alta | Johanna |
@@ -64,13 +64,14 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-15 in `develop` con PKT-05 (`d95cb45`).
 
 ### PKT-02 — Il mese del Budget segue quello scelto nelle altre pagine
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto nel ramo, da unire · **Chi:** Jonny
 - **Perché:** il Budget ha un suo mese, separato da quello di Dashboard e Variabili. Vedi
-  [known-issues.md, punto 2](known-issues.md#2-indice-mese-locale-in-budgetview).
-- **Da decidere:** cosa mostra il Budget quando nelle altre pagine è scelto l'anno intero.
+  [known-issues.md, punto 2](known-issues.md#2-indice-mese-locale-in-budgetview-risolto).
+- **Decisione:** con l'anno intero (`'all'`) nelle altre pagine, il Budget mostra il mese corrente con nota informativa senza sovrascrivere `'all'` finché non si cambia mese; le frecce ‹ › usano `useMonthStep` (passaggio dicembre ↔ gennaio nei limiti di `finance.years`).
 - **Fatto quando:** cambiando pagina il mese resta lo stesso; nessun errore nel cambio del mese.
 - **Storia:**
   - 2026-11-13 aperta (Jonny).
+  - 2026-11-17 completata nel ramo `fix/budget-mese` (Jonny): `BudgetView.vue` legge `finance.selectedMonth` (fallback al mese corrente su `'all'`) e naviga con `useMonthStep`; aggiunti test in `useMonthStep.test.ts` e aggiornati `known-issues.md`, `componenti-e-viste.md`, `mappa-codice.md`.
 
 ### PKT-03 — Inserimenti rapidi e Frequenti: dove sta ciascuno
 - **Stato:** fatto · **Chi:** Johanna, Jonny
