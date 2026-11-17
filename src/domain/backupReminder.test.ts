@@ -30,6 +30,12 @@ describe('hasUserData', () => {
     expect(hasUserData(createDefaultData('it'))).toBe(false)
   })
 
+  it('gli inserimenti rapidi contano come dati utente', () => {
+    const data = createDefaultData('it')
+    data.quickExpenses.push({ id: 'q-1', name: 'Caffè', amount: 120, categoryId: data.categories[0]!.id, paymentMethodId: data.paymentMethods[0]!.id, notes: '' })
+    expect(hasUserData(data)).toBe(true)
+  })
+
   it('i salvadanai contano come dati utente', () => {
     const data = createDefaultData('it')
     data.savingsGoals.push({

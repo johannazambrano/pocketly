@@ -176,7 +176,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 ## 6. Promemoria Backup (`backupReminder.ts`)
 
 - `isReminderDue(meta, currentHash, hasData, now)`:
-  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
+  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`: spese, entrate, ricorrenti, prestiti, salvadanai o inserimenti rapidi), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
 
 ---
 
