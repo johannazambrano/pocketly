@@ -131,6 +131,10 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   spesa» la tastiera si apre da sola sull'importo.
 - **Storia:**
   - 2026-11-15 aperta.
+  - 2026-11-17 prima di pubblicare `develop`: dati portati al formato 3 nel ramo `fix/formato-dati-3` (`7d7d102`),
+    in `develop` con `274bfef`. Senza, un telefono rimasto alla versione di `main` scartava salvadanai, rapidi e
+    note e tag delle entrate, e alla prima modifica li cancellava anche dal server. Ora si ferma su «aggiorna
+    l'app» finché non si ricarica: dopo la pubblicazione ricaricare l'app su tutti i telefoni.
 
 ### PKT-07 — Conti con saldo iniziale e prestiti nel saldo
 - **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
