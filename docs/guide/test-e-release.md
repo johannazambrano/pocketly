@@ -6,7 +6,7 @@ source-files:
   - server/test_main.py
   - scripts/python.mjs
   - scripts/docs-check.mjs
-verified: 2026-11-11
+verified: 2026-11-17
 ---
 
 # Guida: Test, Build e Release
@@ -86,5 +86,6 @@ Prima di effettuare un commit, aprire una Pull Request o distribuire in produzio
 - [ ] `npm run test:server` passa con 100% di successo.
 - [ ] `npm run docs:check` non rileva link interrotti né file orfani.
 - [ ] `npm run build` genera la directory `dist/` senza avvisi critici.
+- [ ] Eseguito il collaudo manuale secondo la [Guida: Test Utente (UAT)](test-utente.md) (almeno lo Smoke Test pre-rilascio e la checklist deploy/sync).
 - [ ] Eventuali modifiche alle transazioni o al modello dati contengono il test di migrazione in `src/services/migration.test.ts`.
 - [ ] La [Mappa del Codice](../riferimento/mappa-codice.md) e la documentazione collegata sono aggiornate.

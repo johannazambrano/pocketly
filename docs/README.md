@@ -26,6 +26,7 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Voglio **aggiungere una nuova schermata/vista** | [Guida: Aggiungere una Vista](guide/aggiungere-una-vista.md) |
 | Voglio **aggiungere un nuovo campo** a una transazione o modello | [Guida: Aggiungere un Campo ai Dati](guide/aggiungere-un-campo-ai-dati.md) |
 | Voglio eseguire i **test** o preparare una nuova build | [Guida: Test e Release](guide/test-e-release.md) |
+| Voglio eseguire i **test manuali utente (UAT)** prima di un rilascio | [Guida: Test Utente (UAT)](guide/test-utente.md) |
 | Voglio vedere **cosa c'è da fare** o prendere in carico un task | [Backlog del Progetto](backlog.md) |
 | Voglio verificare i **limiti o bug noti** dell'applicazione | [Stato e Difetti Noti](known-issues.md) |
 | Voglio configurare il **deploy su Proxmox LXC con Nginx** | [Deploy Proxmox](architettura/deploy.md) |
@@ -57,7 +58,8 @@ docs/
 │   ├── aggiungere-una-vista.md        <-- Step-by-step per nuove viste
 │   ├── aggiungere-un-campo-ai-dati.md <-- Step-by-step modello + migrazione + merge
 │   ├── sync-e-notifiche.md            <-- Setup e collaudo sync e Web Push
-│   └── test-e-release.md              <-- Guida esecuzione test e build
+│   ├── test-e-release.md              <-- Guida esecuzione test e build
+│   └── test-utente.md                 <-- Checklist test manuali utente (UAT) pre-rilascio
 └── archivio/
     ├── README.md                      <-- Indice documenti storici archiviati
     ├── PANORAMICA.md                  <-- Vecchia panoramica iniziale
