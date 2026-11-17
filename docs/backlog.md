@@ -29,7 +29,7 @@ collegamento, senza ripeterne il testo.
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
-| PKT-17 | Categorie, metodi e tag in ordine alfabetico | da fare | alta | libero |
+| PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
@@ -238,7 +238,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta (Johanna).
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
-- **Stato:** da fare · **Priorità:** alta · **Chi:** libero
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** nei menu dei moduli (spesa, entrata, ricorrente, inserimenti rapidi), nei filtri e in Impostazioni
   categorie, metodi di pagamento e tag compaiono nell’ordine in cui sono stati creati: con molte voci quella
   cercata non si trova a colpo d’occhio. Solo la pagina Budget le ordina già.
@@ -249,6 +249,9 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-17 aperta (Johanna).
+  - 2026-11-17 fatta nel ramo `feature/pkt-17-ordine-alfabetico` (`e624dcf`), in `develop` con `812a0ff`:
+    `finance.sortedTags` usato da menu a tendina, scelta dei tag, Impostazioni, Budget e Previsioni. I filtri dei
+    tag in Spese ed Entrate restano ordinati per importo.
 
 ### PKT-18 — Implementazione piano di scalabilità (da PKT-13)
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
