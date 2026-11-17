@@ -1,0 +1,944 @@
+{
+  "schemaVersion": 2,
+  "categories": [
+    {
+      "id": "cat-0001-cibo-bevande",
+      "name": "Cibo e bevande",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "cat-0002-casa-utenze",
+      "name": "Casa e utenze",
+      "color": "#0284c7"
+    },
+    {
+      "id": "cat-0003-trasporti",
+      "name": "Trasporti",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "cat-0004-auto-moto",
+      "name": "Auto e moto",
+      "color": "#f97316"
+    },
+    {
+      "id": "cat-0005-salute-benessere",
+      "name": "Salute e benessere",
+      "color": "#ec4899"
+    },
+    {
+      "id": "cat-0006-digitale-abbonamenti",
+      "name": "Digitale e abbonamenti",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "cat-0007-svago-cultura",
+      "name": "Svago e cultura",
+      "color": "#10b981"
+    },
+    {
+      "id": "cat-0008-abbigliamento-shopping",
+      "name": "Abbigliamento e shopping",
+      "color": "#d946ef"
+    },
+    {
+      "id": "cat-0009-vacanze-viaggi",
+      "name": "Vacanze e viaggi",
+      "color": "#06b6d4"
+    },
+    {
+      "id": "cat-0010-finanza-investimenti",
+      "name": "Finanza e investimenti",
+      "color": "#14b8a6"
+    },
+    {
+      "id": "cat-0011-stipendio",
+      "name": "Stipendio",
+      "color": "#6366f1"
+    },
+    {
+      "id": "cat-0012-altro-extra",
+      "name": "Altro ed entrate extra",
+      "color": "#64748b"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "pm-0001-bonifico",
+      "name": "Bonifico bancario",
+      "color": "#0284c7"
+    },
+    {
+      "id": "pm-0002-carta-debito",
+      "name": "Carta di debito",
+      "color": "#10b981"
+    },
+    {
+      "id": "pm-0003-carta-credito",
+      "name": "Carta di credito",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "pm-0004-contanti",
+      "name": "Contanti",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "pm-0005-paypal",
+      "name": "PayPal",
+      "color": "#0079c1"
+    },
+    {
+      "id": "pm-0006-satispay",
+      "name": "Satispay",
+      "color": "#ef4444"
+    }
+  ],
+  "tags": [
+    {
+      "id": "tag-0001-lavoro",
+      "name": "Lavoro",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "tag-0002-condiviso",
+      "name": "Condiviso",
+      "color": "#10b981"
+    },
+    {
+      "id": "tag-0003-vacanze",
+      "name": "Vacanze",
+      "color": "#06b6d4"
+    },
+    {
+      "id": "tag-0004-sfizio",
+      "name": "Sfizio",
+      "color": "#ec4899"
+    },
+    {
+      "id": "tag-0005-necessita",
+      "name": "Necessità",
+      "color": "#f97316"
+    },
+    {
+      "id": "tag-0006-detraibile",
+      "name": "Detraibile 730",
+      "color": "#8b5cf6"
+    }
+  ],
+  "oneTimeExpenses": [
+    {
+      "id": "exp-m3-01",
+      "name": "Spesa supermercato Conad",
+      "amount": 7840,
+      "date": "2026-08-02",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Rifornimento alimentari inizio mese",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m3-02",
+      "name": "Farmacia integratori e creme",
+      "amount": 3450,
+      "date": "2026-08-04",
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Scontrino parlante per detrazione",
+      "tagIds": [
+        "tag-0006-detraibile",
+        "tag-0003-vacanze"
+      ]
+    },
+    {
+      "id": "exp-m3-03",
+      "name": "Biglietti aerei vacanze",
+      "amount": 31000,
+      "date": "2026-08-07",
+      "categoryId": "cat-0009-vacanze-viaggi",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Voli a/r per due persone",
+      "tagIds": [
+        "tag-0003-vacanze",
+        "tag-0002-condiviso"
+      ]
+    },
+    {
+      "id": "exp-m3-04",
+      "name": "Pieno benzina",
+      "amount": 8200,
+      "date": "2026-08-11",
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Tratta autostradale",
+      "tagIds": [
+        "tag-0003-vacanze"
+      ]
+    },
+    {
+      "id": "exp-m3-05",
+      "name": "Cena di pesce sul mare",
+      "amount": 9600,
+      "date": "2026-08-15",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Cena speciale",
+      "tagIds": [
+        "tag-0003-vacanze",
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m3-06",
+      "name": "Hotel soggiorno mare",
+      "amount": 48000,
+      "date": "2026-08-18",
+      "categoryId": "cat-0009-vacanze-viaggi",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Saldo 4 notti camera matrimoniale",
+      "tagIds": [
+        "tag-0003-vacanze",
+        "tag-0002-condiviso"
+      ]
+    },
+    {
+      "id": "exp-m3-07",
+      "name": "Libri e tascabili estate",
+      "amount": 2890,
+      "date": "2026-08-21",
+      "categoryId": "cat-0007-svago-cultura",
+      "paymentMethodId": "pm-0004-contanti",
+      "notes": "Due romanzi in libreria",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m3-08",
+      "name": "Spesa supermercato Esselunga",
+      "amount": 6430,
+      "date": "2026-08-25",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Spesa scorte alimentari",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m3-09",
+      "name": "Aperitivo con colleghi",
+      "amount": 1800,
+      "date": "2026-08-28",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Saluti post-ferie",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "exp-m2-01",
+      "name": "Spesa supermercato Coop",
+      "amount": 8850,
+      "date": "2026-09-02",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Spesa inizio mese",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m2-02",
+      "name": "Abbonamento mensile mezzi pubblici",
+      "amount": 3900,
+      "date": "2026-09-04",
+      "categoryId": "cat-0003-trasporti",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Tessera mensile metro/bus",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "exp-m2-03",
+      "name": "Pranzo lavoro con cliente",
+      "amount": 3200,
+      "date": "2026-09-07",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Incontro kick-off progetto",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "exp-m2-04",
+      "name": "Visita dermatologica controllo nei",
+      "amount": 12000,
+      "date": "2026-09-12",
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Fattura per 730 inviata via mail",
+      "tagIds": [
+        "tag-0006-detraibile"
+      ]
+    },
+    {
+      "id": "exp-m2-05",
+      "name": "Spesa supermercato Esselunga",
+      "amount": 7210,
+      "date": "2026-09-15",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m2-06",
+      "name": "Scarpe da corsa nuove",
+      "amount": 11500,
+      "date": "2026-09-18",
+      "categoryId": "cat-0008-abbigliamento-shopping",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Sostituzione vecchie scarpe logore",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m2-07",
+      "name": "Pieno benzina",
+      "amount": 7400,
+      "date": "2026-09-22",
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m2-08",
+      "name": "Pizza tra amici",
+      "amount": 2650,
+      "date": "2026-09-25",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Serata pizza e birra",
+      "tagIds": [
+        "tag-0002-condiviso"
+      ]
+    },
+    {
+      "id": "exp-m2-09",
+      "name": "Cancelleria e accessori scrivania",
+      "amount": 1980,
+      "date": "2026-09-28",
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0005-paypal",
+      "notes": "Quaderni, cavo USB-C e organizer",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "exp-m1-01",
+      "name": "Spesa supermercato Conad",
+      "amount": 9240,
+      "date": "2026-10-02",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Spesa scorte dispensa",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m1-02",
+      "name": "Manutenzione caldaia controllo fumi",
+      "amount": 11000,
+      "date": "2026-10-06",
+      "categoryId": "cat-0002-casa-utenze",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Bollino blu biennale obbligatorio",
+      "tagIds": [
+        "tag-0002-condiviso",
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m1-03",
+      "name": "Pieno benzina",
+      "amount": 7650,
+      "date": "2026-10-10",
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m1-04",
+      "name": "Spesa supermercato Esselunga",
+      "amount": 6890,
+      "date": "2026-10-14",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m1-05",
+      "name": "Visita dentistica e igiene",
+      "amount": 9000,
+      "date": "2026-10-17",
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Pulizia dentale annuale con detrazione",
+      "tagIds": [
+        "tag-0006-detraibile"
+      ]
+    },
+    {
+      "id": "exp-m1-06",
+      "name": "Giacca a vento autunnale",
+      "amount": 13000,
+      "date": "2026-10-21",
+      "categoryId": "cat-0008-abbigliamento-shopping",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Impermeabile traspirante",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m1-07",
+      "name": "Cena compleanno ristorante",
+      "amount": 5800,
+      "date": "2026-10-24",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Festeggiamento con torta",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m1-08",
+      "name": "Biglietti mostra darte contemporanea",
+      "amount": 2800,
+      "date": "2026-10-26",
+      "categoryId": "cat-0007-svago-cultura",
+      "paymentMethodId": "pm-0005-paypal",
+      "notes": "Domenica al museo",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m1-09",
+      "name": "Farmacia sciroppo e vitamine",
+      "amount": 2150,
+      "date": "2026-10-29",
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0004-contanti",
+      "notes": "Integratori cambio stagione",
+      "tagIds": [
+        "tag-0006-detraibile"
+      ]
+    },
+    {
+      "id": "exp-m0-01",
+      "name": "Spesa supermercato Esselunga",
+      "amount": 8450,
+      "date": "2026-11-02",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Prima spesa grande del mese",
+      "tagIds": [
+        "tag-0005-necessita"
+      ]
+    },
+    {
+      "id": "exp-m0-02",
+      "name": "Pranzo lavoro con colleghi",
+      "amount": 1800,
+      "date": "2026-11-04",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Menu fisso pausa pranzo",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "exp-m0-03",
+      "name": "Pieno benzina",
+      "amount": 7500,
+      "date": "2026-11-06",
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Rifornimento self-service",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m0-04",
+      "name": "Farmacia scorta farmaci",
+      "amount": 3620,
+      "date": "2026-11-08",
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Presidi medici detraibili",
+      "tagIds": [
+        "tag-0006-detraibile"
+      ]
+    },
+    {
+      "id": "exp-m0-05",
+      "name": "Manuale Vue 3 e TypeScript avanzato",
+      "amount": 3800,
+      "date": "2026-11-10",
+      "categoryId": "cat-0007-svago-cultura",
+      "paymentMethodId": "pm-0005-paypal",
+      "notes": "Libro studio professionale",
+      "tagIds": [
+        "tag-0001-lavoro",
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m0-06",
+      "name": "Cena sushi dasporto",
+      "amount": 3250,
+      "date": "2026-11-11",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Ordine serale JustEat",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m0-07",
+      "name": "Spesa supermercato programmata",
+      "amount": 6500,
+      "date": "2026-11-18",
+      "categoryId": "cat-0001-cibo-bevande",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notes": "Spesa metà mese stimata",
+      "tagIds": []
+    },
+    {
+      "id": "exp-m0-08",
+      "name": "Biglietti concerto jazz",
+      "amount": 6500,
+      "date": "2026-11-22",
+      "categoryId": "cat-0007-svago-cultura",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Evento auditorium serale",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "exp-m0-09",
+      "name": "Regalo anniversario",
+      "amount": 12000,
+      "date": "2026-11-26",
+      "categoryId": "cat-0008-abbigliamento-shopping",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notes": "Pensiero speciale per ricorrenza",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    }
+  ],
+  "recurringExpenses": [
+    {
+      "id": "rec-0001-affitto",
+      "name": "Affitto appartamento",
+      "amount": 75000,
+      "frequency": "monthly",
+      "startDate": "2026-01-01",
+      "endDate": null,
+      "categoryId": "cat-0002-casa-utenze",
+      "paymentMethodId": "pm-0001-bonifico"
+    },
+    {
+      "id": "rec-0002-fibra",
+      "name": "Fibra Internet casa",
+      "amount": 2990,
+      "frequency": "monthly",
+      "startDate": "2026-01-05",
+      "endDate": null,
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0002-carta-debito",
+      "notifications": [
+        {
+          "daysBefore": 2,
+          "time": "09:00"
+        }
+      ]
+    },
+    {
+      "id": "rec-0003-palestra",
+      "name": "Abbonamento palestra",
+      "amount": 4500,
+      "frequency": "monthly",
+      "startDate": "2026-01-10",
+      "endDate": null,
+      "categoryId": "cat-0005-salute-benessere",
+      "paymentMethodId": "pm-0003-carta-credito"
+    },
+    {
+      "id": "rec-0004-spotify",
+      "name": "Spotify Family",
+      "amount": 1799,
+      "frequency": "monthly",
+      "startDate": "2026-01-15",
+      "endDate": null,
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0005-paypal",
+      "notifications": [
+        {
+          "daysBefore": 1,
+          "time": "10:00"
+        }
+      ]
+    },
+    {
+      "id": "rec-0005-cloud",
+      "name": "Cloud Storage & Backup",
+      "amount": 999,
+      "frequency": "monthly",
+      "startDate": "2026-01-20",
+      "endDate": null,
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0003-carta-credito"
+    },
+    {
+      "id": "rec-0006-vecchia-rivista",
+      "name": "Vecchia rivista digitale (disdetta)",
+      "amount": 500,
+      "frequency": "monthly",
+      "startDate": "2026-01-01",
+      "endDate": "2026-10-28",
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0005-paypal"
+    },
+    {
+      "id": "rec-0007-luce",
+      "name": "Bolletta Energia Elettrica",
+      "amount": 14000,
+      "frequency": "quarterly",
+      "startDate": "2026-02-15",
+      "endDate": null,
+      "categoryId": "cat-0002-casa-utenze",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notifications": [
+        {
+          "daysBefore": 5,
+          "time": "09:00"
+        },
+        {
+          "daysBefore": 1,
+          "time": "18:00"
+        }
+      ]
+    },
+    {
+      "id": "rec-0008-tari",
+      "name": "Tassa Rifiuti TARI",
+      "amount": 6500,
+      "frequency": "quarterly",
+      "startDate": "2026-01-25",
+      "endDate": null,
+      "categoryId": "cat-0002-casa-utenze",
+      "paymentMethodId": "pm-0001-bonifico"
+    },
+    {
+      "id": "rec-0009-assicurazione-moto",
+      "name": "Assicurazione Moto",
+      "amount": 18000,
+      "frequency": "semiannual",
+      "startDate": "2026-05-20",
+      "endDate": null,
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0003-carta-credito",
+      "notifications": [
+        {
+          "daysBefore": 7,
+          "time": "09:00"
+        }
+      ]
+    },
+    {
+      "id": "rec-0010-tagliando-auto",
+      "name": "Tagliando e manutenzione ordinaria auto",
+      "amount": 22000,
+      "frequency": "semiannual",
+      "startDate": "2026-02-10",
+      "endDate": null,
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0002-carta-debito"
+    },
+    {
+      "id": "rec-0011-rc-auto",
+      "name": "Assicurazione RC Auto annuale",
+      "amount": 42000,
+      "frequency": "annual",
+      "startDate": "2026-09-05",
+      "endDate": null,
+      "categoryId": "cat-0004-auto-moto",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notifications": [
+        {
+          "daysBefore": 14,
+          "time": "09:00"
+        },
+        {
+          "daysBefore": 3,
+          "time": "09:00"
+        }
+      ]
+    },
+    {
+      "id": "rec-0012-prime",
+      "name": "Amazon Prime annuale",
+      "amount": 4990,
+      "frequency": "annual",
+      "startDate": "2026-10-18",
+      "endDate": null,
+      "categoryId": "cat-0006-digitale-abbonamenti",
+      "paymentMethodId": "pm-0003-carta-credito"
+    },
+    {
+      "id": "rec-0013-canone-tv",
+      "name": "Canone TV quota",
+      "amount": 9000,
+      "frequency": "annual",
+      "startDate": "2026-01-31",
+      "endDate": null,
+      "categoryId": "cat-0002-casa-utenze",
+      "paymentMethodId": "pm-0001-bonifico"
+    }
+  ],
+  "incomes": [
+    {
+      "id": "inc-01",
+      "name": "Stipendio mensile",
+      "amount": 215000,
+      "date": "2026-08-27",
+      "categoryId": "cat-0011-stipendio",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Accredito busta paga",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-02",
+      "name": "Stipendio mensile",
+      "amount": 215000,
+      "date": "2026-09-27",
+      "categoryId": "cat-0011-stipendio",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Accredito busta paga",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-03",
+      "name": "Stipendio mensile",
+      "amount": 215000,
+      "date": "2026-10-27",
+      "categoryId": "cat-0011-stipendio",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Accredito busta paga",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-04",
+      "name": "Stipendio mensile",
+      "amount": 215000,
+      "date": "2026-11-27",
+      "categoryId": "cat-0011-stipendio",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Accredito stipendio programmato fine mese",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-05",
+      "name": "Consulenza sviluppo web frontend",
+      "amount": 45000,
+      "date": "2026-08-14",
+      "categoryId": "cat-0012-altro-extra",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Progetto landing page freelance",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-06",
+      "name": "Vendita componenti PC usati",
+      "amount": 18000,
+      "date": "2026-09-12",
+      "categoryId": "cat-0012-altro-extra",
+      "paymentMethodId": "pm-0005-paypal",
+      "notes": "Vendita scheda video usata",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "inc-07",
+      "name": "Rimborso spese trasferta aziendale",
+      "amount": 32000,
+      "date": "2026-10-05",
+      "categoryId": "cat-0012-altro-extra",
+      "paymentMethodId": "pm-0001-bonifico",
+      "notes": "Nota spese approvata per congresso",
+      "tagIds": [
+        "tag-0001-lavoro"
+      ]
+    },
+    {
+      "id": "inc-08",
+      "name": "Regalo compleanno zia",
+      "amount": 10000,
+      "date": "2026-10-19",
+      "categoryId": "cat-0012-altro-extra",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Pensiero per compleanno",
+      "tagIds": [
+        "tag-0004-sfizio"
+      ]
+    },
+    {
+      "id": "inc-09",
+      "name": "Cashback e vendita Vinted",
+      "amount": 7500,
+      "date": "2026-11-05",
+      "categoryId": "cat-0012-altro-extra",
+      "paymentMethodId": "pm-0006-satispay",
+      "notes": "Riconoscimento saldo per vendita giacca",
+      "tagIds": []
+    }
+  ],
+  "loans": [
+    {
+      "id": "loan-0001-marco",
+      "name": "Prestito a Marco (anticipo cauzione)",
+      "amount": 60000,
+      "type": "given",
+      "date": "2026-08-10",
+      "notes": "Prestito per caparra nuova casa, accordo 4 rate mensili da 150€",
+      "repayments": [
+        {
+          "id": "rep-0001",
+          "amount": 15000,
+          "date": "2026-09-10"
+        },
+        {
+          "id": "rep-0002",
+          "amount": 15000,
+          "date": "2026-10-10"
+        },
+        {
+          "id": "rep-0003",
+          "amount": 15000,
+          "date": "2026-11-10"
+        }
+      ]
+    },
+    {
+      "id": "loan-0002-luca",
+      "name": "Anticipo conto cena a Luca",
+      "amount": 8500,
+      "type": "given",
+      "date": "2026-09-18",
+      "notes": "Pagato per lui al ristorante con carta",
+      "repayments": [
+        {
+          "id": "rep-0004",
+          "amount": 8500,
+          "date": "2026-09-20"
+        }
+      ]
+    },
+    {
+      "id": "loan-0003-papa",
+      "name": "Prestito da papà per riparazione frizione",
+      "amount": 50000,
+      "type": "received",
+      "date": "2026-09-02",
+      "notes": "Meccanico urgente, restituzione 100€ ogni mese",
+      "repayments": [
+        {
+          "id": "rep-0005",
+          "amount": 10000,
+          "date": "2026-10-02"
+        },
+        {
+          "id": "rep-0006",
+          "amount": 10000,
+          "date": "2026-11-02"
+        }
+      ]
+    },
+    {
+      "id": "loan-0004-sara",
+      "name": "Quota biglietto mostra acquistato da Sara",
+      "amount": 4500,
+      "type": "received",
+      "date": "2026-11-08",
+      "notes": "Da saldare a breve via Satispay",
+      "repayments": []
+    }
+  ],
+  "simulations": [
+    {
+      "id": "sim-0001-monitor",
+      "name": "Nuovo Monitor 4K da lavoro",
+      "amount": 45000,
+      "year": 2026,
+      "month": 10
+    },
+    {
+      "id": "sim-0002-natale",
+      "name": "Regali e cenone di fine anno",
+      "amount": 35000,
+      "year": 2026,
+      "month": 11
+    },
+    {
+      "id": "sim-0003-vacanza",
+      "name": "Weekend sulla neve a inizio anno",
+      "amount": 60000,
+      "year": 2026,
+      "month": 11
+    }
+  ],
+  "forecast": {
+    "estimateIncome": true,
+    "incomeCategoryIds": [
+      "cat-0011-stipendio"
+    ],
+    "estimateChosen": true
+  },
+  "budget": {
+    "limits": {
+      "cat-0001-cibo-bevande": 35000,
+      "cat-0007-svago-cultura": 12000,
+      "cat-0004-auto-moto": 20000,
+      "cat-0006-digitale-abbonamenti": 6000
+    }
+  }
+}

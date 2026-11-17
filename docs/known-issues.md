@@ -2,10 +2,11 @@
 source-files:
   - src/views/IncomeView.vue
   - src/views/BudgetView.vue
+  - src/composables/useMonthStep.ts
   - src/domain/savings.ts
   - server/webpush.py
   - src/stores/notifications.ts
-verified: 2026-11-15
+verified: 2026-11-17
 ---
 
 # Stato e Difetti Noti (Known Issues)
@@ -24,15 +25,11 @@ Questo documento elenca le caratteristiche note, i limiti architetturali e i com
 
 ---
 
-## 2. Indice Mese Locale in `BudgetView`
-- **Classificazione:** `Minor Robustness Risk` / Architettura UI
-- **File coinvolti:** [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
-- **Descrizione:**
-  Nello store `finance.ts` è presente la proprietà reattiva globale `selectedMonth` (inizializzata al mese corrente `new Date().getMonth()`, con tipo `number | 'all'`), utilizzata da `DashboardView` e `OneTimeView`. La vista `BudgetView.vue`, invece, gestisce internamente un proprio stato locale `const monthIndex = ref(parseIsoDate(finance.today).month)` con pulsanti di navigazione mensile dedicati ("Mese precedente", "Mese successivo", "Mese corrente").
-- **Impatto:**
-  Se l'utente seleziona un mese diverso nella Dashboard o in Spese una tantum e successivamente naviga sulla pagina del Budget, `BudgetView` non eredita il mese selezionato, mostrando di default il mese corrente di calendario.
-- **Soluzione futura consigliata:**
-  Valutare se sincronizzare bidirezionalmente il mese di `BudgetView` con lo stato globale `finance.selectedMonth` (convertendo `'all'` nel mese corrente per il budget).
+## 2. Indice Mese Locale in `BudgetView` [RISOLTO]
+- **Classificazione:** Risolto (17 Novembre 2026, PKT-02)
+- **File coinvolti:** [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/composables/useMonthStep.ts`](../src/composables/useMonthStep.ts), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Risoluzione:**
+  `BudgetView.vue` ora legge direttamente `finance.selectedMonth` e naviga tramite `useMonthStep` (che accetta un parametro opzionale `effectiveMonth`), mantenendo il mese sincronizzato con Dashboard, Variabili ed Entrate e gestendo correttamente il passaggio dicembre ↔ gennaio nei limiti di `finance.years`. Quando nelle altre pagine è selezionato l'anno intero (`'all'`), il Budget mostra il mese corrente di calendario (`finance.today`) con una nota informativa (`budget.wholeYearNote`) senza sovrascrivere `'all'` finché l'utente non cambia mese dal Budget.
 
 ---
 

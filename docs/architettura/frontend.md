@@ -24,7 +24,7 @@ source-files:
   - src/views/SettingsView.vue
   - src/i18n/index.ts
   - vite.config.ts
-verified: 2026-11-12
+verified: 2026-11-17
 ---
 
 # Architettura Frontend
@@ -57,7 +57,7 @@ graph TD
    Moduli riutilizzabili per form (`TransactionForm`, `LoanForm`, `RecurringForm`), modali (`BaseModal`), badge di tag (`TagBadge`), grafici a barre (`BudgetBar`), selettori mese (`MonthSelector`), gestione notifiche e toast.
 3. **Composables (`src/composables/`):**
    Funzioni di logica reattiva condivisa:
-   - `useMonthStep.ts`: il periodo prima o dopo quello scelto. Su un mese, il mese prima o dopo (da dicembre a gennaio dell'anno dopo e viceversa); sull'anno intero (`'all'`), l'anno prima o dopo, sempre intero. Si passa solo ad anni presenti in `finance.years`. È condiviso tra le frecce ‹ › e i tasti ←/→ di `MonthSelector.vue` e lo swipe sul riquadro principale, gestito in `DashboardView.vue`. Al mese di oggi porta il pulsante "Oggi" di `MonthSelector`.
+   - `useMonthStep.ts`: il periodo prima o dopo quello scelto. Su un mese, il mese prima o dopo (da dicembre a gennaio dell'anno dopo e viceversa); sull'anno intero (`'all'`), l'anno prima o dopo, sempre intero. Con il parametro opzionale `effectiveMonth` una vista sempre mensile (`BudgetView.vue`) può partire dal mese mostrato anche quando altrove è scelto `'all'`, aggiornando comunque `finance.selectedMonth` su `go`. Si passa solo ad anni presenti in `finance.years`. È condiviso tra le frecce ‹ › e i tasti ←/→ di `MonthSelector.vue`, le frecce ‹ › di `BudgetView.vue` e lo swipe sul riquadro principale, gestito in `DashboardView.vue`. Al mese di oggi porta il pulsante "Oggi" di `MonthSelector`.
    - `useDirty.ts`: dice se i campi di un modulo sono cambiati dall'apertura (`dirty`, azzerato da `reset()` dopo aver riempito i campi). Lo usano i quattro moduli per passare `dirty` a `BaseModal`.
    - `useConfirmDelete.ts`: incapsula la richiesta di conferma prima di azioni distruttive tramite dialogo modale (`ui.confirm`).
 4. **Stores (`src/stores/`):**

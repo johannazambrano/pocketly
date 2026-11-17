@@ -301,6 +301,7 @@ const en: typeof it = {
     },
     prevMonth: 'Previous month',
     nextMonth: 'Next month',
+    wholeYearNote: 'Budget is monthly: showing {month} (whole year is selected on other pages).',
     summary: 'Budget for the month',
     remaining: '{amount} left',
     over: 'Over by {amount}',

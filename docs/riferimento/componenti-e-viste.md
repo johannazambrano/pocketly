@@ -51,7 +51,7 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/UpdatePrompt.vue
   - src/components/WelcomePanel.vue
-verified: 2026-11-13
+verified: 2026-11-17
 ---
 
 # Riferimento: Componenti e Viste
@@ -105,7 +105,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ### `BudgetView.vue` (`/budget`)
 - **Ruolo:** Monitoraggio dei limiti di spesa per categoria e pianificazione attiva tramite salvadanai / obiettivi di risparmio.
 - **Funzionalità:** Selettore a schede superiore che consente di passare tra:
-  1. **Budget mensile:** barra di navigazione mese dedicata (`monthIndex` locale con pulsanti precedente/successivo/mese corrente), configurazione in linea dei limiti per ciascuna categoria con calcolo immediato di speso, programmato, residuo e ritmo (`MIN_PACE_DAYS`), visualizzazione con barre colorate [`BudgetBar`](../../src/components/BudgetBar.vue) e suggeritore automatico basato sulla cronologia.
+  1. **Budget mensile:** barra di navigazione mese sincronizzata con `finance.selectedMonth` tramite `useMonthStep` (con cambio anno tra gennaio e dicembre nei limiti di `finance.years`); quando nelle altre pagine è selezionato l'anno intero (`'all'`), mostra il mese corrente di calendario (`finance.today`) con nota informativa (`budget.wholeYearNote`) senza sovrascrivere `'all'` finché non si cambia mese nel Budget. Include configurazione in linea dei limiti per ciascuna categoria con calcolo immediato di speso, programmato, residuo e ritmo (`MIN_PACE_DAYS`), visualizzazione con barre colorate [`BudgetBar`](../../src/components/BudgetBar.vue) e suggeritore automatico basato sulla cronologia.
   2. **Salvadanai e Obiettivi:** pianificazione di traguardi finanziari (`SavingsGoal`), indicatore di avanzamento globale e per singolo obiettivo, calcolo automatico della quota mensile raccomandata (`calculateSavingsQuota`), chip di versamento rapido (+10 €, +50 €, +100 €, con `moneyWhole`) che versano subito e offrono «Annulla» nel messaggio (`removeSavingsMovement`), pulsanti Versa/Modifica/Elimina con il nome del salvadanaio per i lettori di schermo, modale di versamento/prelievo dedicato ([`SavingsDepositModal`](../../src/components/SavingsDepositModal.vue)) e modale di creazione/modifica ([`SavingsGoalForm`](../../src/components/SavingsGoalForm.vue)). Le due schede sono `tab`/`tabpanel` collegati, con le frecce sinistra e destra per passare dall'una all'altra. Supporta deep linking e highlight automatico (es. da Omnisearch tramite `?tab=savings&highlight=...`).
 
 ### `LoansView.vue` (`/prestiti`)
