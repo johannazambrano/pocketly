@@ -37,7 +37,12 @@ export interface SectionTable {
   rows: CellScalar[][]
 }
 
-function escapeCsvField(val: CellScalar, delimiter: string, decimalSep: string): string {
+/**
+ * Una cella del CSV. Un testo che comincia con `=`, `+`, `-` o `@` Excel e LibreOffice lo leggono come formula (una
+ * nota «-2 rate» diventa #NOME?, un nome «=HYPERLINK(…)» diventa un collegamento): un apostrofo davanti lo fa restare
+ * testo. Solo per i testi: gli importi negativi restano numeri.
+ */
+export function escapeCsvField(val: CellScalar, delimiter: string, decimalSep: string): string {
   if (val === null || val === undefined) return ''
   let s: string
   if (typeof val === 'number') {
@@ -45,6 +50,7 @@ function escapeCsvField(val: CellScalar, delimiter: string, decimalSep: string):
     if (decimalSep === ',') s = s.replace('.', ',')
   } else {
     s = String(val)
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
   }
   if (s.includes('"') || s.includes(delimiter) || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`
