@@ -22,6 +22,17 @@ export function savedAmounts(movements: SavingsMovement[]): Map<string, Cents> {
   return totals
 }
 
+/**
+ * L'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. Di solito è `change`
+ * stesso; se la somma dei movimenti è sotto zero (due prelievi fatti su due dispositivi prima di sincronizzare),
+ * l'app mostra 0 e il movimento copre anche quel buco: un versamento di 30 € porta il salvadanaio a 30 €, non lo
+ * lascia a 0 € in silenzio.
+ */
+export function movementFor(movements: SavingsMovement[], goalId: string, change: Cents): Cents {
+  const raw = movements.reduce((sum, m) => (m.goalId === goalId ? sum + m.amount : sum), 0)
+  return raw < 0 ? change - raw : change
+}
+
 /** Aggiunge a ogni salvadanaio l'importo accantonato. */
 export function withSavedAmounts(goals: SavingsGoal[], movements: SavingsMovement[]): SavedGoal[] {
   const totals = savedAmounts(movements)

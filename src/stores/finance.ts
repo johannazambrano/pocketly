@@ -21,7 +21,7 @@ import type {
 import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, tagTrends, type TagTrendInfo, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
-import { savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
+import { movementFor, savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
 import { sortTagsByName } from '@/domain/tags'
 import { LOCALES, i18n } from '@/i18n'
@@ -418,10 +418,13 @@ export const useFinanceStore = defineStore('finance', () => {
     }
   }
 
-  /** Versamento (importo positivo) o prelievo (negativo) su un salvadanaio. Restituisce l'id del movimento. */
+  /**
+   * Versamento (importo positivo) o prelievo (negativo) su un salvadanaio, rispetto all'importo che si vede
+   * (`movementFor`). Restituisce l'id del movimento.
+   */
   function addSavingsMovement(goalId: Id, amount: Cents): Id {
     if (!data.value.savingsMovements) data.value.savingsMovements = []
-    const movement = { id: newId(), goalId, date: today.value, amount }
+    const movement = { id: newId(), goalId, date: today.value, amount: movementFor(data.value.savingsMovements, goalId, amount) }
     data.value.savingsMovements.push(movement)
     return movement.id
   }

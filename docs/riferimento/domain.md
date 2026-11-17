@@ -189,6 +189,7 @@ Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi
 - `calculateGoalProgress(goal)`: calcola la percentuale di avanzamento normalizzata tra 0 e 1.
 - `goalStatus(goal, today)`: determina lo stato dell'obiettivo tra `'completed'` (raggiunto o superato), `'overdue'` (data superata e saldo inferiore al target) e `'active'` (in corso nei tempi).
 - `savingsSummary(goals, today)`: produce metriche aggregate complete (totale target, totale accantonato, totale residuo, somma delle quote mensili dei soli obiettivi attivi, quanto manca agli obiettivi scaduti in `overdueRemaining`, progresso complessivo ponderato e conteggi per stato). Uno scaduto non entra nella quota mensile: non ha più mesi davanti, e sommarne tutto il mancante darebbe una cifra «al mese» falsa.
+- `movementFor(movements, goalId, change)`: l'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. `savedAmounts` non mostra mai meno di zero, ma la somma dei movimenti può andarci (due prelievi su due dispositivi prima di sincronizzare): in quel caso il movimento copre anche il buco, così un versamento o l'importo scritto nel modulo arrivano davvero. Lo usa `finance.addSavingsMovement`.
 - `sortSavingsGoals(goals, today)`: ordina la lista degli obiettivi dando priorità a quelli scaduti, poi a quelli attivi con scadenza più prossima, collocando i completati in fondo.
 
 ## 8. Ordine di categorie, metodi e tag (`tags.ts`)
