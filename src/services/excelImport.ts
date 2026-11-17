@@ -11,7 +11,7 @@
  * - Categorie, metodi di pagamento e tag: dal foglio Settings più quelli usati nei dati.
  * - Non supportati e quindi ignorati: Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
  */
-import type { FinanceData, Frequency, Income, OneTimeExpense, RecurringExpense, Tag } from '@/types/models'
+import { CURRENT_SCHEMA_VERSION, type FinanceData, type Frequency, type Income, type OneTimeExpense, type RecurringExpense, type Tag } from '@/types/models'
 import { defaultForecastSettings } from '@/domain/defaults'
 import { harmonizedColors } from '@/utils/colors'
 import { uuidv5 } from '@/utils/uuidv5'
@@ -362,7 +362,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
   colorize([categories, payments, tags])
 
   const data: FinanceData = {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: categories.items,
     paymentMethods: payments.items,
     tags: tags.items,

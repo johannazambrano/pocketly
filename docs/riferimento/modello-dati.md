@@ -14,7 +14,7 @@ verified: 2026-11-15
 
 # Riferimento: Modello Dati e Tipi
 
-Questo documento costituisce la specifica esaustiva del modello dati di Pocketly definito in [`src/types/models.ts`](../../src/types/models.ts) (schema v2).
+Questo documento costituisce la specifica esaustiva del modello dati di Pocketly definito in [`src/types/models.ts`](../../src/types/models.ts) (formato 3, `CURRENT_SCHEMA_VERSION`; il formato 2 si legge ancora e si riscrive come 3).
 
 ---
 
@@ -90,7 +90,7 @@ export interface QuickExpense {
 }
 ```
 
-Un `QuickExpense` con `amount` definito registra una `OneTimeExpense` in un solo tocco alla data corrente (`finance.triggerQuickExpense`); senza `amount` precompila il modulo di inserimento lasciando l'importo da scrivere. È facoltativo rispetto ai backup v2 precedenti (`normalizeV2` usa `[]` se assente) senza aumentare lo `schemaVersion`.
+Un `QuickExpense` con `amount` definito registra una `OneTimeExpense` in un solo tocco alla data corrente (`finance.triggerQuickExpense`); senza `amount` precompila il modulo di inserimento lasciando l'importo da scrivere. È facoltativo nei backup precedenti (`normalizeV2` usa `[]` se assente). È uno dei campi che hanno portato al formato 3: un'app in formato 2 lo scarterebbe e alla prima modifica lo cancellerebbe anche dal server.
 
 ### `NotificationRule` e `RecurringExpense` (Spesa Ricorrente)
 ```ts
@@ -224,7 +224,7 @@ puntano a un salvadanaio inesistente vengono scartati da `parseBackup`.
 
 ```ts
 export interface FinanceData {
-  schemaVersion: 2
+  schemaVersion: 3 // typeof CURRENT_SCHEMA_VERSION
   categories: Tag[]
   paymentMethods: Tag[]
   tags: Tag[]
@@ -254,7 +254,7 @@ Il modulo `migration.ts` garantisce che Pocketly possa leggere e importare quals
 - **Validazione difensiva `parseBackup(raw)`:**
   Non assume mai che il file importato sia valido. Convalida la presenza di ciascun array, ripulisce valori `null` o `undefined`, converte tipi non conformi e garantisce il ripristino di una struttura `FinanceData` semanticamente corretta.
 - **Protezione versioni più recenti (`NewerFormatError`):**
-  Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 2`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
+  Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 3`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
 - **Valori predefiniti (`src/domain/defaults.ts`):**
   - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite (stima delle entrate attiva, nessun limite di budget).
   - `createDefaultData(locale)`: genera un dataset iniziale con categorie e metodi di pagamento predefiniti nella lingua indicata (inglese se non supportata), con colori in equilibrio (`harmonizedColors`: ogni voce la tinta più lontana dalle precedenti, "Altro" grigia). Categorie in italiano: Cibo e bevande, Trasporti, Altro, Salute e benessere, Finanza, Digitale, Auto, Vacanze, Stipendio. Metodi: Bonifico, Contanti, Carta di debito, Carta di credito, PayPal.

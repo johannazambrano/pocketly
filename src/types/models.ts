@@ -180,7 +180,7 @@ export interface SavingsMovement {
 }
 
 export interface FinanceData {
-  schemaVersion: 2
+  schemaVersion: typeof CURRENT_SCHEMA_VERSION
   categories: Tag[]
   paymentMethods: Tag[]
   tags: Tag[]
@@ -196,4 +196,11 @@ export interface FinanceData {
   quickExpenses: QuickExpense[]
 }
 
-export const CURRENT_SCHEMA_VERSION = 2
+/**
+ * Versione del formato dei dati. Si alza quando un'app più vecchia, leggendo i dati nuovi, ne scarterebbe una parte e
+ * alla prima modifica la cancellerebbe anche sul server: con il numero più alto quell'app si ferma (`NewerFormatError`,
+ * stato «da aggiornare») invece di sincronizzare.
+ * - 2: formato dell'app.
+ * - 3: salvadanai con i movimenti, inserimenti rapidi, note e tag delle entrate (l'app in formato 2 li scartava).
+ */
+export const CURRENT_SCHEMA_VERSION = 3

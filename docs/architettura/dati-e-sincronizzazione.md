@@ -24,9 +24,9 @@ Questo documento descrive in dettaglio la modellazione dei dati, la persistenza 
 
 ## 1. Modello Dati e Persistenza Locale
 
-Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`](../../src/types/models.ts) (schema v2):
+Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`](../../src/types/models.ts) (formato 3):
 
-- `schemaVersion`: numero intero di versione schema (attualmente `2`).
+- `schemaVersion`: numero intero di versione del formato (attualmente `3`, `CURRENT_SCHEMA_VERSION`). L'app legge anche il formato `2` e lo riscrive come `3`.
 - `categories`: lista di entità `Tag { id, name, color }`.
 - `paymentMethods`: lista di entità `Tag { id, name, color }`.
 - `tags`: lista di entità `Tag { id, name, color }`.
@@ -106,6 +106,8 @@ Se la scrittura fallisce con un conflitto (perché un altro dispositivo ha scrit
 
 ### Protezione Versioni Più Recenti (`NewerFormatError`)
 Se i dati presenti sul server o in un file di backup importato presentano uno `schemaVersion` superiore a quello compreso dall'app in uso (`CURRENT_SCHEMA_VERSION`), il parser in [`src/services/migration.ts`](../../src/services/migration.ts) solleva l'eccezione `NewerFormatError`. Lo store `sync.ts` riconosce l'errore impostando lo stato di problema `outdated`. Il dispositivo rifiuta di toccare o salvare tali dati per evitare perdite accidentali di campi introdotti da release successive dell'applicazione.
+
+**Quando alzare `CURRENT_SCHEMA_VERSION`.** La protezione funziona solo se il numero sale quando serve. Un'app vecchia ricostruisce i dati campo per campo (`normalizeV2`) e scarta quelli che non conosce: se poi registra una modifica, invia i dati senza quei campi e l'unione a tre vie li tratta come cancellati, sul server e su tutti gli altri dispositivi. Si alza quindi il numero ogni volta che si aggiunge un campo o un elenco che un'app precedente perderebbe. Il formato 3 (novembre 2026) è nato così: salvadanai con i movimenti, inserimenti rapidi, note e tag delle entrate. Il primo dispositivo aggiornato che sincronizza porta il server al formato 3; da lì i dispositivi non ancora aggiornati restano fermi su «da aggiornare» finché non ricaricano l'app.
 
 ---
 

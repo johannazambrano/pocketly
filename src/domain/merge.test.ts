@@ -4,7 +4,7 @@ import { deepEqual, mergeFinanceData } from './merge'
 
 function data(overrides: Partial<FinanceData> = {}): FinanceData {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     categories: [
       { id: 'cat-food', name: 'Cibo', color: '#f59e0b' },
       { id: 'cat-home', name: 'Casa', color: '#3b82f6' },
