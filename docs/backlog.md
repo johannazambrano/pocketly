@@ -32,7 +32,7 @@ collegamento, senza ripeterne il testo.
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
-| PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto nel ramo, da unire | media | Jonny, Johanna |
+| PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -294,7 +294,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta da `PKT-05` (Johanna).
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
-- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny, Johanna
+- **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
 - **Perché:** sul telefono il «+» stava in alto su iPhone e apriva sempre la nuova spesa, anche in Entrate o
   Prestiti; la ricerca e gli avvisi delle Impostazioni (sincronizzazione, aggiornamento, backup) non si vedevano
   dalla barra in basso.
@@ -309,3 +309,5 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-18 revisione (Johanna) e correzioni nel ramo `fix/barra-inferiore-os`: avviso letto dai lettori di
     schermo, una sola soglia di larghezza (375 px) per il «+» che sale sopra la barra, scelta documentata del «+»
     dell'intestazione da `md` in su (sempre nuova spesa).
+  - 2026-11-18 in `develop` con `b40e398` (correzioni `7cf6550`, `aa7c31e`, `2fc592a`). Da provare sui telefoni
+    nella versione di prova di `develop`.
