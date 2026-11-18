@@ -208,7 +208,7 @@ const addButtonClass = computed(() => {
   if (isIos.value) {
     return 'pointer-events-auto inline-flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-dock-border bg-accent-fill text-on-color shadow-lg transition-transform duration-150 active:scale-95 max-[374px]:fixed max-[374px]:right-3 max-[374px]:bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-[374px]:h-12 max-[374px]:w-12'
   }
-  return 'pointer-events-auto inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-accent-fill text-on-color shadow-sm transition-all duration-150 hover:bg-accent-fill-strong active:scale-95 max-[379px]:fixed max-[379px]:right-3 max-[379px]:bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-[379px]:h-12 max-[379px]:w-12'
+  return 'pointer-events-auto inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl bg-accent-fill text-on-color shadow-sm transition-all duration-150 hover:bg-accent-fill-strong active:scale-95 max-[374px]:fixed max-[374px]:right-3 max-[374px]:bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-[374px]:h-12 max-[374px]:w-12'
 })
 
 const scrimClass = computed(() =>
@@ -340,7 +340,7 @@ function moreRowClass(active: boolean) {
           </button>
 
           <template v-if="isDesktop">
-            <span class="mx-0.5 hidden h-7 w-px shrink-0 bg-line min-[380px]:block" aria-hidden="true"></span>
+            <span class="mx-0.5 hidden h-7 w-px shrink-0 bg-line min-[375px]:block" aria-hidden="true"></span>
             <button type="button" :class="addButtonClass" :aria-label="addLabel" :title="addLabel" @click="ui.triggerPrimaryAdd()">
               <i class="fa-solid fa-plus text-lg" aria-hidden="true"></i>
             </button>

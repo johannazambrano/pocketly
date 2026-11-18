@@ -14,7 +14,7 @@ const { t } = useI18n()
     :class="
       appearance.platform === 'android'
         ? 'bottom-[calc(10rem+env(safe-area-inset-bottom))]'
-        : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-[379px]:bottom-[calc(9.5rem+env(safe-area-inset-bottom))]'
+        : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-[374px]:bottom-[calc(9.5rem+env(safe-area-inset-bottom))]'
     "
     aria-live="polite"
   >
