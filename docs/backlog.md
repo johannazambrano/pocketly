@@ -32,6 +32,7 @@ collegamento, senza ripeterne il testo.
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
+| PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto nel ramo, da unire | media | Jonny, Johanna |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -291,3 +292,20 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   aggiornate.
 - **Storia:**
   - 2026-11-17 aperta da `PKT-05` (Johanna).
+
+### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
+- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny, Johanna
+- **Perché:** sul telefono il «+» stava in alto su iPhone e apriva sempre la nuova spesa, anche in Entrate o
+  Prestiti; la ricerca e gli avvisi delle Impostazioni (sincronizzazione, aggiornamento, backup) non si vedevano
+  dalla barra in basso.
+- **Come:** sotto `md` una barra flottante con l'aspetto di ogni sistema (vetro su iPhone, Material su Android,
+  barra centrata sul PC a finestra stretta), il «+» in basso dove arriva il pollice che fa l'azione della pagina
+  (`usePageAction`, di serie la nuova spesa), la ricerca dentro «Altro» e un pallino su «Altro» e Impostazioni
+  quando c'è un avviso (`resolveSettingsAlert`). Da `md` in su resta la barra laterale.
+- **Fatto quando:** provata su iPhone, Android e PC; avvisi e messaggi non finiscono sotto la barra; lettori di
+  schermo informati degli avvisi; documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-18 fatta da Jonny nel ramo `feature/barra-inferiore-os` (`04456fe`).
+  - 2026-11-18 revisione (Johanna) e correzioni nel ramo `fix/barra-inferiore-os`: avviso letto dai lettori di
+    schermo, una sola soglia di larghezza (375 px) per il «+» che sale sopra la barra, scelta documentata del «+»
+    dell'intestazione da `md` in su (sempre nuova spesa).

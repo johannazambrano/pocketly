@@ -28,7 +28,15 @@ const en: typeof it = {
     forecast: 'Forecast',
     settings: 'Settings',
     more: 'More',
+    moreSections: 'More sections',
+    moreActive: 'More ({section})',
+    searchHint: 'Search entries, budgets, loans…',
     menu: 'Main menu',
+    alerts: {
+      syncError: 'Sync error',
+      update: 'Update ready',
+      backup: 'Backup due',
+    },
   },
   common: {
     save: 'Save',

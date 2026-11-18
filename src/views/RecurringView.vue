@@ -13,6 +13,7 @@ import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const { t, money, date } = useFormat()
@@ -34,6 +35,7 @@ function open(item: RecurringExpense | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('recurring.new'), run: () => open(null) }))
 
 /**
  * "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo.

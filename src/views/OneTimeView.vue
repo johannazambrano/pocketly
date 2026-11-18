@@ -15,6 +15,7 @@ import TagBadge from '@/components/TagBadge.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
 import QuickExpenseBar from '@/components/QuickExpenseBar.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
@@ -110,6 +111,7 @@ function open(item: OneTimeExpense | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('onetime.new'), run: () => open(null) }))
 
 function duplicate(item: OneTimeExpense) {
   editing.value = {

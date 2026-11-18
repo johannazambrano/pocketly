@@ -11,6 +11,7 @@ import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import PageHeader from '@/components/PageHeader.vue'
 import LoanForm from '@/components/LoanForm.vue'
 import RepaymentForm from '@/components/RepaymentForm.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const ui = useUiStore()
@@ -28,6 +29,7 @@ function open(item: Loan | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('loans.new'), run: () => open(null) }))
 
 /** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
 function remove() {

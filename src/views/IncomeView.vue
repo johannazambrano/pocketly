@@ -14,6 +14,7 @@ import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
@@ -109,6 +110,7 @@ function open(item: Income | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('income.new'), run: () => open(null) }))
 
 function duplicate(item: Income) {
   editing.value = {
