@@ -30,6 +30,11 @@ source-files:
   - src/components/BreakdownList.vue
   - src/components/BackupReminder.vue
   - src/components/ToastHost.vue
+  - src/components/BottomNav.vue
+  - src/components/AppHeader.vue
+  - src/components/UpdatePrompt.vue
+  - src/composables/usePageAction.ts
+  - src/utils/navStatus.ts
   - src/composables/useMonthStep.ts
   - src/domain/tags.ts
   - src/services/migration.ts
@@ -38,7 +43,7 @@ source-files:
   - src/services/excelImport.ts
   - src/services/backup.ts
   - deploy/proxmox/update.sh
-verified: 2026-11-17
+verified: 2026-11-18
 ---
 
 # Guida: Piano di Test Utente (UAT)
@@ -68,6 +73,7 @@ Se hai poco tempo, esegui almeno questi controlli minimi (coprono le ultime inte
 - [ ] **Salvadanai:** in `/budget` → scheda *«Salvadanai»* crea un salvadanaio, testa `+10 €` con «Annulla» e la modale «Versa o Preleva».
 - [ ] **Omnisearch:** apri `SearchModal` (`Ctrl+K` / `Cmd+K` o lente in intestazione), cerca una voce e verifica salto alla vista corretta con evidenziazione temporanea.
 - [ ] **Esportazione tabellare:** in `/impostazioni` scarica un `.xlsx` e verifica che i fogli si aprano senza errori.
+- [ ] **Barra in basso e «+» (`PKT-20`):** sul telefono il «+» in basso fa l'azione della pagina (Entrate → nuova entrata, Budget → *Salvadanai* → nuovo salvadanaio, Dashboard → nuova spesa); «Altro» si apre, contiene la ricerca e si chiude toccando fuori; un toast non finisce sotto la barra o sotto il «+».
 - [ ] **Console pulita:** nessuna eccezione JavaScript o errore di rendering nelle viste principali.
 
 ### Checklist Operativa Deploy e Sync (`PKT-06`)
@@ -83,9 +89,15 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 
 - [ ] **Primo avvio (`WelcomePanel`):** su archivio vuoto compare il riquadro *«Per cominciare»* con i collegamenti ad entrata, spesa ricorrente e importazione; sparisce automaticamente appena viene inserito il primo dato (`incomes`, `oneTimeExpenses`, `recurringExpenses` o `loans`).
 - [ ] **Piattaforme (`useAppearanceStore`):** in `/impostazioni` prova tutte e tre le scelte *iPhone*, *Android*, *PC* e verifica sia su viewport mobile (~390px) sia su desktop (~1280px):
-  - su *iPhone*: barra superiore traslucida, titolo grande del periodo e foglio modale con barra *Annulla · Titolo · Fine*;
+  - su *iPhone*: barra superiore traslucida, titolo grande del periodo e foglio modale con barra *Annulla · Titolo · Fine*; sul telefono barra in basso in vetro con il «+» tondo accanto (non più in alto);
   - su *Android*: top app bar con nome vista, chip del selettore mese, pulsante `+` flottante in basso a destra che non copre l'ultima riga della lista;
-  - su *PC*: menu laterale sinistro e barra superiore con pulsante `+ Nuova spesa`.
+  - su *PC*: menu laterale sinistro e barra superiore con pulsante `+ Nuova spesa`; con la finestra stretta (sotto 768 px) barra in basso centrata con il «+» dentro.
+- [ ] **Barra in basso sul telefono (`BottomNav`, `PKT-20`):** su viewport mobile (~390px), per *iPhone*, *Android* e *PC*:
+  - **«+» che segue la pagina (`usePageAction`):** in Entrate apre *«Nuova entrata»*, in Ricorrenti *«Nuova spesa ricorrente»*, in Prestiti *«Nuovo prestito»*, in Budget → *Salvadanai* *«Nuovo salvadanaio»*; in Budget → *Budget*, Dashboard, Variabili, Previsioni e Impostazioni apre *«Nuova spesa variabile»*. Passa rapidamente tra le pagine (anche con «Indietro») e verifica che il «+» non resti con l'azione della pagina precedente;
+  - **«Altro»:** su Android sale dal fondo come pannello, su iPhone e PC compare sopra la barra; contiene *«Cerca movimenti, budget, prestiti…»* (apre la ricerca) e le altre sezioni; si chiude toccando fuori, con `Esc` e cambiando pagina; mentre è aperto il «+» di Android sparisce; su una pagina di «Altro» (es. Prestiti) la voce «Altro» resta evidenziata;
+  - **Pallino di avviso (`resolveSettingsAlert`):** con il promemoria del backup attivo (o un aggiornamento pronto, o un errore di sincronizzazione sul container) compare un pallino su «Altro» e un'etichetta accanto a *Impostazioni* nel pannello; su PC largo il pallino è accanto a *Impostazioni* nel menu laterale. Con un lettore di schermo (TalkBack / VoiceOver) «Altro» si legge come *«Altro, Backup consigliato»*;
+  - **Niente sotto la barra:** l'ultima riga di ogni lista si raggiunge scorrendo; i toast (es. dopo un rapido 1-tap) e il banner *«Aggiornamento pronto»* restano sopra la barra e sopra il «+» di Android;
+  - **Schermi stretti:** a 360px (Android piccolo) e sotto 375px (es. 340px dagli strumenti del browser) le etichette della barra non si tagliano male; sotto 375px su iPhone e PC il «+» esce dalla barra e sale sopra, a destra, senza coprire contenuti.
 - [ ] **Tema Chiaro / Scuro:** verifica il passaggio tra tema *Chiaro* e *Scuro* su tutte e 3 le piattaforme (6 combinazioni totali), controllando leggibilità dei testi e contrasto di badge, bottoni e avvisi.
 - [ ] **Selettore del periodo (`MonthSelector`):**
   - cambia mese con ‹ e › (e con i tasti freccia `←` / `→` sulla tastiera);
