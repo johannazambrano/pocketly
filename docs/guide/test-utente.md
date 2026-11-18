@@ -47,6 +47,15 @@ Questo documento raccoglie la checklist completa dei test manuali da eseguire su
 
 Per i test automatici e la build vedi [Guida: Test, Build e Release](test-e-release.md).
 
+**Dove provare:** la versione di prova di `develop` è pubblicata da Vercel a ogni push, sull'indirizzo fisso del ramo
+che Vercel crea da solo e gratis (quello con `-git-develop-`, da *Deployments* → ultima pubblicazione di `develop` →
+*Domains*; non quello con il codice casuale, che vale per una sola pubblicazione). Perché si apra e si installi senza
+login va spenta la protezione delle anteprime (*Settings → Deployment Protection → Vercel Authentication*): con la
+protezione accesa Chrome non riesce a leggere il manifest e risponde «questa app non può essere installata».
+Installata sul telefono si chiama **«Pocketly dev»** e sta accanto a quella vera. Lì la sincronizzazione è nascosta e i dati sono solo di quell'indirizzo: si parte importando
+[`pocketly-test-data.json`](../../pocketly-test-data.json) da *Impostazioni → Importa backup*. Le prove di
+sincronizzazione si fanno sul container Proxmox.
+
 ---
 
 ## 0. Smoke Test Rapido Pre-Rilascio (5–10 minuti)

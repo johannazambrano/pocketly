@@ -122,6 +122,7 @@ L'internazionalizzazione è gestita tramite `vue-i18n` in [`src/i18n/`](../../sr
 
 La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramite `vite-plugin-pwa`:
 - Modalità: `generateSW` con Workbox.
+- Nome dell'app (`APP_NAME`, anche in `__APP_NAME__`): «Pocketly», oppure «Pocketly dev» quando la build gira su Vercel dal ramo `develop` (`VERCEL_GIT_COMMIT_REF`). Finisce nel manifest (`name`, `short_name`), nel titolo della pagina e in `apple-mobile-web-app-title`, così sul telefono la versione di prova si installa accanto a quella vera con un nome diverso. Per la versione di prova si usa l'indirizzo fisso del ramo che Vercel crea gratis (`<progetto>-git-develop-<account>.vercel.app`), non quello di una singola pubblicazione, con la protezione delle anteprime spenta: altrimenti il manifest risponde con il login e Android rifiuta l'installazione.
 - Pre-caching completo di asset statici, HTML, JS, CSS e font FontAwesome WOFF2.
 - Service worker dedicato per notifiche push: per le notifiche Web Push su browser Chromium/Firefox in background viene registrato il push listener capace di mostrare la notifica anche quando la pagina principale è chiusa.
 - Il componente [`UpdatePrompt.vue`](../../src/components/UpdatePrompt.vue) registra il service worker e decide quando cercare una versione nuova; lo stato condiviso e le regole stanno in [`useAppUpdate.ts`](../../src/composables/useAppUpdate.ts) (`updateReady`, `reloadPending`, `checkForUpdate`, `applyUpdate`, `onControllerChange`):

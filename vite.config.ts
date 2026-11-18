@@ -24,6 +24,26 @@ function inlineAppleTouchIcon(): Plugin {
   }
 }
 
+/**
+ * Nome dell'app installata. La versione di prova pubblicata su Vercel dal ramo `develop` si chiama «Pocketly dev»,
+ * così sul telefono si distingue da quella vera (su Android il nome viene solo da qui, su iPhone è quello proposto
+ * aggiungendo l'app alla Home). Vercel dice il ramo in `VERCEL_GIT_COMMIT_REF`; altrove (container Proxmox, `npm run
+ * dev`) il nome resta «Pocketly». Corto apposta: Android taglia i nomi lunghi sotto l'icona.
+ */
+const APP_NAME = process.env.VERCEL_GIT_COMMIT_REF === 'develop' ? 'Pocketly dev' : 'Pocketly'
+
+/** Mette il nome dell'app nel titolo della pagina e nel nome proposto da iPhone per la Home. */
+function appNameInHtml(): Plugin {
+  return {
+    name: 'app-name-in-html',
+    transformIndexHtml(html) {
+      return html
+        .replace('<title>Pocketly</title>', `<title>${APP_NAME}</title>`)
+        .replace('<meta name="apple-mobile-web-app-title" content="Pocketly" />', `<meta name="apple-mobile-web-app-title" content="${APP_NAME}" />`)
+    },
+  }
+}
+
 /** Uscita di un comando git, o '' senza git (es. copia senza cartella .git) o se il comando fallisce. */
 function git(args: string): string {
   try {
@@ -48,17 +68,19 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
     __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+    __APP_NAME__: JSON.stringify(APP_NAME),
   },
   plugins: [
     inlineAppleTouchIcon(),
+    appNameInHtml(),
     vue(),
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Pocketly',
-        short_name: 'Pocketly',
+        name: APP_NAME,
+        short_name: APP_NAME,
         description: 'Tieni traccia di spese, entrate, prestiti e previsioni. I dati restano sul tuo dispositivo.',
         lang: 'it',
         theme_color: '#0f172a',

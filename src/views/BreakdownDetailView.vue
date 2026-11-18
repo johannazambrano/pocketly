@@ -72,7 +72,7 @@ const previousTitle = document.title
 watch(
   () => tag.value?.name,
   async (name) => {
-    document.title = name ? `${name} · Pocketly` : previousTitle
+    document.title = name ? `${name} · ${__APP_NAME__}` : previousTitle
     await nextTick()
     heading.value?.focus()
   },
