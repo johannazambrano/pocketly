@@ -682,6 +682,7 @@ const en: typeof it = {
     undoneToast: 'Expense “{name}” undone.',
     undo: 'Undo',
     prefillLabel: 'Edit “{name}” before saving',
+    enterAmountLabel: 'Enter the amount for “{name}”',
     moveUp: 'Move {name} up',
     moveDown: 'Move {name} down',
   },

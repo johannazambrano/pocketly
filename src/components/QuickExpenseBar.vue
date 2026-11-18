@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useFormat } from '@/i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useQuickExpenseTrigger } from '@/composables/useQuickExpenseTrigger'
@@ -17,6 +18,12 @@ const { trigger, prefill } = useQuickExpenseTrigger()
 function categoryColor(categoryId: string): string {
   return finance.tag('categories', categoryId)?.color ?? OTHER_COLOR
 }
+
+/**
+ * Segnaposto al posto della cifra per i rapidi senza importo («… €» in italiano, «€…» in inglese): dice che la cifra
+ * la scrive l'utente. Ricavato da `money(0)` così segue valuta e lingua.
+ */
+const amountPlaceholder = computed(() => money(0).replace(/\d[\d.,\s\u00a0]*\d|\d/, '…'))
 
 </script>
 
@@ -61,15 +68,19 @@ function categoryColor(categoryId: string): string {
           </button>
         </div>
 
+        <!-- Senza importo: un solo pulsante che apre il modulo; al posto della cifra il segnaposto, niente matita
+             (la matita resta solo per «modifica prima di salvare» nei rapidi con importo). -->
         <button
           v-else
           type="button"
           class="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-ink-2 shadow-2xs transition-colors hover:bg-surface-3 active:bg-surface-4"
+          :aria-label="t('quickExpenses.enterAmountLabel', { name: q.name })"
+          :title="t('quickExpenses.enterAmountLabel', { name: q.name })"
           @click="trigger(q)"
         >
           <span class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: categoryColor(q.categoryId) }" aria-hidden="true"></span>
           <span class="truncate">{{ q.name }}</span>
-          <i class="fa-solid fa-pen-to-square shrink-0 text-[11px] text-ink-4" aria-hidden="true"></i>
+          <span class="shrink-0 font-normal text-ink-4 tabular-nums" aria-hidden="true">{{ amountPlaceholder }}</span>
         </button>
       </template>
     </div>
