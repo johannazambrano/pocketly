@@ -45,9 +45,6 @@ const isActive = (name: string) => route.name === name || isParent(name)
 
 const activeMoreTab = computed(() => moreTabs.find((tab) => isActive(tab.name)) ?? null)
 const moreActive = computed(() => activeMoreTab.value !== null)
-const moreAriaLabel = computed(() =>
-  activeMoreTab.value ? t('nav.moreActive', { section: t(`nav.${activeMoreTab.value.name}`) }) : t('nav.more'),
-)
 
 const addLabel = computed(() => ui.pageAction?.label ?? t('onetime.new'))
 
@@ -74,6 +71,17 @@ const ALERT_PILL_CLASS: Record<NavAlertTone, string> = {
 }
 
 const showMoreAlertDot = computed(() => !!settingsAlert.value && !isActive('settings'))
+
+/**
+ * Nome di «Altro» per i lettori di schermo: dice la sezione aperta e, quando c'è il pallino, anche l'avviso
+ * (il pallino da solo è `aria-hidden` e chi non vede non saprebbe che c'è qualcosa da guardare).
+ */
+const moreAriaLabel = computed(() => {
+  const name = activeMoreTab.value
+    ? t('nav.moreActive', { section: t(`nav.${activeMoreTab.value.name}`) })
+    : t('nav.more')
+  return showMoreAlertDot.value && settingsAlert.value ? `${name}, ${t(`nav.alerts.${settingsAlert.value.kind}`)}` : name
+})
 
 function openMore() {
   restoreFocusOnClose = true
@@ -357,13 +365,16 @@ function moreRowClass(active: boolean) {
       >
         <i class="fa-solid w-5 text-center" :class="tab.icon" aria-hidden="true"></i>
         <span class="min-w-0 flex-1 truncate">{{ t(`nav.${tab.name}`) }}</span>
-        <span
-          v-if="tab.name === 'settings' && settingsAlert"
-          class="h-2 w-2 shrink-0 rounded-full"
-          :class="ALERT_DOT_CLASS[settingsAlert.tone]"
-          :title="t(`nav.alerts.${settingsAlert.kind}`)"
-          :aria-label="t(`nav.alerts.${settingsAlert.kind}`)"
-        ></span>
+        <!-- Il pallino si vede, il testo nascosto lo legge il lettore di schermo (un aria-label su uno span viene ignorato). -->
+        <template v-if="tab.name === 'settings' && settingsAlert">
+          <span
+            class="h-2 w-2 shrink-0 rounded-full"
+            :class="ALERT_DOT_CLASS[settingsAlert.tone]"
+            :title="t(`nav.alerts.${settingsAlert.kind}`)"
+            aria-hidden="true"
+          ></span>
+          <span class="sr-only">, {{ t(`nav.alerts.${settingsAlert.kind}`) }}</span>
+        </template>
       </RouterLink>
     </div>
   </nav>
