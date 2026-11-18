@@ -122,11 +122,11 @@ const yearSelect = computed(() => {
         <kbd class="hidden sm:inline-flex items-center rounded border border-line bg-surface-2 px-1.5 py-0.5 text-[10px] font-mono text-ink-4">Ctrl K</kbd>
       </button>
 
-      <!-- iPhone: "+" tondo nella tinta. PC (e Android su schermi larghi): pulsante con il nome dell'azione. -->
+      <!-- Sotto `md` il "+" è nella barra inferiore in zona pollice per ogni OS; da `md` in su resta qui. -->
       <button
         v-if="appearance.platform === 'ios'"
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent max-md:hidden"
         :aria-label="t('onetime.new')"
         @click="ui.openQuickAdd()"
       >
@@ -135,8 +135,7 @@ const yearSelect = computed(() => {
       <button
         v-else
         type="button"
-        class="btn-primary shrink-0 gap-2"
-        :class="{ 'max-md:hidden': appearance.platform === 'android' }"
+        class="btn-primary shrink-0 gap-2 max-md:hidden"
         @click="ui.openQuickAdd()"
       >
         <i class="fa-solid fa-plus" aria-hidden="true"></i>{{ t('app.newExpense') }}

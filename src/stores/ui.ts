@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import type { OneTimeExpense, QuickExpense } from '@/types/models'
+
+export interface PageAction {
+  label: string
+  run: () => void
+}
 
 export interface ConfirmRequest {
   title: string
@@ -33,7 +38,28 @@ export const useUiStore = defineStore('ui', () => {
   const quickEditExpense = ref<OneTimeExpense | null>(null)
   const confirmRequest = ref<ConfirmRequest | null>(null)
   const toasts = ref<Toast[]>([])
+  const pageActionEntry = shallowRef<{ owner: symbol; action: PageAction } | null>(null)
+  const pageAction = computed(() => pageActionEntry.value?.action ?? null)
   let toastSeq = 0
+
+  function setPageAction(owner: symbol, action: PageAction | null) {
+    if (action) {
+      pageActionEntry.value = { owner, action }
+    } else if (pageActionEntry.value?.owner === owner) {
+      pageActionEntry.value = null
+    }
+  }
+
+  function clearPageAction(owner: symbol) {
+    if (pageActionEntry.value?.owner === owner) {
+      pageActionEntry.value = null
+    }
+  }
+
+  function triggerPrimaryAdd() {
+    if (pageAction.value) pageAction.value.run()
+    else openQuickAdd()
+  }
 
   function openQuickAdd() {
     quickAddPreset.value = null
@@ -124,6 +150,10 @@ export const useUiStore = defineStore('ui', () => {
     quickEditExpense,
     confirmRequest,
     toasts,
+    pageAction,
+    setPageAction,
+    clearPageAction,
+    triggerPrimaryAdd,
     openQuickAdd,
     openQuickAddFromPreset,
     openQuickEdit,

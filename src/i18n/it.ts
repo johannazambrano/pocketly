@@ -26,7 +26,15 @@ export default {
     forecast: 'Previsioni',
     settings: 'Impostazioni',
     more: 'Altro',
+    moreSections: 'Altre sezioni',
+    moreActive: 'Altro ({section})',
+    searchHint: 'Cerca movimenti, budget, prestiti…',
     menu: 'Menu principale',
+    alerts: {
+      syncError: 'Errore sync',
+      update: 'Aggiornamento pronto',
+      backup: 'Backup consigliato',
+    },
   },
   common: {
     save: 'Salva',

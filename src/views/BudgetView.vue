@@ -22,6 +22,7 @@ import BudgetBar from '@/components/BudgetBar.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SavingsGoalForm from '@/components/SavingsGoalForm.vue'
 import SavingsDepositModal from '@/components/SavingsDepositModal.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const ui = useUiStore()
@@ -137,6 +138,7 @@ function openNewGoal() {
   editingGoalId.value = null
   formOpen.value = true
 }
+usePageAction(() => (activeTab.value === 'savings' ? { label: t('savings.new'), run: openNewGoal } : null))
 
 function openEditGoal(goal: SavedGoal) {
   editingGoalId.value = goal.id

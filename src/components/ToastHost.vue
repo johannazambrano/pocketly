@@ -1,13 +1,23 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { useAppearanceStore } from '@/stores/appearance'
 import { useUiStore } from '@/stores/ui'
 
 const ui = useUiStore()
+const appearance = useAppearanceStore()
 const { t } = useI18n()
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6" aria-live="polite">
+  <div
+    class="pointer-events-none fixed inset-x-0 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6"
+    :class="
+      appearance.platform === 'android'
+        ? 'bottom-[calc(10rem+env(safe-area-inset-bottom))]'
+        : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-[379px]:bottom-[calc(9.5rem+env(safe-area-inset-bottom))]'
+    "
+    aria-live="polite"
+  >
     <TransitionGroup enter-from-class="opacity-0 translate-y-2" leave-to-class="opacity-0" enter-active-class="transition" leave-active-class="transition">
       <!-- Errori e messaggi con pulsanti hanno la ✕: restano a lungo e non devono coprire la pagina più del necessario. -->
       <div
