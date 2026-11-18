@@ -680,6 +680,7 @@ export default {
     undoneToast: 'Spesa «{name}» annullata.',
     undo: 'Annulla',
     prefillLabel: 'Modifica «{name}» prima di salvare',
+    enterAmountLabel: 'Scrivi l\'importo di «{name}»',
     moveUp: 'Sposta su {name}',
     moveDown: 'Sposta giù {name}',
   },

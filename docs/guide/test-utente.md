@@ -118,7 +118,7 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
   - clicca **«Annulla»** sul toast e verifica che la spesa appena registrata venga eliminata;
   - ripeti e clicca **«Modifica»** sul toast e verifica che si apra `TransactionForm` sulla spesa appena creata.
 - [ ] **Modifica prima di salvare (`prefill`):** clicca sull'icona matita (`✎`) accanto a un rapido a importo fisso e verifica che si apra *«Nuova spesa variabile»* precompilato, senza proporre di nuovo *«Salva anche come inserimento rapido»*.
-- [ ] **Rapido ad importo libero:** clicca su un rapido senza importo fisso; deve aprire il modulo precompilato pronto per scrivere solo l'importo.
+- [ ] **Rapido ad importo libero:** clicca su un rapido senza importo fisso; nella pillola, al posto della cifra, compare «… €» in grigio e nessuna matita; toccandola si apre il modulo precompilato pronto per scrivere solo l'importo.
 - [ ] **Gestione e riordino (`QuickExpenseManager`):** clicca *«Gestisci»* nella barra rapida (o vai a `/impostazioni#inserimenti-rapidi`), aggiungi un nuovo rapido, verificane gli errori di validazione (nome obbligatorio, importo facoltativo ma valido se presente), riordina le voci con ↑ / ↓ e verifica che il nuovo ordine si rifletta immediatamente in Dashboard e Variabili.
 
 ---
