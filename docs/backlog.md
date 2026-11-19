@@ -33,11 +33,8 @@ collegamento, senza ripeterne il testo.
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
-<<<<<<< HEAD
-| PKT-21 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
-=======
 | PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | da fare | media | libero |
->>>>>>> 01d10959b9923aa3d11ebe6531ef89f3ce1ddbc1
+| PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -323,15 +320,6 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-18 in `develop` con `b40e398` (correzioni `7cf6550`, `aa7c31e`, `2fc592a`). Da provare sui telefoni
     nella versione di prova di `develop`.
 
-<<<<<<< HEAD
-### PKT-21 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
-- **Perché:** introdurre il monitoraggio e l'analisi completa del patrimonio (`Attività − Passività = Patrimonio Netto`) con un modello ibrido: conti liquidi collegati ai metodi di pagamento (saldo iniziale + flussi + giroconti + «Allinea saldo»), investimenti/beni/passività aggiornati a valutazioni periodiche e giroconti, integrazione senza doppi conteggi con Prestiti (`Loan`) e Salvadanai (`SavingsGoal`), serie storica con grafico SVG leggero senza dipendenze esterne, riquadro sintetico in Dashboard, Omnisearch ed export XLSX/CSV. Assorbe ed estende `PKT-07` e si coordina con `PKT-19` per la lettura della liquidità libera vs accantonata.
-- **Come partire:** tutte le specifiche tecniche, il modello matematico, l'elenco file per file e la checklist di verifica sono salvati in [Progetto e Piano Implementativo: Sezione Patrimonio](architettura/patrimonio.md). Prima di scrivere codice, aprire un ramo dedicato (es. `feature/patrimonio`), confermare il posizionamento in `TABS` (menu «Altro» su mobile / sidebar su desktop) e considerare il salto a `CURRENT_SCHEMA_VERSION = 4`.
-- **Fatto quando:** modello dati v4, migrazione, merge 3-vie, logica pura `wealth.ts`, vista `PatrimonyView.vue`, grafico storico SVG, card Dashboard, integrazione Prestiti/Omnisearch/Export, traduzioni `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica visiva su tutte le 6 combinazioni piattaforma × tema.
-- **Storia:**
-  - 2026-11-19 aperta: analisi condivisa e piano implementativo completo salvato in [architettura/patrimonio.md](architettura/patrimonio.md).
-=======
 ### PKT-21 — Scelta dei tag nel modulo con ricerca o menu a tendina
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
 - **Perché:** nel modulo di spese ed entrate (`TagInput`, usato da `TransactionForm` e `QuickExpenseForm`) tutti i
@@ -350,4 +338,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   iPhone, Android e PC; un test sul filtro; documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-19 aperta (Johanna).
->>>>>>> 01d10959b9923aa3d11ebe6531ef89f3ce1ddbc1
+
+### PKT-22 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** introdurre il monitoraggio e l'analisi completa del patrimonio (`Attività − Passività = Patrimonio Netto`) con un modello ibrido: conti liquidi collegati ai metodi di pagamento (saldo iniziale + flussi + giroconti + «Allinea saldo»), investimenti/beni/passività aggiornati a valutazioni periodiche e giroconti, integrazione senza doppi conteggi con Prestiti (`Loan`) e Salvadanai (`SavingsGoal`), serie storica con grafico SVG leggero senza dipendenze esterne, riquadro sintetico in Dashboard, Omnisearch ed export XLSX/CSV. Assorbe ed estende `PKT-07` e si coordina con `PKT-19` per la lettura della liquidità libera vs accantonata.
+- **Come partire:** tutte le specifiche tecniche, il modello matematico, l'elenco file per file e la checklist di verifica sono salvati in [Progetto e Piano Implementativo: Sezione Patrimonio](architettura/patrimonio.md). Prima di scrivere codice, aprire un ramo dedicato (es. `feature/patrimonio`), confermare il posizionamento in `TABS` (menu «Altro» su mobile / sidebar su desktop) e considerare il salto a `CURRENT_SCHEMA_VERSION = 4`.
+- **Fatto quando:** modello dati v4, migrazione, merge 3-vie, logica pura `wealth.ts`, vista `PatrimonyView.vue`, grafico storico SVG, card Dashboard, integrazione Prestiti/Omnisearch/Export, traduzioni `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica visiva su tutte le 6 combinazioni piattaforma × tema.
+- **Storia:**
+  - 2026-11-19 aperta: analisi condivisa e piano implementativo completo salvato in [architettura/patrimonio.md](architettura/patrimonio.md).
