@@ -149,6 +149,9 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     promemoria del backup con i soli rapidi (`6267392`); schede del Budget per i lettori di schermo (`ad6a404`).
     Restano fuori `csvExport.ts` (`PKT-19`) e i filtri dei tag copiati tra Entrate e Spese (da riordinare con
     `PKT-15`).
+  - 2026-11-19 `develop` portato in `main` con `2f177e6` (formato dati 3, nome «Pocketly dev» per la prova su
+    Vercel, rapidi senza importo, barra in basso `PKT-20`). Vercel ripubblica `main` da solo; restano `update.sh`
+    sul container, la ricarica dell'app su tutti i telefoni e le prove della sincronizzazione.
 
 ### PKT-07 — Conti con saldo iniziale e prestiti nel saldo
 - **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
