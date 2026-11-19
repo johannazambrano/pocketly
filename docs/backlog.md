@@ -18,7 +18,7 @@ collegamento, senza ripeterne il testo.
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
 | PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | fatto | — | Johanna |
-| PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
+| PKT-06 | Pubblicare su Proxmox e provare sui telefoni | fatto | — | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
 | PKT-09 | Critique 12 della dashboard: P1 e P2 | fatto | — | Johanna |
@@ -33,6 +33,7 @@ collegamento, senza ripeterne il testo.
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
+| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -131,7 +132,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     decidono dopo in `PKT-19`.
 
 ### PKT-06 — Pubblicare su Proxmox e provare sui telefoni
-- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** in `main` ci sono modifiche non ancora pubblicate (critique 12, avviso del backup, tag da Excel).
 - **Fatto quando:** `update.sh` lanciato, app aggiornata su tutti i telefoni; provato su iPhone che in «Nuova
   spesa» la tastiera si apre da sola sull'importo.
@@ -152,6 +153,9 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-19 `develop` portato in `main` con `2f177e6` (formato dati 3, nome «Pocketly dev» per la prova su
     Vercel, rapidi senza importo, barra in basso `PKT-20`). Vercel ripubblica `main` da solo; restano `update.sh`
     sul container, la ricarica dell'app su tutti i telefoni e le prove della sincronizzazione.
+  - 2026-11-19 `update.sh` lanciato sul container (Johanna): `main` a `2f177e6` pubblicato, formato dati 3.
+    Fatta. Le app sui telefoni vanno ricaricate perché sincronizzino di nuovo; le prove dei telefoni seguono la
+    [guida di prova](guide/test-utente.md).
 
 ### PKT-07 — Conti con saldo iniziale e prestiti nel saldo
 - **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
@@ -314,3 +318,22 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     dell'intestazione da `md` in su (sempre nuova spesa).
   - 2026-11-18 in `develop` con `b40e398` (correzioni `7cf6550`, `aa7c31e`, `2fc592a`). Da provare sui telefoni
     nella versione di prova di `develop`.
+
+### PKT-21 — Scelta dei tag nel modulo con ricerca o menu a tendina
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** nel modulo di spese ed entrate (`TagInput`, usato da `TransactionForm` e `QuickExpenseForm`) tutti i
+  tag non scelti compaiono come pillole sotto il campo. Con tanti tag l'elenco diventa lungo, spinge in basso il
+  resto del modulo e quello cercato non si trova a colpo d'occhio. Categoria e metodo di pagamento invece si
+  scelgono da un menu a tendina.
+- **Come:** un solo campo che cerca e crea. Scrivendo, sotto compare un menu a tendina con i tag che corrispondono
+  (in ordine alfabetico, senza badare a maiuscole e accenti, come `PKT-17`); si sceglie con il tocco o con frecce e
+  Invio; se il nome non esiste la prima voce è «Crea #nome». A campo vuoto il menu mostra pochi tag (i più usati o
+  gli ultimi), non tutti. I tag scelti restano pillole con la ✕ sopra il campo. Da provare la tastiera del telefono
+  (il menu non deve finire sotto la tastiera) e il lettore di schermo (combobox con elenco di opzioni).
+- **Alternative:** menu a tendina a scelta multipla come per le categorie (semplice, ma con molti tag è di nuovo un
+  elenco lungo e non si crea un tag nuovo); lasciare le pillole e aggiungere solo un campo per filtrarle (poco
+  lavoro, ma il modulo resta lungo finché non si scrive).
+- **Fatto quando:** scelta la soluzione; nel modulo i tag si cercano, si scelgono e si creano dallo stesso campo su
+  iPhone, Android e PC; un test sul filtro; documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-19 aperta (Johanna).
