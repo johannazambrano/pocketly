@@ -10,7 +10,7 @@ const { t } = useI18n()
 
 const newTagName = ref('')
 
-const allTags = computed(() => finance.data.tags)
+const allTags = computed(() => finance.sortedTags.tags)
 
 const selectedTags = computed(() => {
   return model.value

@@ -1,4 +1,4 @@
-import type { BudgetSettings, FinanceData, ForecastSettings, Tag } from '@/types/models'
+import { CURRENT_SCHEMA_VERSION, type BudgetSettings, type FinanceData, type ForecastSettings, type Tag } from '@/types/models'
 import { harmonizedColors } from '@/utils/colors'
 import { newId } from '@/utils/id'
 
@@ -32,7 +32,7 @@ export function createDefaultData(locale: string): FinanceData {
   const lang = locale in DEFAULT_CATEGORIES ? locale : 'en'
   const given: string[] = []
   return {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: toTags(DEFAULT_CATEGORIES[lang]!, given),
     paymentMethods: toTags(DEFAULT_PAYMENT_METHODS[lang]!, given),
     tags: [],
@@ -43,12 +43,15 @@ export function createDefaultData(locale: string): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    savingsGoals: [],
+    savingsMovements: [],
+    quickExpenses: [],
   }
 }
 
 export function createEmptyData(): FinanceData {
   return {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: [],
     paymentMethods: [],
     tags: [],
@@ -59,5 +62,8 @@ export function createEmptyData(): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    savingsGoals: [],
+    savingsMovements: [],
+    quickExpenses: [],
   }
 }

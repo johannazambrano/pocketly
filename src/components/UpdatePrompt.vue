@@ -2,6 +2,7 @@
 import { onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
+import { useAppearanceStore } from '@/stores/appearance'
 import { useUiStore } from '@/stores/ui'
 import {
   applyUpdate,
@@ -14,6 +15,7 @@ import {
 
 const { t } = useI18n()
 const ui = useUiStore()
+const appearance = useAppearanceStore()
 
 /** Tra due controlli fatti al risveglio passa almeno questo tempo: `focus` al PC scatta di continuo. */
 const MIN_CHECK_GAP_MS = 60 * 1000
@@ -96,7 +98,12 @@ watch(offlineReady, (ready) => {
   <div
     v-if="updateReady || reloadPending"
     role="status"
-    class="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center justify-between gap-3 rounded-xl bg-chrome px-4 py-3 text-sm text-on-color shadow-lg md:bottom-6"
+    class="fixed inset-x-4 z-[60] mx-auto flex max-w-md items-center justify-between gap-3 rounded-xl bg-chrome px-4 py-3 text-sm text-on-color shadow-lg md:bottom-6"
+    :class="
+      appearance.platform === 'android'
+        ? 'bottom-[calc(10rem+env(safe-area-inset-bottom))]'
+        : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-[374px]:bottom-[calc(9.5rem+env(safe-area-inset-bottom))]'
+    "
   >
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-arrows-rotate text-accent-light" aria-hidden="true"></i>

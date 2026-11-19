@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, monthBreakdown, monthSummary, oneTimeTagBreakdown, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -433,13 +433,13 @@ describe('monthSummary', () => {
   })
 })
 
-describe('oneTimeTagBreakdown', () => {
-  it('restituisce un array vuoto se non ci sono spese o nessuna ha tag', () => {
-    expect(oneTimeTagBreakdown([])).toEqual([])
+describe('tagBreakdown / oneTimeTagBreakdown', () => {
+  it('restituisce un array vuoto se non ci sono elementi o nessuno ha tag', () => {
+    expect(tagBreakdown([])).toEqual([])
     expect(
-      oneTimeTagBreakdown([
-        { id: '1', name: 'A', amount: 100, date: '2026-01-01', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
-        { id: '2', name: 'B', amount: 200, date: '2026-01-02', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: [] },
+      tagBreakdown([
+        { amount: 100 },
+        { amount: 200, tagIds: [] },
       ]),
     ).toEqual([])
   })
@@ -452,11 +452,24 @@ describe('oneTimeTagBreakdown', () => {
       { id: '4', name: 'Regalo', amount: 5000, date: '2026-07-20', categoryId: 'c3', paymentMethodId: 'p1', notes: '', tagIds: ['regali'] },
     ]
 
-    const breakdown = oneTimeTagBreakdown(expenses)
+    const breakdown = tagBreakdown(expenses)
     expect(breakdown).toEqual([
       { id: 'vacanza', total: 108000, count: 3 },
       { id: 'alloggio', total: 65000, count: 1 },
       { id: 'regali', total: 5000, count: 1 },
+    ])
+    // Verifica retrocompatibilità
+    expect(oneTimeTagBreakdown(expenses)).toEqual(breakdown)
+  })
+
+  it('funziona anche con entrate dotate di tag', () => {
+    const incomes = [
+      { id: 'i1', name: 'Bonus', amount: 100000, date: '2026-07-15', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['lavoro', 'premio'] },
+      { id: 'i2', name: 'Stipendio', amount: 200000, date: '2026-07-27', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: ['lavoro'] },
+    ]
+    expect(tagBreakdown(incomes)).toEqual([
+      { id: 'lavoro', total: 300000, count: 2 },
+      { id: 'premio', total: 100000, count: 1 },
     ])
   })
 })
@@ -491,6 +504,252 @@ describe('breakdownItems', () => {
     expect(items.every((i) => i.source === 'recurring')).toBe(true)
     expect(items[0]!.date).toBe('2026-11-01')
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length)
+  })
+})
+
+describe('frequentTemplates', () => {
+  it('restituisce array vuoto se non ci sono elementi', () => {
+    expect(frequentTemplates([])).toEqual([])
+  })
+
+  it('ordina per frequenza decrescente e prende i dati della versione più recente', () => {
+    const items = [
+      { name: 'Caffè', amount: 120, date: '2026-06-01', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Bar' },
+      { name: 'Caffè', amount: 130, date: '2026-06-05', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Prezzo aumentato' },
+      { name: 'Pranzo', amount: 1200, date: '2026-06-02', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 4500, date: '2026-06-03', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 5000, date: '2026-06-04', categoryId: 'c1', paymentMethodId: 'p1' },
+      { name: 'Supermercato', amount: 4800, date: '2026-06-06', categoryId: 'c1', paymentMethodId: 'p1', tagIds: ['spesa'] },
+    ]
+
+    const templates = frequentTemplates(items, 2)
+    expect(templates).toHaveLength(2)
+    // Supermercato (3 volte)
+    expect(templates[0]?.name).toBe('Supermercato')
+    expect(templates[0]?.count).toBe(3)
+    // Prende i dati dell'ultima occorrenza (2026-06-06)
+    expect(templates[0]?.amount).toBe(4800)
+    expect(templates[0]?.tagIds).toEqual(['spesa'])
+
+    // Caffè (2 volte)
+    expect(templates[1]?.name).toBe('Caffè')
+    expect(templates[1]?.count).toBe(2)
+    expect(templates[1]?.amount).toBe(130)
+    expect(templates[1]?.notes).toBe('Prezzo aumentato')
+  })
+})
+
+describe('tagTrends', () => {
+  it('restituisce mappa vuota per mese all o totals vuoto', () => {
+    const d = createEmptyData()
+    expect(tagTrends(d, 2026, 'all', 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+    expect(tagTrends(d, 2026, 5, 'categoryId', [], '2026-06-15').size).toBe(0)
+  })
+
+  it('restituisce mappa vuota per mesi futuri o se non ci sono mesi precedenti', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({ id: 'o1', name: 'Spesa', amount: 5000, date: '2026-03-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' })
+    // Mese 2 (marzo) è il primo mese con movimenti: nessun mese precedente
+    expect(tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+    // Mese 7 (agosto) è futuro rispetto a oggi (2026-06-15)
+    expect(tagTrends(d, 2026, 7, 'categoryId', [{ id: 'c1', total: 5000 }], '2026-06-15').size).toBe(0)
+  })
+
+  it('calcola la media dei mesi passati e assegna i verdetti correttamente', () => {
+    const d = createEmptyData()
+    // Gennaio (mese 0): c1 = 10000, c2 = 4000
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 10000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'B', amount: 4000, date: '2026-01-12', categoryId: 'c2', paymentMethodId: 'p1', notes: '' },
+    )
+    // Febbraio (mese 1): c1 = 10000
+    d.oneTimeExpenses.push(
+      { id: 'o3', name: 'C', amount: 10000, date: '2026-02-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+    )
+    // Marzo (mese 2): mese passato rispetto a TODAY = '2026-06-15'
+    // Media c1 su gen-feb (2 mesi): (10000 + 10000) / 2 = 10000
+    // Media c2 su gen-feb (2 mesi): (4000 + 0) / 2 = 2000
+
+    // Caso 1: c1 con 12000 (> 10000 + 10%) -> above
+    const res1 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 12000 }], '2026-06-15')
+    const t1 = res1.get('c1')
+    expect(t1).toBeDefined()
+    expect(t1?.previousAverage).toBe(10000)
+    expect(t1?.baseline).toBe(10000)
+    expect(t1?.verdict).toBe('above')
+    expect(t1?.diffPercent).toBe(20)
+    expect(t1?.isPace).toBe(false)
+
+    // Caso 2: c1 con 10500 (entro 10%) -> inline
+    const res2 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 10500 }], '2026-06-15')
+    expect(res2.get('c1')?.verdict).toBe('inline')
+    expect(res2.get('c1')?.diffPercent).toBe(5)
+
+    // Caso 3: c1 con 8000 (< 10000 - 10%) -> below
+    const res3 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c1', total: 8000 }], '2026-06-15')
+    expect(res3.get('c1')?.verdict).toBe('below')
+    expect(res3.get('c1')?.diffPercent).toBe(-20)
+
+    // Categoria mai usata prima (c3) non ha media precedente e viene ignorata
+    const res4 = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'c3', total: 5000 }], '2026-06-15')
+    expect(res4.has('c3')).toBe(false)
+  })
+
+  it('per il mese in corso proietta la media precedente al ritmo atteso (pace)', () => {
+    const d = createEmptyData()
+    // Gennaio e Febbraio: spesa c1 di 31000 centesimi (310 €) ciascuno
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 31000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'B', amount: 31000, date: '2026-02-10', categoryId: 'c1', paymentMethodId: 'p1', notes: '' },
+    )
+    // Oggi è 10 marzo 2026 (marzo ha 31 giorni).
+    // Media precedente: 31000. Ritmo al giorno 10: Math.round(31000 * 10 / 31) = 10000.
+    const today = '2026-03-10'
+    const totals = [{ id: 'c1', total: 10000 }]
+    const trends = tagTrends(d, 2026, 2, 'categoryId', totals, today)
+
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(31000)
+    expect(info?.baseline).toBe(10000)
+    expect(info?.verdict).toBe('inline')
+    expect(info?.isPace).toBe(true)
+    expect(info?.diffPercent).toBe(0)
+  })
+
+  it('funziona allo stesso modo per i metodi di pagamento', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'A', amount: 5000, date: '2026-01-10', categoryId: 'c1', paymentMethodId: 'card', notes: '' },
+    )
+    const trends = tagTrends(d, 2026, 1, 'paymentMethodId', [{ id: 'card', total: 6000 }], '2026-03-01')
+    const info = trends.get('card')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(5000)
+    expect(info?.verdict).toBe('above')
+  })
+
+  it('include le spese ricorrenti nella media dei mesi precedenti', () => {
+    const d = createEmptyData()
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Affitto',
+      amount: 50000,
+      frequency: 'monthly',
+      startDate: '2026-01-01',
+      endDate: null,
+      categoryId: 'rent',
+      paymentMethodId: 'bank',
+    })
+    // Gennaio (0) e Febbraio (1) hanno l'addebito ricorrente di 50000 ciascuno.
+    // A Marzo (2) c'è una spesa una tantum imprevista di 10000 oltre all'affitto (totale 60000).
+    const totals = [{ id: 'rent', total: 60000 }]
+    const trends = tagTrends(d, 2026, 2, 'categoryId', totals, '2026-06-01')
+    const info = trends.get('rent')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(50000)
+    expect(info?.verdict).toBe('above')
+    expect(info?.diffPercent).toBe(20)
+  })
+
+  it('calcola la media corretta quando il primo movimento dell’anno è successivo a gennaio', () => {
+    const d = createEmptyData()
+    // Primo movimento in assoluto nel 2026 a Marzo (mese 2)
+    d.oneTimeExpenses.push({
+      id: 'o1',
+      name: 'Spesa',
+      amount: 6000,
+      date: '2026-03-15',
+      categoryId: 'c1',
+      paymentMethodId: 'p1',
+      notes: '',
+    })
+    // Ad Aprile (mese 3), i mesi precedenti considerati sono solo Marzo (monthsCount = 3 - 2 = 1)
+    const trends = tagTrends(d, 2026, 3, 'categoryId', [{ id: 'c1', total: 6000 }], '2026-06-01')
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(6000)
+    expect(info?.verdict).toBe('inline')
+    expect(info?.diffPercent).toBe(0)
+  })
+
+  it('gestisce correttamente il caso con totale a 0 rispetto alla media precedente', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({
+      id: 'o1',
+      name: 'Spesa',
+      amount: 10000,
+      date: '2026-01-15',
+      categoryId: 'c1',
+      paymentMethodId: 'p1',
+      notes: '',
+    })
+    const trends = tagTrends(d, 2026, 1, 'categoryId', [{ id: 'c1', total: 0 }], '2026-06-01')
+    const info = trends.get('c1')
+    expect(info).toBeDefined()
+    expect(info?.previousAverage).toBe(10000)
+    expect(info?.verdict).toBe('below')
+    expect(info?.diffPercent).toBe(-100)
+  })
+
+  it("nel mese in corso l'addebito ricorrente già arrivato non sembra sopra il ritmo", () => {
+    const d = createEmptyData()
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Affitto',
+      amount: 50000,
+      frequency: 'monthly',
+      startDate: '2026-01-01',
+      endDate: null,
+      categoryId: 'rent',
+      paymentMethodId: 'bank',
+    })
+    // Il 3 marzo l'affitto del 1° è già addebitato: di solito allo stesso giorno c'era già.
+    const info = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'rent', total: 50000 }], '2026-03-03').get('rent')
+    expect(info?.baseline).toBe(50000)
+    expect(info?.verdict).toBe('inline')
+  })
+
+  it("nel mese in corso l'addebito ricorrente che arriva più avanti non conta ancora", () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push(
+      { id: 'o1', name: 'Film', amount: 3100, date: '2026-01-05', categoryId: 'svago', paymentMethodId: 'p1', notes: '' },
+      { id: 'o2', name: 'Film', amount: 3100, date: '2026-02-05', categoryId: 'svago', paymentMethodId: 'p1', notes: '' },
+    )
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Streaming',
+      amount: 1500,
+      frequency: 'monthly',
+      startDate: '2026-01-20',
+      endDate: null,
+      categoryId: 'svago',
+      paymentMethodId: 'p1',
+    })
+    // Il 10 marzo (31 giorni): variabili 3100 × 10/31 = 1000, lo streaming del 20 non è ancora arrivato.
+    const info = tagTrends(d, 2026, 2, 'categoryId', [{ id: 'svago', total: 1000 }], '2026-03-10').get('svago')
+    expect(info?.previousAverage).toBe(4600)
+    expect(info?.baseline).toBe(1000)
+    expect(info?.verdict).toBe('inline')
+  })
+
+  it('la media parte dal mese in cui la voce compare, non dal primo movimento dell anno', () => {
+    const d = createEmptyData()
+    d.oneTimeExpenses.push({ id: 'o1', name: 'Spesa', amount: 2000, date: '2026-01-10', categoryId: 'cibo', paymentMethodId: 'p1', notes: '' })
+    d.recurringExpenses.push({
+      id: 'r1',
+      name: 'Palestra',
+      amount: 4000,
+      frequency: 'monthly',
+      startDate: '2026-05-01',
+      endDate: null,
+      categoryId: 'sport',
+      paymentMethodId: 'p1',
+    })
+    // A giugno la palestra ha un solo mese precedente (maggio): media 4000, non 4000 / 5.
+    const info = tagTrends(d, 2026, 5, 'categoryId', [{ id: 'sport', total: 4000 }], '2026-07-01').get('sport')
+    expect(info?.previousAverage).toBe(4000)
+    expect(info?.verdict).toBe('inline')
   })
 })
 

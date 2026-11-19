@@ -44,12 +44,25 @@ function conflict(local: Value, remote: Value): Value {
   return local === ABSENT ? remote : local
 }
 
+/** Le voci presenti in tutti e due gli elenchi stanno nello stesso ordine (aggiunte e rimozioni non contano). */
+function sameOrder(a: { id: Id }[], b: { id: Id }[]): boolean {
+  const inB = new Set(b.map((x) => x.id))
+  const inA = new Set(a.map((x) => x.id))
+  const x = a.map((v) => v.id).filter((id) => inB.has(id))
+  const y = b.map((v) => v.id).filter((id) => inA.has(id))
+  return x.length === y.length && x.every((id, i) => id === y[i])
+}
+
 function mergeIdList(base: { id: Id }[], local: { id: Id }[], remote: { id: Id }[]): { id: Id }[] {
   const b = new Map(base.map((x) => [x.id, x]))
   const l = new Map(local.map((x) => [x.id, x]))
   const r = new Map(remote.map((x) => [x.id, x]))
-  // Ordine: quello del server, poi le voci nuove di questo dispositivo.
-  const ids = [...r.keys(), ...[...l.keys()].filter((id) => !r.has(id))]
+  // Ordine: quello del server, poi le voci nuove di questo dispositivo. Se però sul server l'ordine non è cambiato
+  // dall'ultima sincronizzazione e su questo dispositivo sì (es. inserimenti rapidi riordinati), vale quello di qui,
+  // con in fondo le voci nuove arrivate dal server.
+  const ids = sameOrder(base, remote) && !sameOrder(base, local)
+    ? [...l.keys(), ...[...r.keys()].filter((id) => !l.has(id))]
+    : [...r.keys(), ...[...l.keys()].filter((id) => !r.has(id))]
   const out: { id: Id }[] = []
   for (const id of ids) {
     // Ogni voce è un'unità: se cambiata da tutte e due le parti non si mescolano i campi.
@@ -132,11 +145,25 @@ function repairReferences(data: FinanceData, ...sources: FinanceData[]): Finance
     }
   }
 
+  // Un salvadanaio cancellato su un dispositivo mentre sull'altro ci si versava: torna, con i movimenti arrivati
+  // dopo (quelli di prima li ha tolti chi l'ha cancellato), invece di lasciare il versamento senza salvadanaio.
+  const goals = [...(data.savingsGoals ?? [])]
+  const knownGoals = new Set(goals.map((g) => g.id))
+  for (const m of data.savingsMovements ?? []) {
+    if (knownGoals.has(m.goalId)) continue
+    const goal = sources.map((s) => (s.savingsGoals ?? []).find((g) => g.id === m.goalId)).find(Boolean)
+    if (goal) {
+      goals.push(goal)
+      knownGoals.add(goal.id)
+    }
+  }
+
   const limits = Object.fromEntries(Object.entries(data.budget.limits).filter(([id]) => known.categories.has(id)))
   return {
     ...data,
     categories: lists.categories,
     paymentMethods: lists.paymentMethods,
+    savingsGoals: goals,
     forecast: { ...data.forecast, incomeCategoryIds: data.forecast.incomeCategoryIds.filter((id) => known.categories.has(id)) },
     budget: { ...data.budget, limits },
   }

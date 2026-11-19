@@ -84,6 +84,10 @@
   --color-negative-fill-light: var(--pk-negative-fill-light);
   --color-recurring-fill: var(--pk-recurring-fill);
   --color-caution-fill: var(--pk-caution-fill);
+  --color-dock: var(--pk-dock-bg);
+  --color-dock-sheet: var(--pk-dock-sheet);
+  --color-dock-border: var(--pk-dock-border);
+  --color-dock-pill: var(--pk-dock-pill);
 }
 
 :root {
@@ -154,6 +158,10 @@
   --pk-negative-fill-light: var(--color-rose-500);
   --pk-recurring-fill: var(--color-indigo-600);
   --pk-caution-fill: var(--color-amber-600);
+  --pk-dock-bg: color-mix(in oklab, var(--color-white) 90%, transparent);
+  --pk-dock-sheet: color-mix(in oklab, var(--color-white) 96%, transparent);
+  --pk-dock-border: var(--color-slate-200);
+  --pk-dock-pill: var(--color-emerald-50);
 }
 
 /*
@@ -227,6 +235,10 @@
   --pk-negative-fill-light: var(--color-rose-500);
   --pk-recurring-fill: var(--color-indigo-500);
   --pk-caution-fill: var(--color-amber-500);
+  --pk-dock-bg: color-mix(in oklab, var(--color-slate-900) 90%, transparent);
+  --pk-dock-sheet: color-mix(in oklab, var(--color-slate-900) 96%, transparent);
+  --pk-dock-border: var(--color-slate-700);
+  --pk-dock-pill: color-mix(in oklab, var(--color-emerald-500) 18%, transparent);
 }
 
 /*
@@ -249,6 +261,10 @@
   --pk-ink-4: #6c6c70;
   --pk-ink-5: #8e8e93;
   --pk-ink-6: #aeaeb2;
+  --pk-dock-bg: color-mix(in oklab, #ffffff 76%, transparent);
+  --pk-dock-sheet: color-mix(in oklab, #ffffff 88%, transparent);
+  --pk-dock-border: color-mix(in oklab, #ffffff 65%, var(--color-slate-300));
+  --pk-dock-pill: color-mix(in oklab, var(--color-emerald-700) 12%, transparent);
 }
 :root[data-platform='ios'][data-theme='dark'] {
   --pk-canvas: #000000;
@@ -266,6 +282,10 @@
   --pk-ink-4: #aeaeb2;
   --pk-ink-5: #98989d;
   --pk-ink-6: #636366;
+  --pk-dock-bg: color-mix(in oklab, #1c1c1e 78%, transparent);
+  --pk-dock-sheet: color-mix(in oklab, #2c2c2e 90%, transparent);
+  --pk-dock-border: color-mix(in oklab, #ffffff 14%, transparent);
+  --pk-dock-pill: color-mix(in oklab, var(--color-emerald-400) 20%, transparent);
 }
 
 /*
@@ -289,6 +309,7 @@
   --pk-ink-5: #5e6863;
   --pk-ink-6: #89938e;
   --pk-accent: #006c4c;
+  --pk-accent-bright: #00875f;
   --pk-accent-icon: #006c4c;
   --pk-accent-soft: #cde9da;
   --pk-accent-soft-2: #8ef6c4;
@@ -297,6 +318,10 @@
   /* Sulle superfici verdine di Material il rosso e l'ambra piccoli scendevano sotto 4,5:1: un grado più scuri. */
   --pk-negative: var(--color-rose-700);
   --pk-caution: var(--color-amber-800);
+  --pk-dock-bg: #e3eae4;
+  --pk-dock-sheet: #eef4ef;
+  --pk-dock-border: #dae4de;
+  --pk-dock-pill: #cde9da;
 }
 :root[data-platform='android'][data-theme='dark'] {
   --pk-canvas: #0f1512;
@@ -315,6 +340,7 @@
   --pk-ink-5: #8f9a94;
   --pk-ink-6: #6f7974;
   --pk-accent: #72d9a9;
+  --pk-accent-bright: #8ef6c4;
   --pk-accent-icon: #72d9a9;
   --pk-accent-soft: #334b40;
   --pk-accent-soft-2: #005138;
@@ -323,6 +349,10 @@
   /* Le regole di Android vengono dopo quelle dello scuro: rosso e ambra vanno ridetti per il buio. */
   --pk-negative: var(--color-rose-400);
   --pk-caution: var(--color-amber-400);
+  --pk-dock-bg: #252b28;
+  --pk-dock-sheet: #1b211e;
+  --pk-dock-border: #303633;
+  --pk-dock-pill: #334b40;
 }
 
 @layer base {
@@ -335,10 +365,14 @@
      * elemento, la pagina scorre tenendolo fuori da entrambe invece di lasciarlo nascosto sotto.
      */
     scroll-padding-top: calc(5rem + env(safe-area-inset-top));
-    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+  :root[data-platform='android'] {
+    scroll-padding-bottom: calc(9.5rem + env(safe-area-inset-bottom));
   }
   @media (min-width: 48rem) {
-    html {
+    html,
+    :root[data-platform='android'] {
       scroll-padding-bottom: 1rem;
     }
   }

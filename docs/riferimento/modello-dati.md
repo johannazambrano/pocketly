@@ -3,17 +3,18 @@ source-files:
   - src/types/models.ts
   - src/services/migration.ts
   - src/domain/defaults.ts
+  - src/domain/savings.ts
   - src/utils/dates.ts
   - src/utils/money.ts
   - src/utils/id.ts
   - src/domain/recurrence.ts
   - src/services/storage.ts
-verified: 2026-11-12
+verified: 2026-11-15
 ---
 
 # Riferimento: Modello Dati e Tipi
 
-Questo documento costituisce la specifica esaustiva del modello dati di Pocketly definito in [`src/types/models.ts`](../../src/types/models.ts) (schema v2).
+Questo documento costituisce la specifica esaustiva del modello dati di Pocketly definito in [`src/types/models.ts`](../../src/types/models.ts) (formato 3, `CURRENT_SCHEMA_VERSION`; il formato 2 si legge ancora e si riscrive come 3).
 
 ---
 
@@ -76,6 +77,21 @@ export interface OneTimeExpense {
 }
 ```
 
+### `QuickExpense` (Inserimento Rapido di Spesa Variabile)
+```ts
+export interface QuickExpense {
+  id: Id
+  name: string
+  amount?: Cents // Importo fisso in centesimi, oppure assente se varia ogni volta
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+```
+
+Un `QuickExpense` con `amount` definito registra una `OneTimeExpense` in un solo tocco alla data corrente (`finance.triggerQuickExpense`); senza `amount` precompila il modulo di inserimento lasciando l'importo da scrivere. È facoltativo nei backup precedenti (`normalizeV2` usa `[]` se assente). È uno dei campi che hanno portato al formato 3: un'app in formato 2 lo scarterebbe e alla prima modifica lo cancellerebbe anche dal server.
+
 ### `NotificationRule` e `RecurringExpense` (Spesa Ricorrente)
 ```ts
 export interface NotificationRule {
@@ -120,6 +136,8 @@ export interface Income {
   date: IsoDate
   categoryId: Id
   paymentMethodId: Id
+  notes?: string
+  tagIds?: Id[]
 }
 ```
 
@@ -171,13 +189,42 @@ export interface BudgetSettings {
 }
 ```
 
+### `SavingsGoal` (Salvadanaio / Obiettivo di Risparmio)
+```ts
+export interface SavingsGoal {
+  id: Id
+  name: string
+  targetAmount: Cents           // Importo target in centesimi
+  targetDate: IsoDate           // Data entro cui raggiungere il traguardo (YYYY-MM-DD)
+  color?: string                // Colore identificativo personalizzato
+  notes?: string                // Note o promemoria testuali opzionali
+}
+```
+L'importo già accantonato non è salvato sul salvadanaio: è la somma dei suoi movimenti
+(`withSavedAmounts` in `domain/savings.ts`, mai sotto zero). I dati salvati prima dei movimenti avevano
+`currentAmount` sul salvadanaio: `parseBackup` lo trasforma in un movimento con id `<id salvadanaio>-iniziale`,
+uguale su tutti i dispositivi, solo se il salvadanaio non ha ancora movimenti.
+
+### `SavingsMovement` (Versamento o prelievo su un salvadanaio)
+```ts
+export interface SavingsMovement {
+  id: Id
+  goalId: Id                    // Salvadanaio a cui appartiene
+  date: IsoDate                 // Giorno del movimento
+  amount: Cents                 // Positivo = versamento, negativo = prelievo (mai 0)
+}
+```
+Ogni movimento è una voce a sé nell'elenco `savingsMovements`: due versamenti fatti su due dispositivi prima di
+sincronizzare restano entrambi. Cancellando un salvadanaio si cancellano anche i suoi movimenti; quelli che
+puntano a un salvadanaio inesistente vengono scartati da `parseBackup`.
+
 ---
 
 ## 3. Struttura Radice: `FinanceData`
 
 ```ts
 export interface FinanceData {
-  schemaVersion: 2
+  schemaVersion: 3 // typeof CURRENT_SCHEMA_VERSION
   categories: Tag[]
   paymentMethods: Tag[]
   tags: Tag[]
@@ -188,6 +235,9 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  savingsGoals: SavingsGoal[]
+  savingsMovements: SavingsMovement[]
+  quickExpenses: QuickExpense[]
 }
 
 export const CURRENT_SCHEMA_VERSION = 2
@@ -204,7 +254,7 @@ Il modulo `migration.ts` garantisce che Pocketly possa leggere e importare quals
 - **Validazione difensiva `parseBackup(raw)`:**
   Non assume mai che il file importato sia valido. Convalida la presenza di ciascun array, ripulisce valori `null` o `undefined`, converte tipi non conformi e garantisce il ripristino di una struttura `FinanceData` semanticamente corretta.
 - **Protezione versioni più recenti (`NewerFormatError`):**
-  Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 2`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
+  Se il file di backup o i dati provenienti dal server presentano uno `schemaVersion` maggiore di quello compreso dall'applicazione (`CURRENT_SCHEMA_VERSION = 3`), `parseBackup` solleva `NewerFormatError`. Lo store `sync.ts` riconosce l'eccezione impostando lo stato di problema `outdated`. Questo impedisce a versioni datate del client di sovrascrivere o cancellare dati che contengono campi introdotti in release future.
 - **Valori predefiniti (`src/domain/defaults.ts`):**
   - `createEmptyData()`: genera un'istanza con array vuoti e impostazioni predefinite (stima delle entrate attiva, nessun limite di budget).
   - `createDefaultData(locale)`: genera un dataset iniziale con categorie e metodi di pagamento predefiniti nella lingua indicata (inglese se non supportata), con colori in equilibrio (`harmonizedColors`: ogni voce la tinta più lontana dalle precedenti, "Altro" grigia). Categorie in italiano: Cibo e bevande, Trasporti, Altro, Salute e benessere, Finanza, Digitale, Auto, Vacanze, Stipendio. Metodi: Bonifico, Contanti, Carta di debito, Carta di credito, PayPal.

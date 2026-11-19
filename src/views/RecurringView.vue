@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHighlight } from '@/composables/useHighlight'
 import { computed, ref } from 'vue'
 import type { RecurringException, RecurringExpense } from '@/types/models'
 import { monthlyEquivalent, type RecurringSeries } from '@/domain/recurrence'
@@ -12,6 +13,7 @@ import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const { t, money, date } = useFormat()
@@ -23,11 +25,17 @@ const editing = ref<RecurringExpense | null>(null)
 const monthlyTotal = computed(() =>
   Math.round(finance.recurringSeriesOfYear.reduce((acc, s) => acc + (s.active ? monthlyEquivalent(s.current) : 0), 0)),
 )
+// La ricerca può indicare una parte vecchia di una spesa divisa: si segna la riga della serie, che mostra la parte in corso.
+const highlightedId = useHighlight(
+  (id) => `entry-${id}`,
+  (id) => finance.recurringSeriesOfYear.find((s) => s.parts.some((p) => p.id === id))?.current.id ?? id,
+)
 
 function open(item: RecurringExpense | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('recurring.new'), run: () => open(null) }))
 
 /**
  * "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo.
@@ -97,10 +105,12 @@ function partState(s: RecurringSeries, p: RecurringExpense) {
     >
       <EntryRow
         v-for="s in finance.recurringSeriesOfYear"
+        :id="`entry-${s.current.id}`"
         :key="s.key"
         :name="s.current.name"
         :amount="money(s.current.amount)"
         :subtitle="period(s)"
+        :class="{ 'ring-2 ring-accent rounded-xl bg-accent-soft/30 transition-all duration-500': highlightedId === s.current.id }"
         @edit="open(s.current)"
         @delete="confirmDelete(s.current.name, () => finance.deleteRecurringSeries(s.current))"
       >

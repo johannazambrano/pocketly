@@ -11,7 +11,7 @@
  * - Categorie, metodi di pagamento e tag: dal foglio Settings più quelli usati nei dati.
  * - Non supportati e quindi ignorati: Fonte, Prelievo su (come conto), frequenza Weekly, Prestiti.
  */
-import type { FinanceData, Frequency, Income, OneTimeExpense, RecurringExpense, Tag } from '@/types/models'
+import { CURRENT_SCHEMA_VERSION, type FinanceData, type Frequency, type Income, type OneTimeExpense, type RecurringExpense, type Tag } from '@/types/models'
 import { defaultForecastSettings } from '@/domain/defaults'
 import { harmonizedColors } from '@/utils/colors'
 import { uuidv5 } from '@/utils/uuidv5'
@@ -286,6 +286,11 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       if (!date) continue
       const key = name.toLowerCase()
       const k = occurrence(`${date}\u0000${key}\u0000${amount}`)
+      const tagIds: string[] = []
+      for (const tagName of parseTagNames(r.Tag)) {
+        const id = tags.add(tagName)
+        if (!tagIds.includes(id)) tagIds.push(id)
+      }
       incomes.push({
         id: stableId(`in:${date}:${key}:${amount}:${k}`),
         name,
@@ -293,6 +298,8 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
         date,
         categoryId: categories.add(clean(r.Categoria) || 'Other'),
         paymentMethodId: payments.add(clean(r['Prelievo su']) || 'Other'),
+        notes: clean(r.Note),
+        tagIds,
       })
     }
   }
@@ -355,7 +362,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
   colorize([categories, payments, tags])
 
   const data: FinanceData = {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: categories.items,
     paymentMethods: payments.items,
     tags: tags.items,
@@ -366,6 +373,9 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: { limits: {} },
+    savingsGoals: [],
+    savingsMovements: [],
+    quickExpenses: [],
   }
 
   return {

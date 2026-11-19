@@ -12,6 +12,7 @@ import MonthSelector from '@/components/MonthSelector.vue'
 import WelcomePanel from '@/components/WelcomePanel.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
+import QuickExpenseBar from '@/components/QuickExpenseBar.vue'
 import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 import { useMonthStep } from '@/composables/useMonthStep'
 
@@ -512,6 +513,8 @@ const showUpcoming = computed(
         :explain="explain"
       />
 
+      <QuickExpenseBar manage-link />
+
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div v-if="showUpcoming" class="card space-y-3 md:col-span-2">
           <h3 ref="upcomingHeading" tabindex="-1" class="text-sm font-semibold text-ink-2 focus:outline-none">
@@ -583,12 +586,12 @@ const showUpcoming = computed(
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-ink-2">{{ t('dashboard.byCategory') }}</h3>
-          <BreakdownList kind="categories" linked :totals="categoryTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="categories" linked :totals="categoryTotals" :trends="finance.categoryTrends" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
 
         <div class="card space-y-3">
           <h3 class="text-sm font-semibold text-ink-2">{{ t('dashboard.byPayment') }}</h3>
-          <BreakdownList kind="paymentMethods" linked :totals="paymentTotals" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
+          <BreakdownList kind="paymentMethods" linked :totals="paymentTotals" :trends="finance.paymentMethodTrends" :grand-total="breakdownGrandTotal" :empty-text="categoryEmptyText" />
         </div>
       </div>
     </template>

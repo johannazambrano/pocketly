@@ -2,40 +2,34 @@
 source-files:
   - src/views/IncomeView.vue
   - src/views/BudgetView.vue
+  - src/composables/useMonthStep.ts
+  - src/domain/savings.ts
   - server/webpush.py
   - src/stores/notifications.ts
-verified: 2026-11-10
+verified: 2026-11-17
 ---
 
 # Stato e Difetti Noti (Known Issues)
 
-*Verificato il 10 Novembre 2026 sul commit `d9f4a6d` (merge `main`).*
+*Verificato il 12 Novembre 2026.*
 
 Questo documento elenca le caratteristiche note, i limiti architetturali e i comportamenti specifici verificati direttamente sul codice sorgente di Pocketly.
 
 ---
 
-## 1. Disallineamento UI Filtro Mese in `IncomeView`
-- **Classificazione:** `Minor Robustness Risk` / Scelta UI
-- **File coinvolti:** [`src/views/IncomeView.vue`](../src/views/IncomeView.vue) vs [`src/views/OneTimeView.vue`](../src/views/OneTimeView.vue)
-- **Descrizione:**
-  In `OneTimeView.vue` è presente il componente `MonthSelector`, che consente all'utente di filtrare le uscite per singolo mese oltre che per l'intero anno. Al contrario, `IncomeView.vue` visualizza direttamente `finance.incomesOfYear` senza componente `MonthSelector`.
-- **Impatto:**
-  L'utente in `IncomeView` vede sempre tutte le entrate dell'anno in corso in una lista unica. Se il numero di entrate nell'anno è elevato, la vista non offre il filtro mensile rapido.
-- **Soluzione futura consigliata:**
-  Introdurre `MonthSelector` anche in `IncomeView.vue` collegandolo a un elenco filtrato (es. `incomesFiltered`), coerentemente con quanto avviene per le spese una tantum.
+## 1. Disallineamento UI Filtro Mese in `IncomeView` [RISOLTO]
+- **Classificazione:** Risolto (12 Novembre 2026)
+- **File coinvolti:** [`src/views/IncomeView.vue`](../src/views/IncomeView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Risoluzione:**
+  `IncomeView.vue` è stata armonizzata con `OneTimeView.vue`: dispone di `MonthSelector` nella testata, mostra `incomesFiltered`, supporta filtri e riepilogo raggruppato per tag (`tagBreakdown`), e visualizza note e badge dei tag per ciascuna entrata.
 
 ---
 
-## 2. Indice Mese Locale in `BudgetView`
-- **Classificazione:** `Minor Robustness Risk` / Architettura UI
-- **File coinvolti:** [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
-- **Descrizione:**
-  Nello store `finance.ts` è presente la proprietà reattiva globale `selectedMonth` (inizializzata al mese corrente `new Date().getMonth()`, con tipo `number | 'all'`), utilizzata da `DashboardView` e `OneTimeView`. La vista `BudgetView.vue`, invece, gestisce internamente un proprio stato locale `const monthIndex = ref(parseIsoDate(finance.today).month)` con pulsanti di navigazione mensile dedicati ("Mese precedente", "Mese successivo", "Mese corrente").
-- **Impatto:**
-  Se l'utente seleziona un mese diverso nella Dashboard o in Spese una tantum e successivamente naviga sulla pagina del Budget, `BudgetView` non eredita il mese selezionato, mostrando di default il mese corrente di calendario.
-- **Soluzione futura consigliata:**
-  Valutare se sincronizzare bidirezionalmente il mese di `BudgetView` con lo stato globale `finance.selectedMonth` (convertendo `'all'` nel mese corrente per il budget).
+## 2. Indice Mese Locale in `BudgetView` [RISOLTO]
+- **Classificazione:** Risolto (17 Novembre 2026, PKT-02)
+- **File coinvolti:** [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/composables/useMonthStep.ts`](../src/composables/useMonthStep.ts), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Risoluzione:**
+  `BudgetView.vue` ora legge direttamente `finance.selectedMonth` e naviga tramite `useMonthStep` (che accetta un parametro opzionale `effectiveMonth`), mantenendo il mese sincronizzato con Dashboard, Variabili ed Entrate e gestendo correttamente il passaggio dicembre ↔ gennaio nei limiti di `finance.years`. Quando nelle altre pagine è selezionato l'anno intero (`'all'`), il Budget mostra il mese corrente di calendario (`finance.today`) con una nota informativa (`budget.wholeYearNote`) senza sovrascrivere `'all'` finché l'utente non cambia mese dal Budget.
 
 ---
 
@@ -54,3 +48,13 @@ Questo documento elenca le caratteristiche note, i limiti architetturali e i com
   Il calcolo dei promemoria (`calculateUpcomingReminders`) genera le scadenze su un orizzonte massimo di 60 giorni in avanti. Inoltre, il server accetta al massimo 5000 notifiche pianificate in totale (`MAX_PUSH_SCHEDULE = 5000`).
 - **Miglioramento apportato:**
   L'interfaccia utente in `NotificationSettings.vue` chiarisce ora esplicitamente all'utente questo comportamento ("I promemoria coprono i prossimi 60 giorni e si rinnovano a ogni apertura dell'app"), e lo store notifica avvisi visivi dedicati (`scheduleProblem`) qualora il tetto massimo di 5000 notifiche venga raggiunto (`tooMany`) o si verifichino errori di rete nell'inoltro del calendario (`failed`). Spese con scadenza oltre 60 giorni vengono pianificate non appena rientrano nella finestra.
+
+---
+
+## 5. Tracciamento Salvadanai e Isolamento dal Saldo Operativo
+- **Classificazione:** `Caratteristica di Design` (Documentata)
+- **File coinvolti:** [`src/domain/savings.ts`](../src/domain/savings.ts), [`src/views/BudgetView.vue`](../src/views/BudgetView.vue), [`src/stores/finance.ts`](../src/stores/finance.ts)
+- **Descrizione:**
+  I salvadanai (`SavingsGoal`) gestiscono l'accantonamento fondi verso obiettivi futuri monitorando il capitale attuale e il target desiderato (`targetAmount`). I versamenti e i prelievi sono movimenti (`savingsMovements`) da cui si calcola il capitale attuale, e non generano transazioni contabili nel bilancio operativo del mese (`oneTimeExpenses` / `incomes`).
+- **Motivazione:**
+  L'accantonamento in un salvadanaio è un trasferimento patrimoniale / riserva liquida e non un consumo a fondo perduto né una nuova entrata reddituale; mantenere isolato il saldo operativo evita distorsioni nelle medie storiche e nelle stime previsionali dell'anno.

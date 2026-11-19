@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type {
+  Cents,
   FinanceData,
   ForecastSettings,
   Id,
@@ -9,16 +10,21 @@ import type {
   Loan,
   NotificationRule,
   OneTimeExpense,
+  QuickExpense,
   RecurringException,
   RecurringExpense,
   Repayment,
+  SavingsGoal,
   Simulation,
   Tag,
 } from '@/types/models'
-import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, variableSpending, yearSummary } from '@/domain/calculations'
+import { availableYears, estimateCategoryIds, estimateMonthlyIncome, forecast, monthSummary, tagTrends, type TagTrendInfo, variableSpending, yearSummary } from '@/domain/calculations'
 import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
+import { movementFor, savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
+import { sortTagsByName } from '@/domain/tags'
+import { LOCALES, i18n } from '@/i18n'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
 import { addDays, lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
@@ -154,6 +160,18 @@ export const useFinanceStore = defineStore('finance', () => {
     if (selectedMonth.value === 'all') return null
     return monthSummary(data.value, selectedYear.value, selectedMonth.value, today.value)
   })
+  const categoryTrends = computed(() => {
+    const ms = monthSummaryData.value
+    if (!ms || selectedMonth.value === 'all') return new Map<Id, TagTrendInfo>()
+    const totals = ms.timing === 'current' ? ms.byCategoryToDate : ms.byCategory
+    return tagTrends(data.value, selectedYear.value, selectedMonth.value, 'categoryId', totals, today.value)
+  })
+  const paymentMethodTrends = computed(() => {
+    const ms = monthSummaryData.value
+    if (!ms || selectedMonth.value === 'all') return new Map<Id, TagTrendInfo>()
+    const totals = ms.timing === 'current' ? ms.byPaymentMethodToDate : ms.byPaymentMethod
+    return tagTrends(data.value, selectedYear.value, selectedMonth.value, 'paymentMethodId', totals, today.value)
+  })
   const oneTimeFiltered = computed(() => {
     if (selectedMonth.value === 'all') return oneTimeOfYear.value
     return oneTimeOfYear.value.filter((e) => parseIsoDate(e.date).month === selectedMonth.value)
@@ -161,6 +179,10 @@ export const useFinanceStore = defineStore('finance', () => {
   const incomesOfYear = computed(() =>
     data.value.incomes.filter((e) => yearOf(e.date) === selectedYear.value).sort(byDateDesc),
   )
+  const incomesFiltered = computed(() => {
+    if (selectedMonth.value === 'all') return incomesOfYear.value
+    return incomesOfYear.value.filter((e) => parseIsoDate(e.date).month === selectedMonth.value)
+  })
   const recurringOfYear = computed(() =>
     data.value.recurringExpenses
       .filter((r) => isActiveInYear(r, selectedYear.value))
@@ -183,12 +205,30 @@ export const useFinanceStore = defineStore('finance', () => {
     data.value.simulations.filter((s) => s.year === selectedYear.value).sort((a, b) => a.month - b.month),
   )
   const loans = computed(() => [...data.value.loans].sort(byDateDesc))
+  const savedGoals = computed(() => withSavedAmounts(data.value.savingsGoals ?? [], data.value.savingsMovements ?? []))
+  const savingsGoals = computed(() => sortSavingsGoals(savedGoals.value, today.value))
+  const savingsSummaryData = computed(() => savingsSummary(savedGoals.value, today.value))
+  const quickExpenses = computed(() => data.value.quickExpenses)
 
   const tagMaps = computed(() => ({
     categories: new Map(data.value.categories.map((t) => [t.id, t])),
     paymentMethods: new Map(data.value.paymentMethods.map((t) => [t.id, t])),
     tags: new Map(data.value.tags.map((t) => [t.id, t])),
   }))
+
+  /**
+   * Categorie, metodi e tag in ordine alfabetico nella lingua dell'app: menu, filtri e Impostazioni li leggono da
+   * qui invece che da `data` (che li tiene nell'ordine di creazione, e così restano salvati e sincronizzati).
+   */
+  const sortedTags = computed(() => {
+    const locale = i18n.global.locale.value
+    const intl = LOCALES.find((l) => l.code === locale)?.intl ?? locale
+    return {
+      categories: sortTagsByName(data.value.categories, intl),
+      paymentMethods: sortTagsByName(data.value.paymentMethods, intl),
+      tags: sortTagsByName(data.value.tags, intl),
+    }
+  })
 
   function tag(kind: TagKind, id: Id): Tag | undefined {
     return tagMaps.value[kind].get(id)
@@ -209,13 +249,58 @@ export const useFinanceStore = defineStore('finance', () => {
     return { categoryId: pick('categories', last?.categoryId), paymentMethodId: pick('paymentMethods', last?.paymentMethodId) }
   }
 
-  function saveOneTime(item: WithOptionalId<OneTimeExpense>) {
-    upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
+  function saveOneTime(item: WithOptionalId<OneTimeExpense>): OneTimeExpense {
+    const saved = upsert(data.value.oneTimeExpenses, { ...item, tagIds: item.tagIds ?? [] })
     selectedYear.value = yearOf(item.date)
+    return saved
+  }
+
+  function saveQuickExpense(item: WithOptionalId<QuickExpense>): QuickExpense {
+    const { amount, ...rest } = item
+    const normalizedAmount = typeof amount === 'number' && Number.isInteger(amount) && amount > 0 ? amount : undefined
+    return upsert(data.value.quickExpenses, {
+      ...rest,
+      name: item.name.trim(),
+      notes: item.notes.trim(),
+      tagIds: item.tagIds ?? [],
+      ...(normalizedAmount !== undefined ? { amount: normalizedAmount } : {}),
+    })
+  }
+
+  const deleteQuickExpense = (id: Id) => remove(data.value.quickExpenses, id)
+
+  function moveQuickExpense(id: Id, direction: -1 | 1) {
+    const list = data.value.quickExpenses
+    const index = list.findIndex((q) => q.id === id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= list.length) return
+    const [item] = list.splice(index, 1)
+    if (item) list.splice(target, 0, item)
+  }
+
+  /**
+   * Registra subito una spesa variabile a partire da un inserimento rapido con importo fisso.
+   * Restituisce null se il rapido non ha importo o se mancano categoria/metodo utilizzabili.
+   */
+  function triggerQuickExpense(preset: QuickExpense, date: IsoDate = today.value): OneTimeExpense | null {
+    if (!preset.amount || preset.amount <= 0) return null
+    const categoryId = tag('categories', preset.categoryId)?.id ?? data.value.categories[0]?.id
+    const paymentMethodId = tag('paymentMethods', preset.paymentMethodId)?.id ?? data.value.paymentMethods[0]?.id
+    if (!categoryId || !paymentMethodId) return null
+    const tagIds = (preset.tagIds ?? []).filter((id) => !!tag('tags', id))
+    return saveOneTime({
+      name: preset.name,
+      amount: preset.amount,
+      date,
+      categoryId,
+      paymentMethodId,
+      notes: preset.notes,
+      tagIds,
+    })
   }
 
   function saveIncome(item: WithOptionalId<Income>) {
-    upsert(data.value.incomes, item)
+    upsert(data.value.incomes, { ...item, tagIds: item.tagIds ?? [], notes: item.notes ?? '' })
     selectedYear.value = yearOf(item.date)
   }
 
@@ -312,6 +397,43 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const deleteSimulation = (id: Id) => remove(data.value.simulations, id)
 
+  // --- salvadanai e obiettivi di risparmio ------------------------------
+
+  /**
+   * Salva il salvadanaio. `amountChange` è la differenza tra l'importo accantonato scritto nel modulo e quello
+   * che c'era quando il modulo è stato aperto: diventa un movimento, così un versamento arrivato nel frattempo
+   * da un altro dispositivo non si perde.
+   */
+  function saveSavingsGoal(item: WithOptionalId<SavingsGoal>, amountChange: Cents = 0): SavingsGoal {
+    if (!data.value.savingsGoals) data.value.savingsGoals = []
+    const goal = upsert(data.value.savingsGoals, { ...item, targetAmount: Math.max(0, item.targetAmount) })
+    if (amountChange !== 0) addSavingsMovement(goal.id, amountChange)
+    return goal
+  }
+
+  const deleteSavingsGoal = (id: Id) => {
+    if (data.value.savingsGoals) remove(data.value.savingsGoals, id)
+    if (data.value.savingsMovements) {
+      data.value.savingsMovements = data.value.savingsMovements.filter((m) => m.goalId !== id)
+    }
+  }
+
+  /**
+   * Versamento (importo positivo) o prelievo (negativo) su un salvadanaio, rispetto all'importo che si vede
+   * (`movementFor`). Restituisce l'id del movimento.
+   */
+  function addSavingsMovement(goalId: Id, amount: Cents): Id {
+    if (!data.value.savingsMovements) data.value.savingsMovements = []
+    const movement = { id: newId(), goalId, date: today.value, amount: movementFor(data.value.savingsMovements, goalId, amount) }
+    data.value.savingsMovements.push(movement)
+    return movement.id
+  }
+
+  /** Toglie un movimento (es. «Annulla» dopo un versamento rapido). */
+  const removeSavingsMovement = (id: Id) => {
+    if (data.value.savingsMovements) remove(data.value.savingsMovements, id)
+  }
+
   // --- previsioni --------------------------------------------------------
 
   function setForecastSettings(patch: Partial<ForecastSettings>) {
@@ -379,18 +501,18 @@ export const useFinanceStore = defineStore('finance', () => {
 
   function tagUsage(kind: TagKind, id: Id): number {
     if (kind === 'tags') {
-      return data.value.oneTimeExpenses.filter((x) => x.tagIds?.includes(id)).length
+      return [...data.value.oneTimeExpenses, ...data.value.incomes, ...data.value.quickExpenses].filter((x) => x.tagIds?.includes(id)).length
     }
     const field = REF_FIELD[kind]
     const d = data.value
-    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes].filter((x) => x[field] === id).length
+    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses].filter((x) => x[field] === id).length
   }
 
   /** Elimina una categoria/metodo/tag spostando le voci che lo usano su `reassignTo`. */
   function deleteTag(kind: TagKind, id: Id, reassignTo?: Id) {
     const d = data.value
     if (kind === 'tags') {
-      for (const x of d.oneTimeExpenses) {
+      for (const x of [...d.oneTimeExpenses, ...d.incomes, ...d.quickExpenses]) {
         if (x.tagIds?.includes(id)) {
           x.tagIds = x.tagIds.filter((t) => t !== id)
           if (reassignTo && !x.tagIds.includes(reassignTo)) {
@@ -403,7 +525,7 @@ export const useFinanceStore = defineStore('finance', () => {
     }
     const field = REF_FIELD[kind]
     if (reassignTo) {
-      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes]) {
+      for (const x of [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses]) {
         if (x[field] === id) x[field] = reassignTo
       }
     }
@@ -425,6 +547,7 @@ export const useFinanceStore = defineStore('finance', () => {
     isMonthFiltered,
     monthSummaryData,
     oneTimeFiltered,
+    incomesFiltered,
     init,
     flush,
     replaceAll,
@@ -434,6 +557,8 @@ export const useFinanceStore = defineStore('finance', () => {
     forecastRows,
     estimatedMonthlyIncome,
     estimateCategories,
+    categoryTrends,
+    paymentMethodTrends,
     variableThisMonth,
     variableOfSelectedMonth,
     setForecastSettings,
@@ -445,9 +570,17 @@ export const useFinanceStore = defineStore('finance', () => {
     recurringSeriesOfYear,
     simulationsOfYear,
     loans,
+    savingsGoals,
+    savingsSummaryData,
+    quickExpenses,
+    sortedTags,
     tag,
     lastUsedTags,
     saveOneTime,
+    saveQuickExpense,
+    deleteQuickExpense,
+    moveQuickExpense,
+    triggerQuickExpense,
     saveIncome,
     saveRecurring,
     applyNotificationsToRecurring,
@@ -464,6 +597,10 @@ export const useFinanceStore = defineStore('finance', () => {
     deleteRepayment,
     addSimulation,
     deleteSimulation,
+    saveSavingsGoal,
+    deleteSavingsGoal,
+    addSavingsMovement,
+    removeSavingsMovement,
     addTag,
     renameTag,
     setTagColor,

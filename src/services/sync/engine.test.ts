@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { decryptBackup, WrongPasswordError, type EncryptedBackup } from '@/services/backupCrypto'
-import type { FinanceData, OneTimeExpense } from '@/types/models'
+import { decryptBackup, encryptWithKey, WrongPasswordError, type EncryptedBackup } from '@/services/backupCrypto'
+import { NewerFormatError, parseBackup } from '@/services/migration'
+import { CURRENT_SCHEMA_VERSION, type FinanceData, type OneTimeExpense } from '@/types/models'
 import type { PullResult, PushResult, SyncApi } from './api'
 import { prepareConnection, SyncConflictError, syncOnce, useDeviceData, useServerData, type SyncContext } from './engine'
 
@@ -32,7 +33,7 @@ class FakeServer {
 
 function emptyData(): FinanceData {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     categories: [{ id: 'cat', name: 'Cibo', color: '#f59e0b' }],
     paymentMethods: [{ id: 'pm', name: 'Carta', color: '#64748b' }],
     tags: [],
@@ -43,6 +44,9 @@ function emptyData(): FinanceData {
     simulations: [],
     forecast: { estimateIncome: true, incomeCategoryIds: [] },
     budget: { limits: {} },
+    savingsGoals: [],
+    savingsMovements: [],
+    quickExpenses: [],
   }
 }
 
@@ -219,5 +223,55 @@ describe('sincronizzazione', () => {
     await b.sync()
     expect(b.data.oneTimeExpenses.map((e) => e.id).sort()).toEqual(['da-b', 'durante'])
     expect(server.version).toBeGreaterThan(2)
+  })
+})
+
+describe('formato dei dati', () => {
+  it('con i dati del server in un formato più nuovo si ferma e non invia niente, anche con modifiche da inviare', async () => {
+    const server = new FakeServer()
+    const a = new Device(server)
+    await a.connect()
+    // Un dispositivo con un'app più nuova scrive dati in un formato che questa app non conosce.
+    const newer = { ...emptyData(), schemaVersion: CURRENT_SCHEMA_VERSION + 1, campoNuovo: [{ id: 'x' }] }
+    server.payload = await encryptWithKey(JSON.stringify(newer), a.ctx.key)
+    server.version++
+    const version = server.version
+    a.data.oneTimeExpenses.push(coffee('da-a'))
+    await expect(a.sync()).rejects.toBeInstanceOf(NewerFormatError)
+    expect(server.version).toBe(version)
+  })
+
+  it('dopo l\'aggiornamento il primo giro porta il server al formato corrente', async () => {
+    const server = new FakeServer()
+    const old = { ...emptyData(), schemaVersion: 2 } as unknown as FinanceData
+    const a = new Device(server, old)
+    await a.connect()
+    // Al riavvio l'app aggiornata rilegge i dati salvati, che passano al formato corrente.
+    a.data = parseBackup(JSON.parse(JSON.stringify(a.data)))
+    await a.sync()
+    const b = new Device(server)
+    await b.connect()
+    expect(b.data.schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
+  })
+})
+
+describe('aggiornamento dell\'app', () => {
+  it('la prima sincronizzazione dopo l\'aggiornamento non annulla le modifiche fatte su un altro dispositivo', async () => {
+    const server = new FakeServer()
+    const income = { id: 'i1', name: 'Stipendio', amount: 100000, date: '2026-11-01', categoryId: 'cat', paymentMethodId: 'pm' }
+    const gone = { ...income, id: 'i2', name: 'Rimborso' }
+    // Dati come li scriveva l'app precedente: entrate senza note e tag.
+    const old = { ...emptyData(), schemaVersion: 2, incomes: [income, gone] } as unknown as FinanceData
+    const a = new Device(server, structuredClone(old))
+    await a.connect()
+    const b = new Device(server, structuredClone(old))
+    await b.connect()
+    // Sull'altro dispositivo (ancora con l'app precedente) un'entrata cambia e una sparisce.
+    b.data.incomes = [{ ...income, amount: 120000 }] as FinanceData['incomes']
+    await b.sync()
+    // Questo dispositivo si aggiorna: al riavvio i dati salvati passano al formato corrente, la base no.
+    a.data = parseBackup(JSON.parse(JSON.stringify(a.data)))
+    await a.sync()
+    expect(a.data.incomes.map((i) => [i.id, i.amount])).toEqual([['i1', 120000]])
   })
 })

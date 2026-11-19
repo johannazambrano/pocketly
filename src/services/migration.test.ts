@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BackupFormatError, NewerFormatError, parseBackup } from './migration'
+import { CURRENT_SCHEMA_VERSION } from '@/types/models'
 
 /** Formato salvato dal prototipo index.html (`finances_tracker_multiyr`). */
 const prototypeBackup = {
@@ -202,22 +203,110 @@ describe('parseBackup – schema v2', () => {
     const withoutTags = parseBackup({
       schemaVersion: 2,
       oneTimeExpenses: [{ id: '1', name: 'Spesa', amount: 500, date: '2026-01-01', categoryId: 'c1', paymentMethodId: 'p1' }],
+      incomes: [{ id: 'inc1', name: 'Stipendio', amount: 200000, date: '2026-01-27', categoryId: 'c1', paymentMethodId: 'p1' }],
     })
     expect(withoutTags.tags).toEqual([])
     expect(withoutTags.oneTimeExpenses[0]!.tagIds).toEqual([])
+    expect(withoutTags.incomes[0]!.tagIds).toEqual([])
+    expect(withoutTags.incomes[0]!.notes).toBe('')
 
     const withTags = parseBackup({
       schemaVersion: 2,
       tags: [{ id: 't1', name: 'Vacanza', color: '#123456' }],
       oneTimeExpenses: [{ id: '1', name: 'Hotel', amount: 15000, date: '2026-07-01', categoryId: 'c1', paymentMethodId: 'p1', tagIds: ['t1'] }],
+      incomes: [{ id: 'inc2', name: 'Premio', amount: 50000, date: '2026-07-27', categoryId: 'c1', paymentMethodId: 'p1', notes: 'Extra', tagIds: ['t1'] }],
     })
     expect(withTags.tags).toEqual([{ id: 't1', name: 'Vacanza', color: '#123456' }])
     expect(withTags.oneTimeExpenses[0]!.tagIds).toEqual(['t1'])
+    expect(withTags.incomes[0]!.tagIds).toEqual(['t1'])
+    expect(withTags.incomes[0]!.notes).toBe('Extra')
+  })
+
+  it('normalizza gli obiettivi di risparmio e mantiene la retrocompatibilità', () => {
+    // Backup senza savingsGoals
+    const withoutGoals = parseBackup({ schemaVersion: 2 })
+    expect(withoutGoals.savingsGoals).toEqual([])
+
+    // Backup con savingsGoals validi e non validi
+    const withGoals = parseBackup({
+      schemaVersion: 2,
+      savingsGoals: [
+        { id: 'g1', name: 'Fondo emergenza', targetAmount: 300000, currentAmount: 50000, targetDate: '2026-12-31', color: '#10b981', notes: 'Banca' },
+        { id: 'g2', name: 'Importo non valido', targetAmount: -50, currentAmount: 0, targetDate: '2026-12-31' },
+        { id: 'g3', name: 'Senza target', currentAmount: 1000, targetDate: '2026-12-31' },
+        { id: 'g4', name: 'Auto', targetAmount: 500000, targetDate: '2027-06-30' },
+      ],
+    })
+    expect(withGoals.savingsGoals.length).toBe(2)
+    expect(withGoals.savingsGoals[0]).toEqual({
+      id: 'g1',
+      name: 'Fondo emergenza',
+      targetAmount: 300000,
+      targetDate: '2026-12-31',
+      color: '#10b981',
+      notes: 'Banca',
+    })
+    expect(withGoals.savingsGoals[1]).toMatchObject({
+      id: 'g4',
+      name: 'Auto',
+      targetAmount: 500000,
+      targetDate: '2027-06-30',
+    })
+    // L'importo accantonato salvato sul salvadanaio (versione precedente) diventa un movimento con id fisso
+    expect(withGoals.savingsMovements).toEqual([
+      { id: 'g1-iniziale', goalId: 'g1', date: expect.any(String), amount: 50000 },
+    ])
+  })
+
+  it('tiene i movimenti dei salvadanai validi e scarta quelli senza salvadanaio', () => {
+    const parsed = parseBackup({
+      schemaVersion: 2,
+      savingsGoals: [{ id: 'g1', name: 'Auto', targetAmount: 500000, currentAmount: 9999, targetDate: '2027-06-30' }],
+      savingsMovements: [
+        { id: 'm1', goalId: 'g1', date: '2026-11-01', amount: 10000 },
+        { id: 'm2', goalId: 'g1', date: '2026-11-02', amount: -2500 },
+        { id: 'm3', goalId: 'altro', date: '2026-11-02', amount: 100 },
+        { id: 'm4', goalId: 'g1', date: '2026-11-02', amount: 0 },
+        { id: 'm5', goalId: 'g1', date: '2026-11-02', amount: 1.5 },
+      ],
+    })
+    // Con movimenti già presenti il vecchio currentAmount non si aggiunge una seconda volta
+    expect(parsed.savingsMovements.map((m) => m.id)).toEqual(['m1', 'm2'])
+  })
+
+  it('gestisce gli inserimenti rapidi con retrocompatibilità e validazione difensiva', () => {
+    expect(parseBackup({ schemaVersion: 2 }).quickExpenses).toEqual([])
+    expect(parseBackup(prototypeBackup).quickExpenses).toEqual([])
+
+    const parsed = parseBackup({
+      schemaVersion: 2,
+      quickExpenses: [
+        { id: 'q1', name: '  Caffè  ', amount: 150, categoryId: 'c1', paymentMethodId: 'p1', notes: 'bar', tagIds: ['t1', 5] },
+        { id: 'q2', name: 'Pranzo', categoryId: 'c1', paymentMethodId: 'p1' },
+        { id: 'q3', name: '   ', amount: 100 },
+        { id: 'q4', name: 'Decimale', amount: 1.5 },
+        { id: 'q5', name: 'Zero', amount: 0 },
+      ],
+    })
+    expect(parsed.quickExpenses).toEqual([
+      { id: 'q1', name: 'Caffè', amount: 150, categoryId: 'c1', paymentMethodId: 'p1', notes: 'bar', tagIds: ['t1'] },
+      { id: 'q2', name: 'Pranzo', categoryId: 'c1', paymentMethodId: 'p1', notes: '', tagIds: [] },
+    ])
+    expect('amount' in parsed.quickExpenses[1]!).toBe(false)
+    expect(parseBackup(JSON.parse(JSON.stringify(parsed)))).toEqual(parsed)
   })
 })
 
 describe('dati di una versione più nuova', () => {
   it('li rifiuta invece di leggerli come un formato vecchio', () => {
-    expect(() => parseBackup({ schemaVersion: 3, oneTimeExpenses: [], categories: [] })).toThrow(NewerFormatError)
+    expect(() => parseBackup({ schemaVersion: CURRENT_SCHEMA_VERSION + 1, oneTimeExpenses: [], categories: [] })).toThrow(NewerFormatError)
+  })
+
+  it('legge i dati in formato 2 e 3 e li porta al formato corrente', () => {
+    expect(CURRENT_SCHEMA_VERSION).toBe(3)
+    const fromV2 = parseBackup({ schemaVersion: 2, incomes: [{ id: 'i1', name: 'Stipendio', amount: 100000, date: '2026-11-01', categoryId: 'c', paymentMethodId: 'p', notes: 'novembre', tagIds: ['t'] }] })
+    expect(fromV2.schemaVersion).toBe(3)
+    expect(fromV2.incomes[0]).toMatchObject({ notes: 'novembre', tagIds: ['t'] })
+    expect(parseBackup({ schemaVersion: 3 }).schemaVersion).toBe(3)
   })
 })

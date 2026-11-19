@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBackupStore } from '@/stores/backup'
 import { useFinanceStore } from '@/stores/finance'
@@ -9,6 +9,7 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { applyUpdate, checkForUpdate } from '@/composables/useAppUpdate'
 import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
 import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
+import { canShareFiles, executeExport, shareOrDownloadFile, type ExportFormat } from '@/services/exportData'
 import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
 import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
 import { parseBackup } from '@/services/migration'
@@ -18,6 +19,7 @@ import BaseModal from '@/components/BaseModal.vue'
 import SyncSettings from '@/components/SyncSettings.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import TagManager from '@/components/TagManager.vue'
+import QuickExpenseManager from '@/components/QuickExpenseManager.vue'
 import PageHeader from '@/components/PageHeader.vue'
 
 const finance = useFinanceStore()
@@ -157,6 +159,40 @@ async function doExport(mode: ExportMode) {
     ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.exportError'), 'error')
   } finally {
     busy.value = false
+  }
+}
+
+// --- esportazione tabellare (Excel / CSV) ----------------------------------
+
+const exportFormat = ref<ExportFormat>('xlsx')
+const exportYear = ref<number | 'all'>(finance.selectedYear)
+const exportBusy = ref(false)
+const shareableFile = canShareFiles()
+
+watch(
+  () => finance.selectedYear,
+  (y) => {
+    if (exportYear.value !== 'all') {
+      exportYear.value = y
+    }
+  },
+)
+
+async function doExportTabular(mode: 'download' | 'share') {
+  if (exportBusy.value) return
+  exportBusy.value = true
+  try {
+    const result = await executeExport(exportFormat.value, finance.data, {
+      year: exportYear.value,
+      locale: locale.value,
+    })
+    const res = await shareOrDownloadFile(result, mode)
+    ui.toast(t(res === 'shared' ? 'tabularExport.shared' : 'tabularExport.downloaded'))
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') return
+    ui.toast(t('tabularExport.error'), 'error')
+  } finally {
+    exportBusy.value = false
   }
 }
 
@@ -351,9 +387,59 @@ function changeLocale(code: LocaleCode) {
         </label>
       </div>
 
+      <div class="card space-y-3">
+        <h3 class="text-sm font-semibold text-ink-2">
+          <i class="fa-solid fa-file-excel mr-1 text-accent-icon"></i> {{ t('tabularExport.title') }}
+        </h3>
+        <p class="text-xs text-ink-4">{{ t('tabularExport.hint') }}</p>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label class="block">
+            <span class="field-label">{{ t('tabularExport.format') }}</span>
+            <select v-model="exportFormat" class="field">
+              <option value="xlsx">{{ t('tabularExport.formatXlsx') }}</option>
+              <option value="zip">{{ t('tabularExport.formatZip') }}</option>
+              <option value="onetime">{{ t('tabularExport.formatOnetime') }}</option>
+              <option value="recurring">{{ t('tabularExport.formatRecurring') }}</option>
+              <option value="income">{{ t('tabularExport.formatIncome') }}</option>
+              <option value="loans">{{ t('tabularExport.formatLoans') }}</option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="field-label">{{ t('tabularExport.period') }}</span>
+            <select v-model="exportYear" class="field">
+              <option :value="finance.selectedYear">{{ t('tabularExport.selectedYear', { year: finance.selectedYear }) }}</option>
+              <option value="all">{{ t('tabularExport.allYears') }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="btn-primary min-w-40 flex-1"
+            :disabled="exportBusy"
+            @click="doExportTabular(shareableFile ? 'share' : 'download')"
+          >
+            {{ shareableFile ? t('tabularExport.share') : t('tabularExport.download') }}
+          </button>
+          <button
+            v-if="shareableFile"
+            type="button"
+            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
+            :disabled="exportBusy"
+            @click="doExportTabular('download')"
+          >
+            {{ t('tabularExport.download') }}
+          </button>
+        </div>
+      </div>
+
       <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
       <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
       <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
+      <QuickExpenseManager />
 
       <div class="card space-y-3">
         <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.colorsTitle') }}</h3>

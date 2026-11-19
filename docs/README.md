@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-13
+verified: 2026-11-17
 ---
 
 # Indice della Documentazione di Pocketly
@@ -22,9 +22,11 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Devo comprendere l'architettura **frontend** (Pinia, Vue Router, PWA) | [Architettura Frontend](architettura/frontend.md) |
 | Devo capire come funziona la **sync cifrata** e il merge a 3 vie | [Dati e Sincronizzazione](architettura/dati-e-sincronizzazione.md) |
 | Devo comprendere il **server Python** e le notifiche Web Push | [Architettura Backend](architettura/backend.md) |
+| Voglio valutare la **scalabilità** dell'app e il piano evolutivo | [Analisi e Progetto di Scalabilità](architettura/scalabilita.md) |
 | Voglio **aggiungere una nuova schermata/vista** | [Guida: Aggiungere una Vista](guide/aggiungere-una-vista.md) |
 | Voglio **aggiungere un nuovo campo** a una transazione o modello | [Guida: Aggiungere un Campo ai Dati](guide/aggiungere-un-campo-ai-dati.md) |
 | Voglio eseguire i **test** o preparare una nuova build | [Guida: Test e Release](guide/test-e-release.md) |
+| Voglio eseguire i **test manuali utente (UAT)** prima di un rilascio | [Guida: Test Utente (UAT)](guide/test-utente.md) |
 | Voglio vedere **cosa c'è da fare** o prendere in carico un task | [Backlog del Progetto](backlog.md) |
 | Voglio verificare i **limiti o bug noti** dell'applicazione | [Stato e Difetti Noti](known-issues.md) |
 | Voglio configurare il **deploy su Proxmox LXC con Nginx** | [Deploy Proxmox](architettura/deploy.md) |
@@ -45,6 +47,7 @@ docs/
 │   ├── frontend.md                    <-- Strati Vue 3, Pinia, routing, i18n, PWA
 │   ├── dati-e-sincronizzazione.md     <-- DataStore, crittografia E2E, 3-way merge
 │   ├── backend.md                     <-- Server Python (zero-deps), API REST, VAPID
+│   ├── scalabilita.md                 <-- Analisi limiti e progetto evolutivo (PKT-13)
 │   └── deploy.md                      <-- Proxmox LXC, systemd, Nginx, proxy Vite
 ├── riferimento/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test
@@ -55,7 +58,8 @@ docs/
 │   ├── aggiungere-una-vista.md        <-- Step-by-step per nuove viste
 │   ├── aggiungere-un-campo-ai-dati.md <-- Step-by-step modello + migrazione + merge
 │   ├── sync-e-notifiche.md            <-- Setup e collaudo sync e Web Push
-│   └── test-e-release.md              <-- Guida esecuzione test e build
+│   ├── test-e-release.md              <-- Guida esecuzione test e build
+│   └── test-utente.md                 <-- Checklist test manuali utente (UAT) pre-rilascio
 └── archivio/
     ├── README.md                      <-- Indice documenti storici archiviati
     ├── PANORAMICA.md                  <-- Vecchia panoramica iniziale

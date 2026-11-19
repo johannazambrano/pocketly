@@ -27,9 +27,19 @@ export function daysSince(iso: string, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - then) / DAY_MS))
 }
 
-/** Vero se c'è almeno un dato inserito dall'utente (le sole categorie predefinite non valgono un backup). */
+/**
+ * Vero se c'è almeno un dato inserito dall'utente (le sole categorie predefinite non valgono un backup). Contano
+ * anche salvadanai e inserimenti rapidi: chi ha impostato solo quelli li perderebbe con il telefono.
+ */
 export function hasUserData(data: FinanceData): boolean {
-  return data.oneTimeExpenses.length + data.incomes.length + data.recurringExpenses.length + data.loans.length > 0
+  return (
+    data.oneTimeExpenses.length +
+    data.incomes.length +
+    data.recurringExpenses.length +
+    data.loans.length +
+    (data.savingsGoals?.length ?? 0) +
+    (data.quickExpenses?.length ?? 0) > 0
+  )
 }
 
 export function isReminderDue(meta: BackupMeta, currentHash: string, hasData: boolean, now: Date): boolean {

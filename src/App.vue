@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFinanceStore } from '@/stores/finance'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore } from '@/stores/appearance'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import AppHeader from '@/components/AppHeader.vue'
 import BackupReminder from '@/components/BackupReminder.vue'
 import BottomNav from '@/components/BottomNav.vue'
@@ -10,12 +12,42 @@ import ConfirmHost from '@/components/ConfirmHost.vue'
 import ToastHost from '@/components/ToastHost.vue'
 import UpdatePrompt from '@/components/UpdatePrompt.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
+import SearchModal from '@/components/SearchModal.vue'
+import { isAnyModalOpen } from '@/components/BaseModal.vue'
 import LoadErrorScreen from '@/components/LoadErrorScreen.vue'
 
 const { t } = useI18n()
 const finance = useFinanceStore()
 const ui = useUiStore()
 const appearance = useAppearanceStore()
+const confirmDelete = useConfirmDelete()
+
+function removeQuickEdit() {
+  const item = ui.quickEditExpense
+  if (!item) return
+  void confirmDelete(item.name, () => {
+    finance.deleteOneTime(item.id)
+    ui.closeQuickAdd()
+  })
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    // Con un modulo aperto la ricerca non si apre: scegliendo un risultato si cambierebbe pagina e il modulo si
+    // chiuderebbe senza chiedere, perdendo quello che si è scritto.
+    if (ui.searchOpen) ui.closeSearch()
+    else if (!isAnyModalOpen()) ui.searchOpen = true
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <template>
@@ -25,10 +57,14 @@ const appearance = useAppearanceStore()
     <div class="px-safe w-full flex-grow">
       <!-- Telefono: una colonna. Tablet e PC: menu a sinistra e contenuto largo a destra. -->
       <div class="mx-auto flex w-full max-w-xl md:max-w-6xl md:gap-6 md:px-6 md:py-6">
-        <!-- Su Android il "+" flottante sta sopra la barra in basso: più spazio in fondo, così non copre l'ultima riga. -->
+        <!-- Su Android (e su iOS/PC sotto 375 px, la stessa soglia di BottomNav, dove l'orb "+" sale sopra il dock) serve più spazio in fondo. -->
         <main
           class="min-w-0 flex-1 p-4 md:p-0"
-          :class="appearance.platform === 'android' ? 'pb-[calc(10rem+env(safe-area-inset-bottom))]' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'"
+          :class="
+            appearance.platform === 'android'
+              ? 'pb-[calc(10.5rem+env(safe-area-inset-bottom))]'
+              : 'pb-[calc(6.5rem+env(safe-area-inset-bottom))] max-[374px]:pb-[calc(10rem+env(safe-area-inset-bottom))]'
+          "
         >
           <p v-if="!finance.ready" class="py-10 text-center text-sm text-ink-4">{{ t('app.loading') }}</p>
           <LoadErrorScreen v-else-if="finance.loadError" />
@@ -41,7 +77,16 @@ const appearance = useAppearanceStore()
       </div>
     </div>
   </div>
-  <TransactionForm :open="ui.quickAddOpen" kind="expense" @close="ui.quickAddOpen = false" />
+  <TransactionForm
+    :open="ui.quickAddOpen"
+    kind="expense"
+    :item="ui.quickEditExpense"
+    :preset="ui.quickAddPreset"
+    :deletable="!!ui.quickEditExpense"
+    @close="ui.closeQuickAdd()"
+    @delete="removeQuickEdit"
+  />
+  <SearchModal />
   <ConfirmHost />
   <ToastHost />
   <UpdatePrompt />

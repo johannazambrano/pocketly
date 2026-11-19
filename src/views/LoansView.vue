@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHighlight } from '@/composables/useHighlight'
 import { ref } from 'vue'
 import type { Loan } from '@/types/models'
 import { loanStatus } from '@/domain/calculations'
@@ -10,6 +11,7 @@ import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import PageHeader from '@/components/PageHeader.vue'
 import LoanForm from '@/components/LoanForm.vue'
 import RepaymentForm from '@/components/RepaymentForm.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const ui = useUiStore()
@@ -21,11 +23,13 @@ const formOpen = ref(false)
 const editing = ref<Loan | null>(null)
 const repayingLoan = ref<Loan | null>(null)
 const repaymentOpen = ref(false)
+const highlightedId = useHighlight((id) => `loan-${id}`)
 
 function open(item: Loan | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('loans.new'), run: () => open(null) }))
 
 /** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
 function remove() {
@@ -56,7 +60,13 @@ async function removeRepayment(loan: Loan, repaymentId: string) {
     <PageHeader :title="t('loans.title')" add-label="" @add="open(null)" />
 
     <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-      <div v-for="loan in finance.loans" :key="loan.id" class="card space-y-2 text-xs">
+      <div
+        v-for="loan in finance.loans"
+        :id="`loan-${loan.id}`"
+        :key="loan.id"
+        class="card space-y-2 text-xs transition-all duration-500"
+        :class="{ 'ring-2 ring-accent bg-accent-soft/30': highlightedId === loan.id }"
+      >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
             <div class="truncate text-sm font-bold text-ink">{{ loan.name }}</div>

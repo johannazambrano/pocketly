@@ -35,6 +35,18 @@ export interface OneTimeExpense {
   tagIds?: Id[]
 }
 
+/** Scorciatoia per spese variabili frequenti (es. caffè con importo fisso, pranzo con importo libero). */
+export interface QuickExpense {
+  id: Id
+  name: string
+  /** Importo fisso in centesimi, oppure assente se cambia ogni volta. */
+  amount?: Cents
+  categoryId: Id
+  paymentMethodId: Id
+  notes: string
+  tagIds?: Id[]
+}
+
 export interface NotificationRule {
   /** Giorni prima dell'addebito: 0 = il giorno stesso, 1 = il giorno prima, ecc. (0..365). */
   daysBefore: number
@@ -89,6 +101,8 @@ export interface Income {
   date: IsoDate
   categoryId: Id
   paymentMethodId: Id
+  notes?: string
+  tagIds?: Id[]
 }
 
 export type LoanType = 'given' | 'received'
@@ -140,8 +154,33 @@ export interface BudgetSettings {
   limits: Record<Id, Cents>
 }
 
+/**
+ * Salvadanaio / Obiettivo di risparmio: accumulo di fondi verso un traguardo
+ * con importo target e data di scadenza desiderata. L'importo già accantonato non sta qui:
+ * è la somma dei suoi movimenti (`SavingsMovement`).
+ */
+export interface SavingsGoal {
+  id: Id
+  name: string
+  targetAmount: Cents
+  targetDate: IsoDate
+  color?: string
+  notes?: string
+}
+
+/**
+ * Versamento (importo positivo) o prelievo (negativo) su un salvadanaio. Ogni movimento è una voce a sé,
+ * così due dispositivi che versano prima di sincronizzare non si cancellano a vicenda i versamenti.
+ */
+export interface SavingsMovement {
+  id: Id
+  goalId: Id
+  date: IsoDate
+  amount: Cents
+}
+
 export interface FinanceData {
-  schemaVersion: 2
+  schemaVersion: typeof CURRENT_SCHEMA_VERSION
   categories: Tag[]
   paymentMethods: Tag[]
   tags: Tag[]
@@ -152,6 +191,16 @@ export interface FinanceData {
   simulations: Simulation[]
   forecast: ForecastSettings
   budget: BudgetSettings
+  savingsGoals: SavingsGoal[]
+  savingsMovements: SavingsMovement[]
+  quickExpenses: QuickExpense[]
 }
 
-export const CURRENT_SCHEMA_VERSION = 2
+/**
+ * Versione del formato dei dati. Si alza quando un'app più vecchia, leggendo i dati nuovi, ne scarterebbe una parte e
+ * alla prima modifica la cancellerebbe anche sul server: con il numero più alto quell'app si ferma (`NewerFormatError`,
+ * stato «da aggiornare») invece di sincronizzare.
+ * - 2: formato dell'app.
+ * - 3: salvadanai con i movimenti, inserimenti rapidi, note e tag delle entrate (l'app in formato 2 li scartava).
+ */
+export const CURRENT_SCHEMA_VERSION = 3

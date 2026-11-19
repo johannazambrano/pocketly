@@ -1,16 +1,21 @@
 <script setup lang="ts">
+import { OTHER_COLOR } from '@/utils/colors'
+import { useHighlight } from '@/composables/useHighlight'
 import { computed, ref } from 'vue'
 import type { OneTimeExpense } from '@/types/models'
 import { useFinanceStore } from '@/stores/finance'
 import { useFormat } from '@/i18n'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
 import { oneTimeTagBreakdown } from '@/domain/calculations'
+import { todayIso } from '@/utils/dates'
 import PageHeader from '@/components/PageHeader.vue'
 import EntryList from '@/components/EntryList.vue'
 import EntryRow from '@/components/EntryRow.vue'
 import TagBadge from '@/components/TagBadge.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
+import QuickExpenseBar from '@/components/QuickExpenseBar.vue'
+import { usePageAction } from '@/composables/usePageAction'
 
 const finance = useFinanceStore()
 const { t, money, date, month, locale, percent } = useFormat()
@@ -20,6 +25,17 @@ const formOpen = ref(false)
 const editing = ref<OneTimeExpense | null>(null)
 const selectedTagId = ref<string | null>(null)
 const showBreakdown = ref(false)
+const highlightedId = useHighlight(
+  (id) => `entry-${id}`,
+  (id) => {
+    // Se un filtro tag attivo nasconderebbe la voce, si toglie il filtro
+    if (selectedTagId.value) {
+      const exp = finance.oneTimeFiltered.find((e) => e.id === id)
+      if (!exp || !exp.tagIds?.includes(selectedTagId.value)) selectedTagId.value = null
+    }
+    return id
+  },
+)
 
 const selectedTag = computed(() => (selectedTagId.value ? finance.tag('tags', selectedTagId.value) : null))
 
@@ -56,7 +72,7 @@ const activeYearTags = computed(() => {
     return {
       id: item.id,
       name: tag?.name ?? t('common.unknown'),
-      color: tag?.color ?? '#94a3b8',
+      color: tag?.color ?? OTHER_COLOR,
       countInMonth: displayedExpensesCountForTag(item.id),
       totalInYear: item.total,
     }
@@ -95,6 +111,16 @@ function open(item: OneTimeExpense | null) {
   editing.value = item
   formOpen.value = true
 }
+usePageAction(() => ({ label: t('onetime.new'), run: () => open(null) }))
+
+function duplicate(item: OneTimeExpense) {
+  editing.value = {
+    ...item,
+    id: '',
+    date: todayIso(),
+  }
+  formOpen.value = true
+}
 
 /** "Elimina" dentro il modulo (sul telefono è l'unico modo): dopo la conferma chiude anche il modulo. */
 function remove() {
@@ -116,6 +142,8 @@ function remove() {
         </button>
       </div>
     </PageHeader>
+
+    <QuickExpenseBar manage-link />
 
     <!-- Barra Filtri per Tag (visibile se ci sono tag con spese nell'anno) -->
     <div v-if="activeYearTags.length > 0" class="space-y-2">
@@ -147,7 +175,8 @@ function remove() {
           >
             <span
               class="h-2 w-2 rounded-full"
-              :style="{ backgroundColor: selectedTagId === item.id ? '#ffffff' : item.color }"
+              :class="{ 'bg-on-color': selectedTagId === item.id }"
+              :style="selectedTagId === item.id ? undefined : { backgroundColor: item.color }"
             ></span>
             <span>#{{ item.name }}</span>
             <span
@@ -190,7 +219,7 @@ function remove() {
           >
             <div class="mb-1 flex justify-between gap-2 text-xs">
               <span class="truncate font-medium text-ink-2 flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8' }"></span>
+                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: finance.tag('tags', row.id)?.color ?? OTHER_COLOR }"></span>
                 <span>#{{ finance.tag('tags', row.id)?.name ?? t('common.unknown') }}</span>
                 <span class="text-[10px] text-ink-4">({{ t('onetime.expensesCount', { n: row.count }, row.count) }})</span>
               </span>
@@ -204,7 +233,7 @@ function remove() {
                 class="h-full rounded-full transition-all"
                 :style="{
                   width: `${(row.total / grandTotalForBreakdown) * 100}%`,
-                  backgroundColor: finance.tag('tags', row.id)?.color ?? '#94a3b8',
+                  backgroundColor: finance.tag('tags', row.id)?.color ?? OTHER_COLOR,
                 }"
               ></div>
             </div>
@@ -260,11 +289,15 @@ function remove() {
     >
       <EntryRow
         v-for="e in displayedExpenses"
+        :id="`entry-${e.id}`"
         :key="e.id"
         :name="e.name"
         :amount="money(e.amount)"
         :subtitle="e.notes"
+        duplicable
+        :class="{ 'ring-2 ring-accent rounded-xl bg-accent-soft/30 transition-all duration-500': highlightedId === e.id }"
         @edit="open(e)"
+        @duplicate="duplicate(e)"
         @delete="confirmDelete(e.name, () => finance.deleteOneTime(e.id))"
       >
         <template #meta>

@@ -1,5 +1,5 @@
-import type { Cents, FinanceData, Id, Loan, OneTimeExpense } from '@/types/models'
-import { monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import type { Cents, FinanceData, Id, IsoDate, Loan } from '@/types/models'
+import { lastDayOfMonth, monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { amountInMonth, chargeIn, isActiveInYear, monthlyEquivalent } from './recurrence'
 
 export interface TagTotal {
@@ -487,6 +487,110 @@ export function averageBalanceBefore(data: FinanceData, year: number, month: num
   return balances.length ? Math.round(sum(balances) / balances.length) : null
 }
 
+export interface TagTrendInfo {
+  /** La media mensile dei mesi precedenti dello stesso anno. */
+  previousAverage: Cents
+  /**
+   * Il valore di riferimento per il confronto: per il mese in corso è il ritmo atteso a oggi
+   * (`pace`), per un mese passato è l'intera media precedente (`previousAverage`).
+   */
+  baseline: Cents
+  /** Il verdetto: 'above' (speso più del solito), 'inline' (in linea, ±10%), 'below' (speso meno del solito). */
+  verdict: Verdict
+  /** Differenza percentuale rispetto al riferimento. */
+  diffPercent: number
+  /** True se il confronto è sul ritmo del mese in corso (proporzionato al giorno di oggi). */
+  isPace: boolean
+}
+
+/**
+ * Calcola per ciascun tag (categoria o metodo) il confronto tra l'importo del mese e la media dei mesi precedenti.
+ * - La media parte dal primo mese dell'anno in cui il tag ha avuto spese: un abbonamento iniziato a maggio non
+ *   fa media sui mesi da gennaio ad aprile.
+ * - Mese passato: il totale del mese contro la media mensile.
+ * - Mese in corso: l'importo a oggi contro quello che di solito c'era allo stesso giorno. Le spese variabili si
+ *   proporzionano ai giorni passati (`pace`); gli addebiti ricorrenti contano per intero se di solito arrivano
+ *   entro il giorno di oggi, altrimenti no. Così l'affitto addebitato il 1° non sembra "sopra il ritmo" il giorno 3.
+ * - Mesi futuri, anno intero o nessun mese precedente: mappa vuota.
+ */
+export function tagTrends(
+  data: FinanceData,
+  year: number,
+  month: number | 'all',
+  field: 'categoryId' | 'paymentMethodId',
+  totals: TagTotal[],
+  today: IsoDate,
+): Map<Id, TagTrendInfo> {
+  const result = new Map<Id, TagTrendInfo>()
+  if (month === 'all' || totals.length === 0) return result
+
+  const t = parseIsoDate(today)
+  const key = year * 12 + month
+  const now = t.year * 12 + t.month
+  if (key > now) return result
+
+  const start = periodStartMonth(data, year)
+  if (month <= start) return result
+
+  const isCurrentMonth = key === now
+  let paceFraction = 1
+  if (isCurrentMonth) {
+    const daysInMonth = parseIsoDate(lastDayOfMonth(t.year, t.month)).day
+    paceFraction = Math.min(t.day, daysInMonth) / daysInMonth
+  }
+
+  // Per ogni tag: primo mese con spese, totale dei mesi precedenti, e la parte da confrontare
+  // (variabili e ricorrenti separate, per il mese in corso).
+  interface Previous { first: number; full: Cents; variable: Cents; recurring: Cents }
+  const prev = new Map<Id, Previous>()
+  const add = (id: Id, m: number, full: Cents, variable: Cents, recurring: Cents) => {
+    const p = prev.get(id) ?? { first: m, full: 0, variable: 0, recurring: 0 }
+    p.first = Math.min(p.first, m)
+    p.full += full
+    p.variable += variable
+    p.recurring += recurring
+    prev.set(id, p)
+  }
+  for (const e of data.oneTimeExpenses) {
+    const d = parseIsoDate(e.date)
+    if (d.year === year && d.month >= start && d.month < month) add(e[field], d.month, e.amount, e.amount, 0)
+  }
+  for (const r of data.recurringExpenses) {
+    for (let m = start; m < month; m++) {
+      const charge = chargeIn(r, year, m)
+      if (!charge) continue
+      const byToday = !isCurrentMonth || parseIsoDate(charge.date).day <= t.day
+      add(r[field], m, charge.amount, 0, byToday ? charge.amount : 0)
+    }
+  }
+
+  for (const row of totals) {
+    const p = prev.get(row.id)
+    if (!p || p.full <= 0) continue
+    const monthsCount = month - p.first
+
+    const previousAverage = Math.round(p.full / monthsCount)
+    if (previousAverage <= 0) continue
+
+    const baseline = isCurrentMonth
+      ? Math.round((p.variable * paceFraction + p.recurring) / monthsCount)
+      : previousAverage
+    if (baseline <= 0) continue
+    const verdict = compareToAverage(row.total, baseline)
+    const diffPercent = Math.round(((row.total - baseline) / baseline) * 100)
+
+    result.set(row.id, {
+      previousAverage,
+      baseline,
+      verdict,
+      diffPercent,
+      isPace: isCurrentMonth,
+    })
+  }
+
+  return result
+}
+
 export interface UpcomingCharge {
   /** Chiave unica nell'elenco: un addebito ricorrente compare una volta per scadenza. */
   key: string
@@ -557,15 +661,20 @@ export interface TagSummaryItem {
   count: number
 }
 
+export interface HasTagsAndAmount {
+  amount: Cents
+  tagIds?: Id[]
+}
+
 /**
- * Calcola il totale e il conteggio delle spese una tantum raggruppate per ciascun tag presente.
+ * Calcola il totale e il conteggio delle voci raggruppate per ciascun tag presente.
  * Restituisce i tag ordinati per importo decrescente.
  */
-export function oneTimeTagBreakdown(expenses: OneTimeExpense[]): TagSummaryItem[] {
+export function tagBreakdown(items: HasTagsAndAmount[]): TagSummaryItem[] {
   const totals = new Map<Id, Cents>()
   const counts = new Map<Id, number>()
 
-  for (const e of expenses) {
+  for (const e of items) {
     if (!e.tagIds || e.tagIds.length === 0) continue
     for (const tagId of e.tagIds) {
       totals.set(tagId, (totals.get(tagId) ?? 0) + e.amount)
@@ -576,5 +685,68 @@ export function oneTimeTagBreakdown(expenses: OneTimeExpense[]): TagSummaryItem[
   return [...totals.entries()]
     .map(([id, total]) => ({ id, total, count: counts.get(id) ?? 0 }))
     .sort((a, b) => b.total - a.total)
+}
+
+/** Per retrocompatibilità */
+export const oneTimeTagBreakdown = tagBreakdown
+
+export interface FrequentTemplateItem {
+  name: string
+  amount: Cents
+  date: IsoDate
+  categoryId: Id
+  paymentMethodId: Id
+  tagIds?: Id[]
+  notes?: string
+}
+
+export interface FrequentTemplate {
+  name: string
+  amount: Cents
+  categoryId: Id
+  paymentMethodId: Id
+  tagIds?: Id[]
+  notes?: string
+  count: number
+}
+
+/**
+ * Estrae le voci più frequenti tra le transazioni passate, ordinate per frequenza d'uso e recenza.
+ * Utile per proporre template di compilazione rapida nei moduli di inserimento.
+ */
+export function frequentTemplates<T extends FrequentTemplateItem>(items: T[], limit = 5): FrequentTemplate[] {
+  if (!items.length) return []
+
+  const groups = new Map<string, { latest: T; count: number }>()
+
+  // Ordina per data decrescente così il primo che incontriamo per ogni nome è il più recente
+  const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date))
+
+  for (const item of sorted) {
+    const key = item.name.trim().toLowerCase()
+    if (!key) continue
+    const existing = groups.get(key)
+    if (existing) {
+      existing.count++
+    } else {
+      groups.set(key, { latest: item, count: 1 })
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return b.latest.date.localeCompare(a.latest.date)
+    })
+    .slice(0, limit)
+    .map(({ latest, count }) => ({
+      name: latest.name,
+      amount: latest.amount,
+      categoryId: latest.categoryId,
+      paymentMethodId: latest.paymentMethodId,
+      tagIds: latest.tagIds ? [...latest.tagIds] : [],
+      notes: latest.notes,
+      count,
+    }))
 }
 

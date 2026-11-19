@@ -3,12 +3,12 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFinanceStore, type TagKind } from '@/stores/finance'
 import { useFormat } from '@/i18n'
-import { breakdownItems } from '@/domain/calculations'
+import { breakdownItems, tagTrends, type BreakdownItem } from '@/domain/calculations'
+import { useTrendText } from '@/composables/useTrendText'
 import { monthIndex, parseIsoDate } from '@/utils/dates'
 import MonthSelector from '@/components/MonthSelector.vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import RecurringForm from '@/components/RecurringForm.vue'
-import type { BreakdownItem } from '@/domain/calculations'
 import type { OneTimeExpense, RecurringExpense } from '@/types/models'
 
 /**
@@ -30,6 +30,22 @@ const items = computed(() =>
   breakdownItems(finance.data, finance.selectedYear, finance.selectedMonth, field.value, id.value, finance.today),
 )
 const total = computed(() => items.value.reduce((acc, i) => acc + i.amount, 0))
+
+const trend = computed(() => {
+  if (finance.selectedMonth === 'all') return null
+  const trendsMap = tagTrends(
+    finance.data,
+    finance.selectedYear,
+    finance.selectedMonth,
+    field.value,
+    [{ id: id.value, total: total.value }],
+    finance.today,
+  )
+  return trendsMap.get(id.value) ?? null
+})
+
+const trendText = useTrendText()
+const trendNote = computed(() => (trend.value ? trendText.label(trend.value) : null))
 
 /** Il periodo detto per esteso, con la stessa regola della dashboard: fino a oggi, tutto avvenuto o solo programmato. */
 const periodLabel = computed(() => {
@@ -56,7 +72,7 @@ const previousTitle = document.title
 watch(
   () => tag.value?.name,
   async (name) => {
-    document.title = name ? `${name} · Pocketly` : previousTitle
+    document.title = name ? `${name} · ${__APP_NAME__}` : previousTitle
     await nextTick()
     heading.value?.focus()
   },
@@ -150,6 +166,14 @@ function back(e: MouseEvent) {
         <div class="flex items-baseline justify-between gap-3 border-b border-line-soft px-4 py-3">
           <p class="text-xs font-medium text-ink-4">{{ periodLabel }}</p>
           <p class="text-lg font-bold whitespace-nowrap text-ink">{{ money(total) }}</p>
+        </div>
+        <div
+          v-if="trendNote && trend"
+          class="flex items-center gap-2 border-b border-line-soft px-4 py-2 text-xs font-medium"
+          :class="trendText.tone(trend.verdict)"
+        >
+          <i :class="trendText.icon(trend.verdict)" aria-hidden="true"></i>
+          <span>{{ trendNote }}</span>
         </div>
         <ul v-if="items.length" class="divide-y divide-line-soft">
           <li v-for="item in items" :key="item.key">

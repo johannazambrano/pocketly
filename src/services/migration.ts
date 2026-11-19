@@ -8,8 +8,11 @@ import type {
   IsoDate,
   Loan,
   OneTimeExpense,
+  QuickExpense,
   RecurringExpense,
   Repayment,
+  SavingsGoal,
+  SavingsMovement,
   Simulation,
   Tag,
 } from '@/types/models'
@@ -86,12 +89,12 @@ const V1_FREQUENCIES: Record<string, Frequency> = {
   Annual: 'annual',
 }
 
-/** Converte i dati del prototipo HTML (backup JSON o localStorage) nello schema v2. */
+/** Converte i dati del prototipo HTML (backup JSON o localStorage) nel formato corrente. */
 export function migrateV1(raw: Obj): FinanceData {
   const categories = new TagRegistry(raw.categories)
   const payments = new TagRegistry(raw.paymentMethods)
   const data: FinanceData = {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories: categories.tags,
     paymentMethods: payments.tags,
     tags: [],
@@ -102,6 +105,9 @@ export function migrateV1(raw: Obj): FinanceData {
     simulations: [],
     forecast: defaultForecastSettings(),
     budget: defaultBudgetSettings(),
+    savingsGoals: [],
+    savingsMovements: [],
+    quickExpenses: [],
   }
   const seenRecurring = new Set<Id>()
   const years = isObj(raw.years) ? raw.years : {}
@@ -150,6 +156,8 @@ export function migrateV1(raw: Obj): FinanceData {
         date: date(e.date, firstOfYear),
         categoryId: categories.resolve(e.category, 'Other'),
         paymentMethodId: payments.resolve(e.payment, 'Other'),
+        notes: str(e.notes),
+        tagIds: [],
       })
     }
 
@@ -226,8 +234,39 @@ function normalizeV2(raw: Obj): FinanceData {
       .map(map)
       .filter((x): x is T => x !== null)
 
+  // Salvadanai: i dati salvati prima dei movimenti avevano solo `currentAmount` sul salvadanaio. Diventa un
+  // movimento iniziale con un id fisso, così due dispositivi che convertono lo stesso salvadanaio non lo contano due volte.
+  const legacyAmounts = new Map<string, number>()
+  const savingsGoals = valid<SavingsGoal>(raw.savingsGoals, (o) => {
+    const targetAmount = cents(o.targetAmount)
+    if (targetAmount === null || targetAmount <= 0) return null
+    const goal: SavingsGoal = {
+      id: id(o.id),
+      name: str(o.name),
+      targetAmount,
+      targetDate: date(o.targetDate, today),
+      ...(isHexColor(o.color) ? { color: o.color } : {}),
+      ...(typeof o.notes === 'string' && o.notes ? { notes: str(o.notes) } : {}),
+    }
+    const legacy = cents(o.currentAmount)
+    if (legacy !== null && legacy > 0) legacyAmounts.set(goal.id, legacy)
+    return goal
+  })
+  const goalIds = new Set(savingsGoals.map((g) => g.id))
+  const savingsMovements = valid<SavingsMovement>(raw.savingsMovements, (o) => {
+    const amount = cents(o.amount)
+    const goalId = str(o.goalId)
+    if (amount === null || amount === 0 || !goalIds.has(goalId)) return null
+    return { id: id(o.id), goalId, date: date(o.date, today), amount }
+  })
+  for (const [goalId, amount] of legacyAmounts) {
+    if (!savingsMovements.some((m) => m.goalId === goalId)) {
+      savingsMovements.push({ id: `${goalId}-iniziale`, goalId, date: today, amount })
+    }
+  }
+
   return {
-    schemaVersion: 2,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     categories,
     paymentMethods: normalizeTags(raw.paymentMethods),
     tags: normalizeTags(raw.tags),
@@ -274,6 +313,8 @@ function normalizeV2(raw: Obj): FinanceData {
         date: o.date,
         categoryId: str(o.categoryId),
         paymentMethodId: str(o.paymentMethodId),
+        notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
       }
     }),
     loans: valid<Loan>(raw.loans, (o) => {
@@ -301,12 +342,34 @@ function normalizeV2(raw: Obj): FinanceData {
     }),
     forecast: normalizeForecast(raw.forecast),
     budget: normalizeBudget(raw.budget, categories),
+    savingsGoals,
+    savingsMovements,
+    quickExpenses: valid<QuickExpense>(raw.quickExpenses, (o) => {
+      const name = str(o.name).trim()
+      if (!name) return null
+      let amount: number | undefined
+      if (o.amount !== undefined && o.amount !== null) {
+        const parsed = cents(o.amount)
+        if (parsed === null || parsed <= 0) return null
+        amount = parsed
+      }
+      return {
+        id: id(o.id),
+        name,
+        ...(amount !== undefined ? { amount } : {}),
+        categoryId: str(o.categoryId),
+        paymentMethodId: str(o.paymentMethodId),
+        notes: str(o.notes),
+        tagIds: Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [],
+      }
+    }),
   }
 }
 
 /**
  * Accetta qualsiasi formato di dati noto e lo porta allo schema corrente:
- * - schema v2 (questa app);
+ * - formato 2 e 3 dell'app (il 3 ha in più solo campi facoltativi: lo stesso `normalizeV2` li legge tutti e due e
+ *   scrive il 3);
  * - prototipo multi-anno (`finances_tracker_multiyr`, con `years`);
  * - prototipo mono-anno più vecchio (`finances_tracker_2026`).
  */
@@ -315,7 +378,7 @@ export function parseBackup(raw: unknown): FinanceData {
   if (typeof raw.schemaVersion === 'number' && raw.schemaVersion > CURRENT_SCHEMA_VERSION) {
     throw new NewerFormatError(raw.schemaVersion)
   }
-  if (raw.schemaVersion === 2) return normalizeV2(raw)
+  if (raw.schemaVersion === 2 || raw.schemaVersion === 3) return normalizeV2(raw)
   if (isObj(raw.years)) return migrateV1(raw)
   if (Array.isArray(raw.oneTimeExpenses)) {
     return migrateV1({ categories: raw.categories, paymentMethods: raw.paymentMethods, years: { '2026': raw } })

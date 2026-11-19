@@ -324,6 +324,12 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
             in_seen[sig] = in_seen.get(sig, 0) + 1
             item_id = stable_id(f'in:{d}:{clean(r["Nome"]).casefold()}:{amount}:{in_seen[sig]}')
 
+            tag_ids = []
+            for tag_name in parse_tag_names(r.get('Tag')):
+                tag_id = tags.add(tag_name)
+                if tag_id not in tag_ids:
+                    tag_ids.append(tag_id)
+
             incomes.append({
                 'id': item_id,
                 'name': clean(r['Nome']),
@@ -331,6 +337,8 @@ def convert_xlsx(source, default_day: int = 1) -> tuple[dict, dict, list[str]]:
                 'date': d,
                 'categoryId': categories.add(cat_name),
                 'paymentMethodId': payments.add(pm_name),
+                'notes': clean(r.get('Note')),
+                'tagIds': tag_ids,
             })
 
     ws = sheet(wb, 'recurring')

@@ -62,7 +62,7 @@ fino in fondo; le celle vuote in mezzo sono saltate.
 | Foglio | Diventa | Colonne usate |
 |---|---|---|
 | `One-time` | Spese una tantum | Nome, Importo (€), Categoria, Data (o Mese), Metodo Pagamento, Note, Tag |
-| `Income` | Entrate | Nome, Importo (€), Categoria, Data (o Mese), **Prelievo su** (diventa il metodo di pagamento) |
+| `Income` | Entrate | Nome, Importo (€), Categoria, Data (o Mese), **Prelievo su** (diventa il metodo di pagamento), Note, Tag |
 | `Recurring` | Spese ricorrenti | Nome, Importo (€), Categoria, Frequenza, Data Inizio, Mese, Metodo Pagamento |
 | `Settings` | Categorie, metodi di pagamento e tag | Colonna A (categorie), colonna D (metodi di pagamento) e colonna N da riga 4, se N3 è `TAG` (tag) |
 
@@ -72,7 +72,7 @@ Regole di conversione:
 
 - **Importi:** da euro a centesimi interi (63 € → `6300`).
 - **Categorie, metodi di pagamento e tag:** quelli del foglio `Settings` più quelli usati nei dati ma non
-  elencati. `casa` e `Casa` sono la stessa categoria o lo stesso tag. Nella colonna `Tag` di `One-time` si può
+  elencati. `casa` e `Casa` sono la stessa categoria o lo stesso tag. Nella colonna `Tag` di `One-time` e di `Income` si può
   indicare un solo tag oppure più tag separati da virgola (`,`) o punto e virgola (`;`). I colori sono quelli
   dell'app, non i pastello dell'Excel: scelti come quando si creano a mano (categorie, poi metodi, poi tag),
   ognuno con la tinta più lontana da quelle già date, così due voci non hanno mai lo stesso colore; `Altro` è

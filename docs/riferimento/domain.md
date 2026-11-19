@@ -7,7 +7,9 @@ source-files:
   - src/domain/notifications.ts
   - src/domain/backupReminder.ts
   - src/domain/defaults.ts
-verified: 2026-11-12
+  - src/domain/savings.ts
+  - src/domain/search.ts
+verified: 2026-11-15
 ---
 
 # Riferimento: Logica di Dominio
@@ -69,6 +71,15 @@ Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'i
 ### `averageBalanceBefore(data, year, month, today): Cents | null`
 Media del saldo (entrate meno uscite, da `monthSummary`) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
 
+### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
+Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno:
+- La media parte dal primo mese (dall'inizio del periodo attivo) in cui il tag ha avuto spese: una voce comparsa a maggio non fa media sui mesi prima.
+- Per i mesi passati: confronta l'importo totale del mese con la media mensile precedente.
+- Per il mese in corso: confronta l'importo a oggi con quello che di solito c'era allo stesso giorno. Le spese variabili si proporzionano ai giorni passati (`pace`), come in `variableSpending`; gli addebiti ricorrenti dei mesi precedenti contano per intero se arrivati entro lo stesso giorno del mese, altrimenti non contano. Così un affitto addebitato il 1° non risulta «sopra il ritmo» nei primi giorni.
+- Per l'intero anno (`month = 'all'`), per mesi futuri o per il primo mese del periodo attivo: restituisce una mappa vuota poiché non c'è una serie storica precedente su cui calcolare lo scostamento.
+- Se un tag non ha spese nei mesi precedenti, viene omesso dalla mappa per evitare falsi allarmi o indicatori rumorosi.
+- Restituisce per ciascun tag presente un oggetto `TagTrendInfo` contenente: `previousAverage`, `baseline` (ritmo o media intera), `verdict` (`'above'` | `'inline'` | `'below'`), `diffPercent` e `isPace`.
+
 ### `breakdownItems(data, year, month, field, tagId, today = todayIso()): BreakdownItem[]`
 Estrae le singole voci (spese variabili e addebiti ricorrenti) che compongono una riga di "Spese per categoria" o "Spese per metodo di pagamento", con le medesime regole di consolidamento della dashboard (ordinate dalla più recente):
 - Per l'intero anno (`month = 'all'`): dal mese di inizio del periodo a dicembre, solo ciò che è avvenuto fino a `today`.
@@ -85,7 +96,9 @@ Le voci con data `<= today` sono escluse poiché già conteggiate nel consuntivo
 ### Altre funzioni
 - `loanStatus(loan)`: restituisce `{ repaid, remaining }`, cioè la somma dei rimborsi e il residuo del prestito.
 - `availableYears(data, currentYear)`: anni per cui esistono dati (spese, entrate, prestiti, simulazioni, inizio delle ricorrenze) più l'anno corrente, in ordine crescente.
-- `oneTimeTagBreakdown(expenses)`: totale e conteggio delle spese una tantum per ciascun tag, ordinati per importo decrescente.
+- `tagBreakdown(items)` (e alias `oneTimeTagBreakdown`): totale e conteggio delle voci (spese una tantum o entrate) per ciascun tag presente, ordinati per importo decrescente.
+- `searchFinance(data, query, today)`: motore di ricerca globale pura full-text tokenizzata per trovare corrispondenze tra spese una tantum, ricorrenti, entrate, prestiti e salvadanai (match su nome, note, categorie, metodi e tag). Le ricorrenti sono raggruppate per serie (`groupRecurringSeries`): una spesa divisa in più parti è un solo risultato, con la parte in corso a `today`, e si trova cercando in una qualsiasi delle parti.
+- `frequentTemplates(items, limit)`: estrae le voci più frequenti tra le transazioni passate ordinate per conteggio d'uso e recenza, per proporre template di precompilazione rapida.
 
 ---
 
@@ -139,6 +152,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 - `deepEqual(a, b)`: comparatore strutturale ricorsivo per oggetti, array e tipi primitivi.
 - `mergeFinanceData(base, local, remote)`: unisce i due rami di modifiche.
 - Internamente (funzione non esportata `mergeIdList`) le liste di entità vengono confrontate per `id`, gestendo in modo pulito inserimenti, modifiche e cancellazioni senza bisogno di campi tombstone.
+- Dopo l'unione `repairReferences` rimette le categorie, i metodi di pagamento e i salvadanai cancellati su un dispositivo ma usati da voci aggiunte o cambiate sull'altro (es. un versamento in un salvadanaio cancellato altrove: il salvadanaio torna con i movimenti nuovi), e toglie dalle impostazioni le categorie che non esistono più.
 
 ---
 
@@ -162,4 +176,23 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 ## 6. Promemoria Backup (`backupReminder.ts`)
 
 - `isReminderDue(meta, currentHash, hasData, now)`:
-  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
+  Restituisce true se ci sono dati utente (`hasData`, calcolato con `hasUserData(data)`: spese, entrate, ricorrenti, prestiti, salvadanai o inserimenti rapidi), l'impronta attuale dei dati (`currentHash`) è diversa da quella dell'ultimo backup (`BackupMeta.lastBackupHash`), il promemoria non è rimandato (`snoozedUntil`, `SNOOZE_DAYS = 1`) e sono passati almeno `REMINDER_DAYS = 7` giorni dall'ultimo backup (o dal primo avvio del controllo, `startedAt`).
+
+---
+
+## 7. Salvadanai e Obiettivi di Risparmio (`savings.ts`)
+
+Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi finanziari specifici (`SavingsGoal`):
+- `savedAmounts(movements)` e `withSavedAmounts(goals, movements)`: l'importo accantonato di ogni salvadanaio è la somma dei suoi movimenti (`SavingsMovement`), mai sotto zero. Le funzioni sotto lavorano sul tipo `SavedGoal` (salvadanaio + `currentAmount` calcolato).
+- `calculateMonthsRemaining(today, targetDate)`: calcola quanti mesi effettivi mancano alla scadenza, arrotondando sui giorni solari (~30.4375 giorni/mese) con un minimo di 1 mese se entro lo stesso mese.
+- `calculateRemainingAmount(goal)`: calcola l'importo ancora mancante (`targetAmount - currentAmount`), mai negativo.
+- `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.
+- `calculateGoalProgress(goal)`: calcola la percentuale di avanzamento normalizzata tra 0 e 1.
+- `goalStatus(goal, today)`: determina lo stato dell'obiettivo tra `'completed'` (raggiunto o superato), `'overdue'` (data superata e saldo inferiore al target) e `'active'` (in corso nei tempi).
+- `savingsSummary(goals, today)`: produce metriche aggregate complete (totale target, totale accantonato, totale residuo, somma delle quote mensili dei soli obiettivi attivi, quanto manca agli obiettivi scaduti in `overdueRemaining`, progresso complessivo ponderato, in cui ogni salvadanaio conta al massimo il suo obiettivo, e conteggi per stato). Uno scaduto non entra nella quota mensile: non ha più mesi davanti, e sommarne tutto il mancante darebbe una cifra «al mese» falsa.
+- `movementFor(movements, goalId, change)`: l'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. `savedAmounts` non mostra mai meno di zero, ma la somma dei movimenti può andarci (due prelievi su due dispositivi prima di sincronizzare): in quel caso il movimento copre anche il buco, così un versamento o l'importo scritto nel modulo arrivano davvero. Lo usa `finance.addSavingsMovement`.
+- `sortSavingsGoals(goals, today)`: ordina la lista degli obiettivi dando priorità a quelli scaduti, poi a quelli attivi con scadenza più prossima, collocando i completati in fondo.
+
+## 8. Ordine di categorie, metodi e tag (`tags.ts`)
+
+- `sortTagsByName(tags, locale)`: restituisce un elenco nuovo in ordine alfabetico secondo la lingua dell'app (`Intl.Collator` con `sensitivity: 'base'` e `numeric: true`): maiuscole e accenti non contano, «Carta 2» viene prima di «Carta 10», a parità di nome resta l'ordine di creazione. Lo store lo espone come `finance.sortedTags` (categorie, metodi e tag), usato da menu a tendina (`TagSelect`), scelta dei tag (`TagInput`), Impostazioni (`TagManager`), Budget e Previsioni. In `data` le voci restano nell'ordine di creazione: salvataggio, sincronizzazione e backup non cambiano, e i valori proposti di partenza (es. la prima categoria in un modulo nuovo) restano quelli di prima.

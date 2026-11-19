@@ -12,18 +12,21 @@ export interface MonthTarget {
  * - Su un mese: il mese prima o dopo; da gennaio si torna a dicembre dell'anno prima, da dicembre si va a gennaio
  *   dell'anno dopo.
  * - Sull'anno intero: l'anno prima o dopo, sempre intero.
+ * - Con `effectiveMonth`: permette a una vista sempre mensile (es. Budget) di calcolare il passo rispetto al mese
+ *   mostrato anche quando `finance.selectedMonth === 'all'`, aggiornando comunque `finance.selectedMonth` su `go`.
  * Si passa solo ad anni che compaiono nel menu del periodo (`finance.years`).
  */
-export function useMonthStep() {
+export function useMonthStep(effectiveMonth?: () => number | 'all') {
   const finance = useFinanceStore()
 
   function neighbour(delta: -1 | 1): MonthTarget | null {
     const year = finance.selectedYear
-    if (finance.selectedMonth === 'all') {
+    const current = effectiveMonth ? effectiveMonth() : finance.selectedMonth
+    if (current === 'all') {
       const y = year + delta
       return finance.years.includes(y) ? { year: y, month: 'all' } : null
     }
-    let m = finance.selectedMonth + delta
+    let m = current + delta
     let y = year
     if (m < 0) {
       m = 11

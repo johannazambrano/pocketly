@@ -2,13 +2,18 @@
 source-files:
   - src/types/models.ts
   - src/domain/merge.ts
+  - src/domain/savings.ts
   - src/services/storage.ts
   - src/services/backupCrypto.ts
   - src/services/sync/api.ts
   - src/services/sync/engine.ts
+  - src/services/csvExport.ts
+  - src/services/exportData.ts
+  - src/services/xlsx/writer.ts
+  - src/services/xlsx/zipWriter.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-11
+verified: 2026-11-15
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -19,9 +24,9 @@ Questo documento descrive in dettaglio la modellazione dei dati, la persistenza 
 
 ## 1. Modello Dati e Persistenza Locale
 
-Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`](../../src/types/models.ts) (schema v2):
+Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`](../../src/types/models.ts) (formato 3):
 
-- `schemaVersion`: numero intero di versione schema (attualmente `2`).
+- `schemaVersion`: numero intero di versione del formato (attualmente `3`, `CURRENT_SCHEMA_VERSION`). L'app legge anche il formato `2` e lo riscrive come `3`.
 - `categories`: lista di entità `Tag { id, name, color }`.
 - `paymentMethods`: lista di entità `Tag { id, name, color }`.
 - `tags`: lista di entità `Tag { id, name, color }`.
@@ -32,6 +37,8 @@ Tutti i dati dell'applicazione sono raggruppati nell'interfaccia [`FinanceData`]
 - `simulations`: lista di [`Simulation`](../../src/types/models.ts).
 - `forecast`: configurazione [`ForecastSettings`](../../src/types/models.ts).
 - `budget`: impostazioni limiti [`BudgetSettings`](../../src/types/models.ts).
+- `savingsGoals`: lista di [`SavingsGoal`](../../src/types/models.ts) per salvadanai e pianificazione obiettivi.
+- `savingsMovements`: lista di [`SavingsMovement`](../../src/types/models.ts), versamenti e prelievi dei salvadanai. L'importo accantonato è la loro somma: ogni movimento è una voce a sé, così versamenti fatti su due dispositivi prima di sincronizzare non si sovrascrivono.
 
 ### Persistenza IndexedDB
 La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/services/storage.ts):
@@ -100,12 +107,14 @@ Se la scrittura fallisce con un conflitto (perché un altro dispositivo ha scrit
 ### Protezione Versioni Più Recenti (`NewerFormatError`)
 Se i dati presenti sul server o in un file di backup importato presentano uno `schemaVersion` superiore a quello compreso dall'app in uso (`CURRENT_SCHEMA_VERSION`), il parser in [`src/services/migration.ts`](../../src/services/migration.ts) solleva l'eccezione `NewerFormatError`. Lo store `sync.ts` riconosce l'errore impostando lo stato di problema `outdated`. Il dispositivo rifiuta di toccare o salvare tali dati per evitare perdite accidentali di campi introdotti da release successive dell'applicazione.
 
+**Quando alzare `CURRENT_SCHEMA_VERSION`.** La protezione funziona solo se il numero sale quando serve. Un'app vecchia ricostruisce i dati campo per campo (`normalizeV2`) e scarta quelli che non conosce: se poi registra una modifica, invia i dati senza quei campi e l'unione a tre vie li tratta come cancellati, sul server e su tutti gli altri dispositivi. Si alza quindi il numero ogni volta che si aggiunge un campo o un elenco che un'app precedente perderebbe. Il formato 3 (novembre 2026) è nato così: salvadanai con i movimenti, inserimenti rapidi, note e tag delle entrate. Il primo dispositivo aggiornato che sincronizza porta il server al formato 3; da lì i dispositivi non ancora aggiornati restano fermi su «da aggiornare» finché non ricaricano l'app.
+
 ---
 
 ## 4. Algoritmo di Merge a Tre Vie (`src/domain/merge.ts`)
 
 L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è una funzione pura e deterministica che opera su tre elementi:
-1. `base`: lo snapshot dei dati all'ultima sincronizzazione riuscita.
+1. `base`: lo snapshot dei dati all'ultima sincronizzazione riuscita. Prima di ogni giro `syncOnce` lo fa passare da `parseBackup`, come i dati locali e quelli del server: se l'ha salvato una versione precedente dell'app gli mancherebbero i campi aggiunti dopo (es. note e tag delle entrate), ogni voce sembrerebbe cambiata su questo dispositivo e nell'unione vincerebbe sulle modifiche fatte altrove.
 2. `local`: lo stato attuale sul dispositivo locale.
 3. `remote`: lo stato attuale ricevuto dal server.
 
@@ -122,7 +131,20 @@ L'algoritmo di unione implementato in [`merge.ts`](../../src/domain/merge.ts) è
       - Se un elemento è stato cancellato localmente (presente in `base`, assente in `local`) e non è stato toccato da `remote`, l'elemento viene definitivamente eliminato.
       - Se un elemento è stato cancellato da una parte ma modificato dall'altra, **vince la modifica**, preservando il dato per evitare perdite accidentali.
       - Se un elemento è stato modificato in entrambi i dispositivi, vince la versione locale.
-      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali.
+      - Gli elementi nuovi creati indipendentemente su entrambi i dispositivi vengono uniti mantenendo l'ordine del server seguito dai nuovi locali. Se però sul server l'ordine non è cambiato dalla base e su questo dispositivo sì (es. inserimenti rapidi riordinati nelle Impostazioni), vale l'ordine locale, con in fondo i nuovi arrivati dal server (`sameOrder` in `merge.ts`).
 
 ### Perché i Tombstone non sono necessari?
 Nei sistemi di sincronizzazione a due vie, per distinguere un elemento "cancellato" da uno "ancora da ricevere" è necessario memorizzare un record fantasma (tombstone). In Pocketly il client memorizza sempre l'ultima **base** sincronizzata. Questo rende la tripla `(base, local, remote)` sufficiente per dedurre con certezza matematica se un'assenza è frutto di una cancellazione o di una mancata creazione, rendendo superflui i tombstone sia nel client che nel server.
+
+---
+
+## 5. Esportazione Tabellare (Excel .xlsx con Fogli Separati e CSV)
+
+Il servizio [`src/services/exportData.ts`](../../src/services/exportData.ts) organizza i dati esportati esattamente come l'applicazione:
+- **Spese variabili**: elenco delle uscite con date, importi, categorie, metodi, tag e note.
+- **Spese ricorrenti**: elenco delle ricorrenze con frequenza, data inizio, data fine, categoria, metodo e promemoria.
+- **Entrate**: elenco delle entrate con data, importo, categoria, metodo, tag e note.
+- **Prestiti**: elenco dei prestiti concessi/ricevuti, importo, data, rimborsato, residuo e storico rimborsi.
+- **Categorie e metodi**: elenco delle entità ausiliarie con relativi colori.
+
+La generazione delle cartelle di lavoro Excel con più fogli avviene client-side in puro TypeScript tramite [`src/services/xlsx/writer.ts`](../../src/services/xlsx/writer.ts) e [`src/services/xlsx/zipWriter.ts`](../../src/services/xlsx/zipWriter.ts), senza alcuna libreria esterna. È inoltre supportata l'esportazione di archivi ZIP con i singoli file CSV per sezione e di file CSV dedicati a singole sezioni tramite [`src/services/csvExport.ts`](../../src/services/csvExport.ts).
