@@ -251,7 +251,7 @@ watch(
         <button
           type="button"
           class="min-h-7 rounded-md px-2.5 text-xs font-medium transition-colors"
-          :class="sortMode === 'name' ? 'bg-surface text-ink shadow-2xs' : 'text-ink-4 hover:text-ink-2'"
+          :class="sortMode === 'name' ? 'seg-on bg-surface text-ink shadow-2xs' : 'text-ink-4 hover:text-ink-2'"
           :aria-pressed="sortMode === 'name'"
           @click="sortMode = 'name'"
         >
@@ -260,7 +260,7 @@ watch(
         <button
           type="button"
           class="min-h-7 rounded-md px-2.5 text-xs font-medium transition-colors"
-          :class="sortMode === 'usage' ? 'bg-surface text-ink shadow-2xs' : 'text-ink-4 hover:text-ink-2'"
+          :class="sortMode === 'usage' ? 'seg-on bg-surface text-ink shadow-2xs' : 'text-ink-4 hover:text-ink-2'"
           :aria-pressed="sortMode === 'usage'"
           @click="sortMode = 'usage'"
         >

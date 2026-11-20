@@ -22,6 +22,12 @@ source-files:
   - src/components/QuickExpenseBar.vue
   - src/components/QuickExpenseForm.vue
   - src/components/QuickExpenseManager.vue
+  - src/components/TagManager.vue
+  - src/components/settings/SettingsIndex.vue
+  - src/components/settings/SettingsDataSection.vue
+  - src/components/settings/SettingsAppearanceSection.vue
+  - src/components/settings/SettingsAboutSection.vue
+  - src/utils/settingsSections.ts
   - src/components/SavingsGoalForm.vue
   - src/components/SavingsDepositModal.vue
   - src/components/SearchModal.vue
@@ -43,7 +49,7 @@ source-files:
   - src/services/excelImport.ts
   - src/services/backup.ts
   - deploy/proxmox/update.sh
-verified: 2026-11-18
+verified: 2026-11-20
 ---
 
 # Guida: Piano di Test Utente (UAT)
@@ -72,7 +78,8 @@ Se hai poco tempo, esegui almeno questi controlli minimi (coprono le ultime inte
 - [ ] **Dashboard e dettagli:** verifica `BalancePanel`, trend sulle righe di `BreakdownList` e navigazione al dettaglio (`/dettaglio/...`).
 - [ ] **Salvadanai:** in `/budget` → scheda *«Salvadanai»* crea un salvadanaio, testa `+10 €` con «Annulla» e la modale «Versa o Preleva».
 - [ ] **Omnisearch:** apri `SearchModal` (`Ctrl+K` / `Cmd+K` o lente in intestazione), cerca una voce e verifica salto alla vista corretta con evidenziazione temporanea.
-- [ ] **Esportazione tabellare:** in `/impostazioni` scarica un `.xlsx` e verifica che i fogli si aprano senza errori.
+- [ ] **Esportazione tabellare:** in `/impostazioni/dati` scarica un `.xlsx` e verifica che i fogli si aprano senza errori.
+- [ ] **Impostazioni per argomento (`PKT-16`):** apri `/impostazioni` su telefono (indice raggruppato → pagina figlia con `← Impostazioni`, selettore anno nascosto in alto) e su PC (indice `sticky` a sinistra + sezione a destra); apri *Categorie* o *Tag* e verifica ricerca, filtri utilizzo, modifica nel foglio `BaseModal` e azione `+` contestuale.
 - [ ] **Barra in basso e «+» (`PKT-20`):** sul telefono il «+» in basso fa l'azione della pagina (Entrate → nuova entrata, Budget → *Salvadanai* → nuovo salvadanaio, Dashboard → nuova spesa); «Altro» si apre, contiene la ricerca e si chiude toccando fuori; un toast non finisce sotto la barra o sotto il «+».
 - [ ] **Console pulita:** nessuna eccezione JavaScript o errore di rendering nelle viste principali.
 
@@ -214,15 +221,22 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 
 ---
 
-## J. Impostazioni, Backup, Import/Export, Sync e Notifiche (`/impostazioni`)
+## J. Impostazioni, Backup, Import/Export, Sync e Notifiche (`/impostazioni`, `/impostazioni/:section`)
 
-- [ ] **Categorie, Metodi di pagamento e Tag (`TagManager`, `PKT-17`):**
-  - aggiungi, rinomina, cambia colore (scelto o casuale), prova *«Riarmonizza i colori»* e testa l'eliminazione con riassegnazione delle voci su un'altra categoria/metodo (o rimozione solo tag);
-  - verifica l'**ordine alfabetico** (`finance.sortedTags` / `sortTagsByName`, insensibile a maiuscole/accenti e con ordinamento numerico) nei menu a tendina (`TagSelect`), nella scelta tag (`TagInput`), in Impostazioni, in Budget e in Previsioni (i filtri tag in Variabili ed Entrate restano invece ordinati per importo).
+- [ ] **Indice per argomento e navigazione (`PKT-16`, `SettingsView`, `SettingsIndex`):**
+  - su telefono (`< lg`) verifica che `/impostazioni` mostri i 4 gruppi (*Dati e sincronizzazione*, *Organizzazione*, *Preferenze*, *App*) con righe di stato aggiornate e pallini di avviso dedicati; aprendo una sezione verifica il link `← Impostazioni`, il ritorno alla posizione dell'indice e il selettore dell'anno nascosto nell'header (`meta.hideYear`);
+  - su PC (`>= lg`) verifica il layout a 2 colonne con indice `sticky` a sinistra (che resta visibile scorrendo liste lunghe a destra) e *Dati e backup* aperta di default su `/impostazioni`;
+  - verifica i collegamenti diretti: icona cloud sync → `/impostazioni/sincronizzazione`, *«Gestisci»* in `QuickExpenseBar` → `/impostazioni/inserimenti-rapidi`, *«Importa…»* in `WelcomePanel` → `/impostazioni/dati`, e le vecchie ancore `/impostazioni#backup` e `/impostazioni#inserimenti-rapidi`;
+  - verifica l'aspetto su tutte e 6 le combinazioni piattaforma (iPhone / Android / PC) × tema (chiaro / scuro), compreso il selettore `A–Z / Più usate` su iOS scuro.
+- [ ] **Categorie, Metodi di pagamento e Tag (`TagManager`, `PKT-16`, `PKT-17`):**
+  - verifica aggiunta inline in cima, campo ricerca sempre visibile (senza accenti/maiuscole), filtri *Tutte / In uso / Non usate*, ordinamento *A–Z / Più usate*, griglia a 2 colonne su schermi larghi e barra di salto alfabetico quando ci sono almeno 15 voci;
+  - su telefono verifica che il `+` nella barra inferiore (`usePageAction`) porti il focus sul campo *Aggiungi* in Categorie, Metodi e Tag, e apra il modulo nuovo rapido in *Inserimenti rapidi*;
+  - tocca una riga per aprire il foglio/modale `BaseModal`: verifica anteprima etichetta, rinomina (con controllo nome duplicato), cambio colore dalla tavolozza OKLCH / picker libero / casuale, conteggio utilizzi e cancellazione con riassegnazione delle voci su un'altra categoria/metodo (o rimozione solo tag);
+  - verifica *«Riarmonizza i colori»* dentro *Aspetto e lingua* (`/impostazioni/aspetto`) e l'**ordine alfabetico** (`finance.sortedTags` / `sortTagsByName`, insensibile a maiuscole/accenti e con ordinamento numerico) nei menu a tendina (`TagSelect`), nella scelta tag (`TagInput`), in Impostazioni, in Budget e in Previsioni (i filtri tag in Variabili ed Entrate restano invece ordinati per importo).
 - [ ] **Backup JSON e Promemoria (`BackupReminder`):**
-  - esporta un backup in chiaro e un backup protetto con password (`AES-GCM`), verificando lo stato *«Tutti i dati sono nell'ultimo backup»*;
+  - in `/impostazioni/dati` esporta un backup in chiaro e un backup protetto con password (`AES-GCM`), verificando lo stato *«Tutti i dati sono nell'ultimo backup»*;
   - importa il backup cifrato inserendo prima una password errata (verifica errore *«Password errata»*) e poi quella corretta;
-  - verifica che quando il promemoria `BackupReminder` è attivo, *«Vai al backup»* porti a `/impostazioni#backup` mettendo a fuoco il riquadro del backup (e il banner non compaia dentro le Impostazioni).
+  - verifica che quando il promemoria `BackupReminder` è attivo, *«Vai al backup»* porti a `/impostazioni/dati#backup` mettendo a fuoco il riquadro del backup (e il banner non compaia né sull'indice né nelle pagine figlie delle Impostazioni).
 - [ ] **Importazione da Excel (`.xlsx`):** scegli un file `.xlsx` di Expense Tracker, controlla l'anteprima dei conteggi (incluse le entrate e i tag) e gli eventuali avvisi, e conferma la sostituzione dei dati.
 - [ ] **Esportazione tabellare (`exportData`):**
   - prova **Excel (`.xlsx`)** con anno selezionato e *«Tutti gli anni»*: verifica aprendo il file in Excel/LibreOffice che ci siano i 5 fogli (*Spese variabili*, *Spese ricorrenti* con promemoria e addebiti saltati/cambiati, *Entrate* con tag e note, *Prestiti*, *Categorie e metodi*) e che le cifre siano numeriche formattate correttamente;
