@@ -51,7 +51,7 @@ Questo documento valuta la scalabilità dell'architettura attuale di **Pocketly*
   - [`useSyncStore`](../../src/stores/sync.ts) osserva anch'esso `() => finance.data` con `watch(..., { deep: true })` (debounce 1500 ms).
   - [`useNotificationsStore`](../../src/stores/notifications.ts) osserva `finance.data.recurringExpenses` con `watch(..., { deep: true })` (debounce `SYNC_DEBOUNCE_MS = 2000`).
 - **Doppia copia completa dei dati in memoria e IndexedDB:** [`SyncState.base`](../../src/services/sync/engine.ts) conserva una copia integrale dell'ultima versione sincronizzata in `CONFIG_KEY = 'sync-config'` per il merge a 3 vie (`snapshot(base)` + `JSON.parse(JSON.stringify(next.state))` in `saveConfig`).
-- **Allocazione ripetuta in `tagUsage` (`src/stores/finance.ts`):** `tagUsage(kind, id)` crea uno spread combinato `[...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses]` ad ogni invocazione per singolo ID. Oggi in [`TagManager.vue`](../../src/components/TagManager.vue) gira solo sul tag in eliminazione, ma diventerebbe `O(T * N)` con molte allocazioni se mostrato su ogni riga come previsto da `PKT-16`.
+- **Allocazione ripetuta in `tagUsage` (`src/stores/finance.ts`) *(risolto con `PKT-16`)*:** `countTagUsage` in [`tags.ts`](../../src/domain/tags.ts) calcola ora in un solo passaggio una `Map<Id, number>` esposta come `finance.tagUsageCounts`, e `tagUsage(kind, id)` esegue un lookup `O(1)`.
 
 ### 2.2 Calcoli di dominio, ricerca e rendering UI (`src/domain/`, `src/components/`, `src/views/`)
 - **Scansioni lineari e ricalcoli a cascata in [`calculations.ts`](../../src/domain/calculations.ts):**

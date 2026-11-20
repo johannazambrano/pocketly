@@ -35,7 +35,7 @@ const amountPlaceholder = computed(() => money(0).replace(/\d[\d.,\s\u00a0]*\d|\
       </h3>
       <RouterLink
         v-if="manageLink"
-        to="/impostazioni#inserimenti-rapidi"
+        :to="{ name: 'settings-section', params: { section: 'inserimenti-rapidi' } }"
         class="text-xs font-medium text-accent hover:underline"
       >
         {{ t('quickExpenses.manage') }}

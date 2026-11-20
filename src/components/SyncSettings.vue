@@ -94,12 +94,13 @@ const entries = (d: FinanceData) => d.oneTimeExpenses.length + d.recurringExpens
 </script>
 
 <template>
-  <div v-if="sync.available !== null" class="card space-y-3">
+  <div class="card space-y-3">
     <h3 class="text-sm font-semibold text-ink-2">
-      <i class="fa-solid fa-cloud mr-1 text-sync"></i> {{ t('sync.title') }}
+      <i class="fa-solid fa-cloud mr-1 text-sync" aria-hidden="true"></i> {{ t('sync.title') }}
     </h3>
 
-    <p v-if="!sync.available" class="text-xs text-ink-4">{{ t('sync.unavailable') }}</p>
+    <p v-if="sync.available === null" class="text-xs text-ink-4">{{ t('app.loading') }}</p>
+    <p v-else-if="!sync.available" class="text-xs text-ink-4">{{ t('sync.unavailable') }}</p>
     <p v-else-if="!sync.cryptoAvailable" class="text-xs text-caution">{{ t('sync.needsHttps') }}</p>
 
     <template v-else>

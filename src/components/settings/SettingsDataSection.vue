@@ -1,0 +1,391 @@
+<script setup lang="ts">
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useBackupStore } from '@/stores/backup'
+import { useFinanceStore } from '@/stores/finance'
+import { useUiStore } from '@/stores/ui'
+import { useFormat } from '@/i18n'
+import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
+import { canShareFiles, executeExport, shareOrDownloadFile, type ExportFormat } from '@/services/exportData'
+import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
+import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
+import { parseBackup } from '@/services/migration'
+import { XlsxUnsupportedError } from '@/services/xlsx/zip'
+import { formatDate } from '@/utils/dates'
+import BaseModal from '@/components/BaseModal.vue'
+
+const finance = useFinanceStore()
+const backup = useBackupStore()
+const ui = useUiStore()
+const route = useRoute()
+const { t, locale } = useFormat()
+
+/** Riquadro del backup: l'avviso «Vai al backup» porta qui (`/impostazioni/dati#backup`) e lo mette a fuoco. */
+const backupCard = ref<HTMLElement | null>(null)
+
+async function focusBackupIfHash() {
+  if (route.hash !== '#backup') return
+  await nextTick()
+  backupCard.value?.focus({ preventScroll: true })
+}
+
+onMounted(() => {
+  void focusBackupIfHash()
+})
+
+watch(() => route.hash, () => {
+  void focusBackupIfHash()
+})
+
+// --- esportazione backup ---------------------------------------------------
+
+const shareable = canShareBackup()
+const cryptoAvailable = isCryptoAvailable()
+const protect = ref(false)
+const password = ref('')
+const passwordRepeat = ref('')
+const busy = ref(false)
+
+const passwordProblem = computed(() => {
+  if (!protect.value) return ''
+  if (password.value.length < MIN_PASSWORD_LENGTH) return t('settings.passwordTooShort', { min: MIN_PASSWORD_LENGTH })
+  if (password.value !== passwordRepeat.value) return t('settings.passwordMismatch')
+  return ''
+})
+const showPasswordProblem = computed(() => !!passwordProblem.value && (!!password.value || !!passwordRepeat.value))
+
+const lastBackupText = computed(() => {
+  const days = backup.daysSinceBackup
+  if (days === null) return ''
+  const when = new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }).format(-days, 'day')
+  return t('settings.lastBackup', { when })
+})
+
+async function doExport(mode: ExportMode) {
+  if (busy.value || passwordProblem.value) return
+  busy.value = true
+  try {
+    const result = await exportBackup(finance.data, mode, protect.value ? password.value : undefined)
+    if (result === 'cancelled') return
+    await backup.markBackedUp()
+    ui.toast(t(result === 'shared' ? 'settings.exportShared' : 'settings.exportSuccess'))
+    password.value = ''
+    passwordRepeat.value = ''
+  } catch (e) {
+    ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.exportError'), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- esportazione tabellare (Excel / CSV) ----------------------------------
+
+const exportFormat = ref<ExportFormat>('xlsx')
+const exportYear = ref<number | 'all'>(finance.selectedYear)
+const exportBusy = ref(false)
+const shareableFile = canShareFiles()
+
+watch(
+  () => finance.selectedYear,
+  (y) => {
+    if (exportYear.value !== 'all') {
+      exportYear.value = y
+    }
+  },
+)
+
+async function doExportTabular(mode: 'download' | 'share') {
+  if (exportBusy.value) return
+  exportBusy.value = true
+  try {
+    const result = await executeExport(exportFormat.value, finance.data, {
+      year: exportYear.value,
+      locale: locale.value,
+    })
+    const res = await shareOrDownloadFile(result, mode)
+    ui.toast(t(res === 'shared' ? 'tabularExport.shared' : 'tabularExport.downloaded'))
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') return
+    ui.toast(t('tabularExport.error'), 'error')
+  } finally {
+    exportBusy.value = false
+  }
+}
+
+// --- importazione backup ---------------------------------------------------
+
+const unlock = ref<{ retry: boolean; resolve: (password: string | null) => void } | null>(null)
+const unlockPassword = ref('')
+
+function askPassword(retry: boolean) {
+  return new Promise<string | null>((resolve) => {
+    unlockPassword.value = ''
+    unlock.value = { retry, resolve }
+  })
+}
+
+function answerUnlock(value: string | null) {
+  unlock.value?.resolve(value)
+  unlock.value = null
+  unlockPassword.value = ''
+}
+
+async function importBackup(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  const ok = await ui.confirm({
+    title: t('settings.importConfirmTitle'),
+    message: t('settings.importConfirm'),
+    confirmLabel: t('settings.importConfirmButton'),
+  })
+  if (!ok) return
+  busy.value = true
+  try {
+    const restored = await readBackupFile(file, askPassword)
+    if (!restored) return
+    finance.replaceAll(restored)
+    await finance.flush()
+    await backup.markBackedUp()
+    ui.toast(t('settings.importSuccess'))
+  } catch (e) {
+    ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.importError'), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- importazione da Excel -------------------------------------------------
+
+const excelPreview = ref<ExcelImportResult | null>(null)
+const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods', 'tags']
+
+function excelErrorKey(e: unknown): string {
+  if (e instanceof NotExpenseTrackerError) return 'excelImport.notTracker'
+  if (e instanceof XlsxUnsupportedError) return 'excelImport.unsupported'
+  if (e instanceof RangeError) return 'excelImport.tooLarge'
+  return 'excelImport.error'
+}
+
+function warningText(w: ImportWarning): string {
+  const params = { ...w.params }
+  if (typeof params.date === 'string') params.date = formatDate(params.date, locale.value)
+  return t(`excelImport.warnings.${w.code}`, params)
+}
+
+async function pickExcel(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  busy.value = true
+  try {
+    excelPreview.value = await readExcelFile(file)
+  } catch (e) {
+    console.error('Lettura del file Excel non riuscita', e)
+    ui.toast(t(excelErrorKey(e)), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+
+async function confirmExcelImport() {
+  const preview = excelPreview.value
+  if (!preview || busy.value) return
+  busy.value = true
+  try {
+    // Stesso controllo dei backup: i dati arrivano allo store già normalizzati.
+    finance.replaceAll(parseBackup(JSON.parse(JSON.stringify(preview.data))))
+    await finance.flush()
+    excelPreview.value = null
+    ui.toast(t('excelImport.success'))
+  } catch (e) {
+    console.error('Importazione da Excel non riuscita', e)
+    ui.toast(t('excelImport.error'), 'error')
+  } finally {
+    busy.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="space-y-4">
+    <div id="backup" ref="backupCard" tabindex="-1" aria-labelledby="backup-title" class="card space-y-3 focus:outline-none">
+      <h3 id="backup-title" class="text-sm font-semibold text-ink-2">
+        <i class="fa-solid fa-cloud-arrow-down mr-1 text-accent-icon" aria-hidden="true"></i> {{ t('settings.backupTitle') }}
+      </h3>
+      <p class="text-xs text-ink-4">{{ t('settings.backupHint') }}</p>
+
+      <div class="rounded-lg bg-surface-2 px-3 py-2 text-xs">
+        <template v-if="backup.lastBackupAt">
+          <p class="font-medium text-ink-2">{{ lastBackupText }}</p>
+          <p v-if="backup.unsaved" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>{{ t('settings.unsavedChanges') }}</p>
+          <p v-else class="text-accent"><i class="fa-solid fa-check mr-1" aria-hidden="true"></i>{{ t('settings.allSaved') }}</p>
+        </template>
+        <p v-else class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>{{ t('settings.neverBackedUp') }}</p>
+      </div>
+
+      <div class="space-y-2">
+        <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-ink-2" :class="cryptoAvailable ? '' : 'opacity-50'">
+          <input v-model="protect" type="checkbox" class="h-4 w-4 accent-accent-icon" :disabled="!cryptoAvailable" />
+          {{ t('settings.protect') }}
+        </label>
+        <p v-if="!cryptoAvailable" class="text-xs text-caution">{{ t('settings.cryptoUnavailable') }}</p>
+        <div v-if="protect" class="space-y-2">
+          <p class="text-xs text-ink-4">{{ t('settings.protectHint') }}</p>
+          <input
+            v-model="password"
+            type="password"
+            autocomplete="new-password"
+            class="field"
+            :placeholder="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
+            :aria-label="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
+          />
+          <input
+            v-model="passwordRepeat"
+            type="password"
+            autocomplete="new-password"
+            class="field"
+            :placeholder="t('settings.passwordRepeat')"
+            :aria-label="t('settings.passwordRepeat')"
+          />
+          <p v-if="showPasswordProblem" class="text-xs text-negative" role="alert">{{ passwordProblem }}</p>
+          <p class="text-xs text-caution"><i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>{{ t('settings.passwordWarning') }}</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-primary min-w-40 flex-1" :disabled="busy || !!passwordProblem" @click="doExport(shareable ? 'share' : 'download')">
+          {{ shareable ? t('settings.share') : t('settings.export') }}
+        </button>
+        <button
+          v-if="shareable"
+          type="button"
+          class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
+          :disabled="busy || !!passwordProblem"
+          @click="doExport('download')"
+        >
+          {{ t('settings.download') }}
+        </button>
+      </div>
+
+      <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg bg-chrome-2 px-4 py-2 text-center text-sm font-medium text-on-color focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-chrome-3" :class="busy ? 'pointer-events-none opacity-50' : ''">
+        {{ t('settings.import') }}
+        <input type="file" accept=".json,application/json" class="hidden" :disabled="busy" @change="importBackup" />
+      </label>
+    </div>
+
+    <div class="card space-y-3">
+      <h3 class="text-sm font-semibold text-ink-2">
+        <i class="fa-solid fa-file-excel mr-1 text-accent-icon" aria-hidden="true"></i> {{ t('tabularExport.title') }}
+      </h3>
+      <p class="text-xs text-ink-4">{{ t('tabularExport.hint') }}</p>
+
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label class="block">
+          <span class="field-label">{{ t('tabularExport.format') }}</span>
+          <select v-model="exportFormat" class="field">
+            <option value="xlsx">{{ t('tabularExport.formatXlsx') }}</option>
+            <option value="zip">{{ t('tabularExport.formatZip') }}</option>
+            <option value="onetime">{{ t('tabularExport.formatOnetime') }}</option>
+            <option value="recurring">{{ t('tabularExport.formatRecurring') }}</option>
+            <option value="income">{{ t('tabularExport.formatIncome') }}</option>
+            <option value="loans">{{ t('tabularExport.formatLoans') }}</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="field-label">{{ t('tabularExport.period') }}</span>
+          <select v-model="exportYear" class="field">
+            <option :value="finance.selectedYear">{{ t('tabularExport.selectedYear', { year: finance.selectedYear }) }}</option>
+            <option value="all">{{ t('tabularExport.allYears') }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="btn-primary min-w-40 flex-1"
+          :disabled="exportBusy"
+          @click="doExportTabular(shareableFile ? 'share' : 'download')"
+        >
+          {{ shareableFile ? t('tabularExport.share') : t('tabularExport.download') }}
+        </button>
+        <button
+          v-if="shareableFile"
+          type="button"
+          class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
+          :disabled="exportBusy"
+          @click="doExportTabular('download')"
+        >
+          {{ t('tabularExport.download') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card space-y-3">
+      <h3 class="text-sm font-semibold text-ink-2">
+        <i class="fa-solid fa-file-import mr-1 text-accent-icon" aria-hidden="true"></i> {{ t('excelImport.title') }}
+      </h3>
+      <p class="text-xs text-ink-4">{{ t('excelImport.hint') }}</p>
+      <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-center text-sm font-medium text-ink-2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-surface-2" :class="busy ? 'pointer-events-none opacity-50' : ''">
+        {{ t('excelImport.choose') }}
+        <input
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          class="hidden"
+          :disabled="busy"
+          @change="pickExcel"
+        />
+      </label>
+    </div>
+
+    <BaseModal :open="!!unlock" :title="t('settings.unlockTitle')" @close="answerUnlock(null)">
+      <form class="space-y-3" @submit.prevent="answerUnlock(unlockPassword)">
+        <p class="text-sm text-ink-3">{{ t('settings.unlockText') }}</p>
+        <input
+          v-model="unlockPassword"
+          type="password"
+          autocomplete="current-password"
+          class="field"
+          :aria-label="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
+        />
+        <p v-if="unlock?.retry" class="text-xs text-negative" role="alert">{{ t('settings.unlockWrong') }}</p>
+        <div class="flex gap-2">
+          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="answerUnlock(null)">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="submit" class="btn-primary flex-1" :disabled="!unlockPassword">{{ t('settings.unlockButton') }}</button>
+        </div>
+      </form>
+    </BaseModal>
+
+    <BaseModal :open="!!excelPreview" :title="t('excelImport.previewTitle')" @close="excelPreview = null">
+      <div v-if="excelPreview" class="space-y-3">
+        <dl class="divide-y divide-line-soft rounded-lg bg-surface-2 px-3 text-sm">
+          <div v-for="key in COUNT_KEYS" :key="key" class="flex justify-between py-1.5">
+            <dt class="text-ink-3">{{ t(`excelImport.counts.${key}`) }}</dt>
+            <dd class="font-semibold text-ink tabular-nums">{{ excelPreview.stats[key] }}</dd>
+          </div>
+        </dl>
+        <details v-if="excelPreview.warnings.length" class="rounded-lg border border-caution-line bg-caution-soft px-3 py-2 text-xs text-caution-strong">
+          <summary class="cursor-pointer font-medium">
+            <i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>{{ t('excelImport.warningsTitle', { count: excelPreview.warnings.length }) }}
+          </summary>
+          <ul class="mt-2 max-h-48 list-disc space-y-1 overflow-y-auto pl-4">
+            <li v-for="(w, i) in excelPreview.warnings" :key="i">{{ warningText(w) }}</li>
+          </ul>
+        </details>
+        <p class="text-xs text-ink-3">{{ t('excelImport.replaceWarning') }}</p>
+        <div class="flex gap-2">
+          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="excelPreview = null">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="btn-primary flex-1" :disabled="busy" @click="confirmExcelImport">{{ t('excelImport.confirm') }}</button>
+        </div>
+      </div>
+    </BaseModal>
+  </div>
+</template>

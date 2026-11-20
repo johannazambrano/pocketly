@@ -31,7 +31,7 @@ const secondary =
       <button type="button" :class="secondary" @click="recurringOpen = true">
         <i class="fa-solid fa-rotate" aria-hidden="true"></i>{{ t('welcome.addRecurring') }}
       </button>
-      <RouterLink to="/impostazioni" :class="secondary">
+      <RouterLink :to="{ name: 'settings-section', params: { section: 'dati' } }" :class="secondary">
         <i class="fa-solid fa-file-import" aria-hidden="true"></i>{{ t('welcome.import') }}
       </RouterLink>
     </div>

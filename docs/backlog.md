@@ -28,7 +28,7 @@ collegamento, senza ripeterne il testo.
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
-| PKT-16 | Impostazioni divise per argomento | in corso | media | Jonny |
+| PKT-16 | Impostazioni divise per argomento | fatto nel ramo, da unire | media | Jonny |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
@@ -233,7 +233,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-16 — Impostazioni divise per argomento
-- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
+- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny
 - **Perché:** la pagina Impostazioni è un’unica lista di riquadri (backup, sincronizzazione, notifiche, import da
   Excel, esportazione, inserimenti rapidi, categorie, metodi di pagamento, tag, lingua, aspetto, aggiornamenti,
   privacy): al telefono va scorsa a lungo per trovare una funzione, e sul PC le due colonne mescolano argomenti
@@ -255,7 +255,8 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-17 aperta (Johanna).
-  - 2026-11-20 decisione condivisa e presa in carico (Jonny).
+  - 2026-11-20 decisione condivisa e presa in carico (Jonny, `85faffc`).
+  - 2026-11-20 implementata nel ramo `feature/pkt-16-impostazioni-per-argomento` (Jonny): registro `settingsSections.ts`, rotte `/impostazioni/:section` con redirect vecchie ancore e `meta.hideYear`, `SettingsIndex` + 3 sotto-sezioni modulari (`SettingsDataSection`, `SettingsAppearanceSection`, `SettingsAboutSection`), master-detail desktop con indice sticky, `TagManager` riprogettato con conteggio usi `O(M)` (`countTagUsage` / `finance.tagUsageCounts`), ricerca sempre visibile, filtri utilizzo, ordinamento A–Z/più usate, salto alfabetico su elenchi lunghi, griglia 2 colonne su PC e modifica/cancellazione in `BaseModal`; azione `+` contestuale (`usePageAction`), link interni e documentazione aggiornati.
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
 - **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
