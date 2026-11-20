@@ -24,7 +24,7 @@ collegamento, senza ripeterne il testo.
 | PKT-09 | Critique 12 della dashboard: P1 e P2 | fatto | — | Johanna |
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
-| PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
+| PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
@@ -37,6 +37,7 @@ collegamento, senza ripeterne il testo.
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
 | PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
 | PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
+| PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -203,11 +204,13 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     (`2250894`); in `main` (`384514e`).
 
 ### PKT-12 — Progettare l'autenticazione nell'app
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Chi:** Jonny
 - **Perché:** definire un meccanismo di autenticazione per l'app in linea con l'architettura di Pocketly.
+- **Risultato:** progetto completo e piano implementativo a 3 fasi documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md) (blocco locale con cifratura IndexedDB at-rest incluso `SyncState.base`, Master Password unica Zero-Knowledge con envelope encryption `vaultDEK` e Recovery Key, piena compatibilità password manager e WebAuthn PRF, account su invito/admin con sessioni `HttpOnly` revocabili su SQLite WAL coordinato con `PKT-13`/`PKT-18`, archivi condivisi coppia/famiglia via ECDH P-256). Aperta l'attività operativa `PKT-25`.
 - **Fatto quando:** progetto dell'autenticazione completato e documentato (requisiti, flussi, sessione/credenziali, impatti su dati locali, sync e server); eventuali attività di sviluppo aperte nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-20 analisi condivisa e progetto completato (Jonny): redatta [autenticazione.md](architettura/autenticazione.md), aggiornati [README.md](README.md) e [scalabilita.md](architettura/scalabilita.md), aperta `PKT-25` con link diretto al piano implementativo.
 
 ### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
 - **Stato:** fatto · **Chi:** Jonny
@@ -395,3 +398,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-20 aperta dall'idea di Jonny (Johanna).
+
+### PKT-25 — Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12)
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** implementare l'autenticazione progettata in `PKT-12` (blocco locale opzionale con cifratura IndexedDB at-rest, Master Password unica Zero-Knowledge con compatibilità password manager, account su invito/admin con sessioni revocabili su SQLite WAL e archivi condivisi coppia/famiglia). Tutte le specifiche crittografiche, le API, lo schema SQLite e i contratti HTML per password manager sono documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md).
+- **Come partire:** seguire il piano operativo in 3 fasi indipendenti della [Sezione 7 di autenticazione.md](architettura/autenticazione.md#7-piano-implementativo-a-3-fasi-guida-operativa-per-pkt-25) (chi prende in carico il lavoro può dividerle in sotto-task): **Fase A** blocco locale + cifratura IndexedDB at-rest (`'finance-data'` e `SyncState.base`, solo frontend, offline-first); **Fase B1** account Zero-Knowledge, sessioni `HttpOnly` revocabili e backend SQLite WAL (coordinata con `PKT-18` Fase 3); **Fase B2** archivi condivisi coppia/famiglia via ECDH P-256.
+- **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
+- **Storia:**
+  - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
