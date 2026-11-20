@@ -224,7 +224,7 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 ## J. Impostazioni, Backup, Import/Export, Sync e Notifiche (`/impostazioni`, `/impostazioni/:section`)
 
 - [ ] **Indice per argomento e navigazione (`PKT-16`, `SettingsView`, `SettingsIndex`):**
-  - su telefono (`< lg`) verifica che `/impostazioni` mostri i 4 gruppi (*Dati e sincronizzazione*, *Organizzazione*, *Preferenze*, *App*) con righe di stato aggiornate e pallini di avviso dedicati; aprendo una sezione verifica il link `← Impostazioni`, il ritorno alla posizione dell'indice e il selettore dell'anno nascosto nell'header (`meta.hideYear`);
+  - su telefono (`< lg`) verifica che `/impostazioni` mostri i 4 gruppi (*Dati e sincronizzazione*, *Organizzazione*, *Preferenze*, *App*) con righe di stato aggiornate e pallini di avviso dedicati (con TalkBack / VoiceOver, a promemoria attivo, la riga si legge *«Dati e backup, Ultimo backup …, Backup consigliato»*); aprendo una sezione verifica il link `← Impostazioni`, il ritorno alla posizione dell'indice e il selettore dell'anno nascosto nell'header (`meta.hideYear`);
   - su PC (`>= lg`) verifica il layout a 2 colonne con indice `sticky` a sinistra (che resta visibile scorrendo liste lunghe a destra) e *Dati e backup* aperta di default su `/impostazioni`;
   - verifica i collegamenti diretti: icona cloud sync → `/impostazioni/sincronizzazione`, *«Gestisci»* in `QuickExpenseBar` → `/impostazioni/inserimenti-rapidi`, *«Importa…»* in `WelcomePanel` → `/impostazioni/dati`, e le vecchie ancore `/impostazioni#backup` e `/impostazioni#inserimenti-rapidi`;
   - verifica l'aspetto su tutte e 6 le combinazioni piattaforma (iPhone / Android / PC) × tema (chiaro / scuro), compreso il selettore `A–Z / Più usate` su iOS scuro.

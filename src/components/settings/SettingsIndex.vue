@@ -101,6 +101,15 @@ const alertBySection = computed<Partial<Record<SettingsSectionId, AlertTone>>>((
   return alerts
 })
 
+/**
+ * Testo per i lettori di schermo al posto del pallino, che è solo visivo. Serve solo per «Dati e backup»: la riga di
+ * stato («Ultimo backup 10 giorni fa») non dice che il backup è consigliato. Per sincronizzazione e aggiornamento la
+ * riga di stato nomina già l'avviso («Sincronizzazione non riuscita», «Aggiornamento disponibile»).
+ */
+const alertLabelBySection = computed<Partial<Record<SettingsSectionId, string>>>(() =>
+  alertBySection.value.dati ? { dati: t('nav.alerts.backup') } : {},
+)
+
 const groupTitleClass = computed(() => {
   if (appearance.platform === 'ios') return 'px-3 text-xs font-medium uppercase tracking-wide text-ink-4'
   if (appearance.platform === 'android') return 'px-3 text-xs font-medium text-accent'
@@ -167,6 +176,7 @@ const groupListClass = computed(() => {
               :class="ALERT_DOT_CLASS[alertBySection[section.id]!]"
               aria-hidden="true"
             ></span>
+            <span v-if="alertLabelBySection[section.id]" class="sr-only">, {{ alertLabelBySection[section.id] }}</span>
 
             <i
               class="fa-solid fa-chevron-right shrink-0 text-xs text-ink-5 lg:hidden"
