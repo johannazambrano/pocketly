@@ -70,8 +70,8 @@ const yearSelect = computed(() => {
         {{ pageTitle }}
       </p>
 
-      <!-- Sulle pagine con il selettore del periodo l'anno sta lì dentro: qui solo dove l'anno è l'unico filtro. -->
-      <select v-if="!route.meta.periodInPage" v-model.number="finance.selectedYear" :aria-label="t('app.year')" :class="yearSelect">
+      <!-- Sulle pagine con il selettore del periodo l'anno sta lì dentro; nelle Impostazioni non filtra la vista. -->
+      <select v-if="!route.meta.periodInPage && !route.meta.hideYear" v-model.number="finance.selectedYear" :aria-label="t('app.year')" :class="yearSelect">
         <option v-for="y in finance.years" :key="y" :value="y">{{ y }}</option>
       </select>
 
@@ -79,7 +79,7 @@ const yearSelect = computed(() => {
 
       <RouterLink
         v-if="sync.enabled"
-        to="/impostazioni"
+        :to="{ name: 'settings-section', params: { section: 'sincronizzazione' } }"
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base hover:bg-surface-3"
         :aria-label="`${t('sync.headerLabel')}: ${t(`sync.status.${sync.status}`)}`"
         :title="t(`sync.status.${sync.status}`)"

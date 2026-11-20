@@ -8,7 +8,7 @@ const { t } = useI18n()
 const backup = useBackupStore()
 const route = useRoute()
 /** Nelle Impostazioni il riquadro del backup dice già lo stato: l'avviso lì sarebbe doppio e sembrerebbe ignorare il clic. */
-const shown = computed(() => backup.reminderDue && route.name !== 'settings')
+const shown = computed(() => backup.reminderDue && route.name !== 'settings' && route.meta.navParent !== 'settings')
 </script>
 
 <template>
@@ -19,7 +19,7 @@ const shown = computed(() => backup.reminderDue && route.name !== 'settings')
     </p>
     <div class="mt-2 flex gap-2">
       <RouterLink
-        :to="{ name: 'settings', hash: '#backup' }"
+        :to="{ name: 'settings-section', params: { section: 'dati' }, hash: '#backup' }"
         class="inline-flex min-h-10 items-center rounded-lg bg-caution-fill px-4 text-sm font-medium text-on-color hover:bg-caution-bright"
       >
         {{ t('settings.reminderAction') }}

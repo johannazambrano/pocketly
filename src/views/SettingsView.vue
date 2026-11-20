@@ -1,585 +1,155 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { useBackupStore } from '@/stores/backup'
-import { useFinanceStore } from '@/stores/finance'
-import { useUiStore } from '@/stores/ui'
-import { useAppearanceStore, type PlatformChoice, type ThemeChoice } from '@/stores/appearance'
-import { useNotificationsStore } from '@/stores/notifications'
-import { applyUpdate, checkForUpdate } from '@/composables/useAppUpdate'
-import { LOCALES, setLocale, useFormat, type LocaleCode } from '@/i18n'
-import { canShareBackup, exportBackup, readBackupFile, type ExportMode } from '@/services/backup'
-import { canShareFiles, executeExport, shareOrDownloadFile, type ExportFormat } from '@/services/exportData'
-import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '@/services/backupCrypto'
-import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
-import { parseBackup } from '@/services/migration'
-import { XlsxUnsupportedError } from '@/services/xlsx/zip'
-import { formatDate } from '@/utils/dates'
-import BaseModal from '@/components/BaseModal.vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useFormat } from '@/i18n'
+import { usePageAction } from '@/composables/usePageAction'
+import {
+  DEFAULT_DESKTOP_SECTION,
+  getSettingsSection,
+  isSettingsSection,
+  type SettingsSectionId,
+} from '@/utils/settingsSections'
+import PageHeader from '@/components/PageHeader.vue'
 import SyncSettings from '@/components/SyncSettings.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import TagManager from '@/components/TagManager.vue'
 import QuickExpenseManager from '@/components/QuickExpenseManager.vue'
-import PageHeader from '@/components/PageHeader.vue'
+import SettingsIndex from '@/components/settings/SettingsIndex.vue'
+import SettingsDataSection from '@/components/settings/SettingsDataSection.vue'
+import SettingsAppearanceSection from '@/components/settings/SettingsAppearanceSection.vue'
+import SettingsAboutSection from '@/components/settings/SettingsAboutSection.vue'
 
-const finance = useFinanceStore()
-const backup = useBackupStore()
-const ui = useUiStore()
-const appearance = useAppearanceStore()
-const notifications = useNotificationsStore()
-/** Aspetto e tema: di serie automatici, si possono fissare a mano (preferenze di questo dispositivo). */
-const PLATFORM_CHOICES: PlatformChoice[] = ['auto', 'ios', 'android', 'desktop']
-const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
-const { t, locale } = useFormat()
-const version = __APP_VERSION__
-/** «del 12 nov 2026, 15:30»: su Vercel la versione resta «0.1», e la build si riconosce dalla data. */
-const build = computed(() =>
-  new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(__APP_BUILT_AT__)),
+const route = useRoute()
+const router = useRouter()
+const { t } = useFormat()
+
+/** Sezione scelta nell'URL (`/impostazioni/:section`), oppure `null` sull'indice `/impostazioni`. */
+const routeSection = computed<SettingsSectionId | null>(() =>
+  isSettingsSection(route.params.section) ? route.params.section : null,
 )
 
-const persistent = ref<boolean | null>(null)
-const route = useRoute()
-/** Riquadro del backup: l'avviso «Vai al backup» porta qui (`/impostazioni#backup`) e lo mette a fuoco. */
-const backupCard = ref<HTMLElement | null>(null)
-onMounted(async () => {
-  // Lo scorrimento lo fa il router (scrollBehavior con l'ancora); qui solo il fuoco, per tastiera e lettore di schermo.
-  if (route.hash === '#backup') backupCard.value?.focus({ preventScroll: true })
-  try {
-    persistent.value = (await navigator.storage?.persisted?.()) ?? false
-  } catch {
-    persistent.value = false
+/** Su PC (`>= lg`) `/impostazioni` mostra già la prima sezione a destra senza fare redirect. */
+const displayedSection = computed<SettingsSectionId>(() => routeSection.value ?? DEFAULT_DESKTOP_SECTION)
+const sectionMeta = computed(() => getSettingsSection(displayedSection.value))
+
+const sectionHeading = ref<HTMLElement | null>(null)
+const tagManagerRef = ref<InstanceType<typeof TagManager> | null>(null)
+const quickExpenseRef = ref<InstanceType<typeof QuickExpenseManager> | null>(null)
+
+const tagSectionProps = computed(() => {
+  switch (displayedSection.value) {
+    case 'categorie':
+      return { kind: 'categories' as const, title: t('settings.categories'), placeholder: t('settings.newCategory') }
+    case 'metodi':
+      return { kind: 'paymentMethods' as const, title: t('settings.paymentMethods'), placeholder: t('settings.newPayment') }
+    case 'tag':
+      return { kind: 'tags' as const, title: t('settings.tags'), placeholder: t('settings.newTag') }
+    default:
+      return null
   }
 })
-
-// --- aggiornamenti dell'app -----------------------------------------------
-
-const checkingUpdate = ref(false)
-
-/** Cerca una versione nuova; se c'è la applica subito (questa finestra si ricarica). */
-async function checkAppUpdates() {
-  if (checkingUpdate.value) return
-  checkingUpdate.value = true
-  try {
-    const result = await checkForUpdate()
-    if (result === 'available') {
-      ui.toast(t('settings.updateFound'))
-      applyUpdate()
-    } else if (result === 'offline') {
-      ui.toast(t('settings.updateOffline'), 'error')
-    } else if (result === 'error') {
-      ui.toast(t('settings.updateCheckFailed'), 'error')
-    } else {
-      ui.toast(t('settings.upToDate'))
-    }
-  } finally {
-    checkingUpdate.value = false
-  }
-}
 
 /**
- * Via d'uscita se l'app resta su una versione vecchia: toglie il service worker e svuota le sue cache.
- * Togliere il worker cancella anche l'iscrizione alle notifiche push: la rifà la sincronizzazione successiva
- * (notifications.runSyncPushSchedule), e il messaggio di conferma lo dice.
+ * Azione «+» contestuale della barra inferiore (PKT-20): sulle pagine anagrafiche e sugli inserimenti rapidi
+ * apre/mette a fuoco la creazione della voce; altrove lascia la «Nuova spesa» di serie.
  */
-async function forceReloadServer() {
-  const message = notifications.enabled
-    ? `${t('settings.forceReloadConfirm')} ${t('settings.forceReloadNotifications')}`
-    : t('settings.forceReloadConfirm')
-  const confirmed = await ui.confirm({
-    title: t('settings.forceReload'),
-    message,
-    confirmLabel: t('settings.forceReload'),
-    danger: false,
-  })
-  if (!confirmed) return
-
-  try {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(registrations.map((reg) => reg.unregister()))
-    }
-    if (typeof caches !== 'undefined') {
-      const keys = await caches.keys()
-      await Promise.all(keys.map((k) => caches.delete(k)))
-    }
-  } catch (error) {
-    console.warn('Errore durante la pulizia delle cache PWA:', error)
+usePageAction(() => {
+  switch (routeSection.value) {
+    case 'categorie':
+      return { label: t('settings.tagManager.addCategoryAction'), run: () => void tagManagerRef.value?.focusAdd() }
+    case 'metodi':
+      return { label: t('settings.tagManager.addPaymentAction'), run: () => void tagManagerRef.value?.focusAdd() }
+    case 'tag':
+      return { label: t('settings.tagManager.addTagAction'), run: () => void tagManagerRef.value?.focusAdd() }
+    case 'inserimenti-rapidi':
+      return { label: t('quickExpenses.new'), run: () => quickExpenseRef.value?.openCreate() }
+    default:
+      return null
   }
-
-  window.location.reload()
-}
-
-// --- esportazione ---------------------------------------------------------
-
-const shareable = canShareBackup()
-const cryptoAvailable = isCryptoAvailable()
-const protect = ref(false)
-const password = ref('')
-const passwordRepeat = ref('')
-const busy = ref(false)
-
-const passwordProblem = computed(() => {
-  if (!protect.value) return ''
-  if (password.value.length < MIN_PASSWORD_LENGTH) return t('settings.passwordTooShort', { min: MIN_PASSWORD_LENGTH })
-  if (password.value !== passwordRepeat.value) return t('settings.passwordMismatch')
-  return ''
-})
-const showPasswordProblem = computed(() => !!passwordProblem.value && (!!password.value || !!passwordRepeat.value))
-
-const lastBackupText = computed(() => {
-  const days = backup.daysSinceBackup
-  if (days === null) return ''
-  const when = new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }).format(-days, 'day')
-  return t('settings.lastBackup', { when })
 })
 
-/** "Riarmonizza i colori": sostituisce anche i colori scelti a mano, quindi si chiede prima. */
-async function harmonize() {
-  const ok = await ui.confirm({
-    title: t('settings.harmonizeTitle'),
-    message: t('settings.harmonizeMessage'),
-    confirmLabel: t('settings.harmonize'),
-  })
-  if (!ok) return
-  finance.harmonizeColors()
-  ui.toast(t('settings.harmonizeDone'))
-}
-
-async function doExport(mode: ExportMode) {
-  if (busy.value || passwordProblem.value) return
-  busy.value = true
-  try {
-    const result = await exportBackup(finance.data, mode, protect.value ? password.value : undefined)
-    if (result === 'cancelled') return
-    await backup.markBackedUp()
-    ui.toast(t(result === 'shared' ? 'settings.exportShared' : 'settings.exportSuccess'))
-    password.value = ''
-    passwordRepeat.value = ''
-  } catch (e) {
-    ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.exportError'), 'error')
-  } finally {
-    busy.value = false
-  }
-}
-
-// --- esportazione tabellare (Excel / CSV) ----------------------------------
-
-const exportFormat = ref<ExportFormat>('xlsx')
-const exportYear = ref<number | 'all'>(finance.selectedYear)
-const exportBusy = ref(false)
-const shareableFile = canShareFiles()
-
+/**
+ * Titolo della scheda del browser e focus all'apertura di una pagina figlia su schermi stretti:
+ * se c'è un'ancora (es. `#backup`) il focus resta a quel riquadro.
+ */
+const previousTitle = document.title
 watch(
-  () => finance.selectedYear,
-  (y) => {
-    if (exportYear.value !== 'all') {
-      exportYear.value = y
+  routeSection,
+  async (section) => {
+    document.title = section ? `${t(getSettingsSection(section).titleKey)} · ${__APP_NAME__}` : previousTitle
+    if (!section || route.hash) return
+    await nextTick()
+    if (sectionHeading.value && sectionHeading.value.offsetParent !== null) {
+      sectionHeading.value.focus()
     }
   },
+  { immediate: true },
 )
+onBeforeUnmount(() => {
+  document.title = previousTitle
+})
 
-async function doExportTabular(mode: 'download' | 'share') {
-  if (exportBusy.value) return
-  exportBusy.value = true
-  try {
-    const result = await executeExport(exportFormat.value, finance.data, {
-      year: exportYear.value,
-      locale: locale.value,
-    })
-    const res = await shareOrDownloadFile(result, mode)
-    ui.toast(t(res === 'shared' ? 'tabularExport.shared' : 'tabularExport.downloaded'))
-  } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') return
-    ui.toast(t('tabularExport.error'), 'error')
-  } finally {
-    exportBusy.value = false
-  }
-}
-
-// --- importazione ---------------------------------------------------------
-
-const unlock = ref<{ retry: boolean; resolve: (password: string | null) => void } | null>(null)
-const unlockPassword = ref('')
-
-function askPassword(retry: boolean) {
-  return new Promise<string | null>((resolve) => {
-    unlockPassword.value = ''
-    unlock.value = { retry, resolve }
-  })
-}
-
-function answerUnlock(value: string | null) {
-  unlock.value?.resolve(value)
-  unlock.value = null
-  unlockPassword.value = ''
-}
-
-async function importBackup(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  const ok = await ui.confirm({
-    title: t('settings.importConfirmTitle'),
-    message: t('settings.importConfirm'),
-    confirmLabel: t('settings.importConfirmButton'),
-  })
-  if (!ok) return
-  busy.value = true
-  try {
-    const restored = await readBackupFile(file, askPassword)
-    if (!restored) return
-    finance.replaceAll(restored)
-    await finance.flush()
-    await backup.markBackedUp()
-    ui.toast(t('settings.importSuccess'))
-  } catch (e) {
-    ui.toast(t(e instanceof CryptoUnavailableError ? 'settings.cryptoUnavailable' : 'settings.importError'), 'error')
-  } finally {
-    busy.value = false
-  }
-}
-
-// --- importazione da Excel ------------------------------------------------
-
-const excelPreview = ref<ExcelImportResult | null>(null)
-const COUNT_KEYS: (keyof ExcelImportStats)[] = ['oneTimeExpenses', 'recurringExpenses', 'incomes', 'categories', 'paymentMethods', 'tags']
-
-function excelErrorKey(e: unknown): string {
-  if (e instanceof NotExpenseTrackerError) return 'excelImport.notTracker'
-  if (e instanceof XlsxUnsupportedError) return 'excelImport.unsupported'
-  if (e instanceof RangeError) return 'excelImport.tooLarge'
-  return 'excelImport.error'
-}
-
-function warningText(w: ImportWarning): string {
-  const params = { ...w.params }
-  if (typeof params.date === 'string') params.date = formatDate(params.date, locale.value)
-  return t(`excelImport.warnings.${w.code}`, params)
-}
-
-async function pickExcel(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  busy.value = true
-  try {
-    excelPreview.value = await readExcelFile(file)
-  } catch (e) {
-    console.error('Lettura del file Excel non riuscita', e)
-    ui.toast(t(excelErrorKey(e)), 'error')
-  } finally {
-    busy.value = false
-  }
-}
-
-async function confirmExcelImport() {
-  const preview = excelPreview.value
-  if (!preview || busy.value) return
-  busy.value = true
-  try {
-    // Stesso controllo dei backup: i dati arrivano allo store già normalizzati.
-    finance.replaceAll(parseBackup(JSON.parse(JSON.stringify(preview.data))))
-    await finance.flush()
-    excelPreview.value = null
-    ui.toast(t('excelImport.success'))
-  } catch (e) {
-    console.error('Importazione da Excel non riuscita', e)
-    ui.toast(t('excelImport.error'), 'error')
-  } finally {
-    busy.value = false
-  }
-}
-
-function changeLocale(code: LocaleCode) {
-  setLocale(code)
+/**
+ * «← Impostazioni»: se si arriva dall'indice usa la cronologia (ripristina lo scorrimento);
+ * aprendo un collegamento diretto (es. dall'avviso del backup) porta all'indice.
+ */
+function goBack(e: MouseEvent) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+  e.preventDefault()
+  if (router.options.history.state.back === '/impostazioni') router.back()
+  else void router.push({ name: 'settings' })
 }
 </script>
 
 <template>
   <section class="space-y-4">
-    <PageHeader :title="t('settings.title')" />
-
-    <div class="lg:columns-2 lg:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-      <div id="backup" ref="backupCard" tabindex="-1" aria-labelledby="backup-title" class="card space-y-3 focus:outline-none">
-        <h3 id="backup-title" class="text-sm font-semibold text-ink-2">
-          <i class="fa-solid fa-cloud-arrow-down mr-1 text-accent-icon"></i> {{ t('settings.backupTitle') }}
-        </h3>
-        <p class="text-xs text-ink-4">{{ t('settings.backupHint') }}</p>
-
-        <div class="rounded-lg bg-surface-2 px-3 py-2 text-xs">
-          <template v-if="backup.lastBackupAt">
-            <p class="font-medium text-ink-2">{{ lastBackupText }}</p>
-            <p v-if="backup.unsaved" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.unsavedChanges') }}</p>
-            <p v-else class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.allSaved') }}</p>
-          </template>
-          <p v-else class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.neverBackedUp') }}</p>
-        </div>
-
-        <div class="space-y-2">
-          <label class="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-ink-2" :class="cryptoAvailable ? '' : 'opacity-50'">
-            <input v-model="protect" type="checkbox" class="h-4 w-4 accent-accent-icon" :disabled="!cryptoAvailable" />
-            {{ t('settings.protect') }}
-          </label>
-          <p v-if="!cryptoAvailable" class="text-xs text-caution">{{ t('settings.cryptoUnavailable') }}</p>
-          <div v-if="protect" class="space-y-2">
-            <p class="text-xs text-ink-4">{{ t('settings.protectHint') }}</p>
-            <input
-              v-model="password"
-              type="password"
-              autocomplete="new-password"
-              class="field"
-              :placeholder="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
-              :aria-label="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
-            />
-            <input
-              v-model="passwordRepeat"
-              type="password"
-              autocomplete="new-password"
-              class="field"
-              :placeholder="t('settings.passwordRepeat')"
-              :aria-label="t('settings.passwordRepeat')"
-            />
-            <p v-if="showPasswordProblem" class="text-xs text-negative" role="alert">{{ passwordProblem }}</p>
-            <p class="text-xs text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.passwordWarning') }}</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="btn-primary min-w-40 flex-1" :disabled="busy || !!passwordProblem" @click="doExport(shareable ? 'share' : 'download')">
-            {{ shareable ? t('settings.share') : t('settings.export') }}
-          </button>
-          <button
-            v-if="shareable"
-            type="button"
-            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
-            :disabled="busy || !!passwordProblem"
-            @click="doExport('download')"
-          >
-            {{ t('settings.download') }}
-          </button>
-        </div>
-
-        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg bg-chrome-2 px-4 py-2 text-center text-sm font-medium text-on-color focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-chrome-3" :class="busy ? 'pointer-events-none opacity-50' : ''">
-          {{ t('settings.import') }}
-          <input type="file" accept=".json,application/json" class="hidden" :disabled="busy" @change="importBackup" />
-        </label>
-      </div>
-
-      <SyncSettings />
-      <NotificationSettings />
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2">
-          <i class="fa-solid fa-file-excel mr-1 text-accent-icon"></i> {{ t('excelImport.title') }}
-        </h3>
-        <p class="text-xs text-ink-4">{{ t('excelImport.hint') }}</p>
-        <label class="flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-center text-sm font-medium text-ink-2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-icon hover:bg-surface-2" :class="busy ? 'pointer-events-none opacity-50' : ''">
-          {{ t('excelImport.choose') }}
-          <input
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            class="hidden"
-            :disabled="busy"
-            @change="pickExcel"
-          />
-        </label>
-      </div>
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2">
-          <i class="fa-solid fa-file-excel mr-1 text-accent-icon"></i> {{ t('tabularExport.title') }}
-        </h3>
-        <p class="text-xs text-ink-4">{{ t('tabularExport.hint') }}</p>
-
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label class="block">
-            <span class="field-label">{{ t('tabularExport.format') }}</span>
-            <select v-model="exportFormat" class="field">
-              <option value="xlsx">{{ t('tabularExport.formatXlsx') }}</option>
-              <option value="zip">{{ t('tabularExport.formatZip') }}</option>
-              <option value="onetime">{{ t('tabularExport.formatOnetime') }}</option>
-              <option value="recurring">{{ t('tabularExport.formatRecurring') }}</option>
-              <option value="income">{{ t('tabularExport.formatIncome') }}</option>
-              <option value="loans">{{ t('tabularExport.formatLoans') }}</option>
-            </select>
-          </label>
-
-          <label class="block">
-            <span class="field-label">{{ t('tabularExport.period') }}</span>
-            <select v-model="exportYear" class="field">
-              <option :value="finance.selectedYear">{{ t('tabularExport.selectedYear', { year: finance.selectedYear }) }}</option>
-              <option value="all">{{ t('tabularExport.allYears') }}</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="btn-primary min-w-40 flex-1"
-            :disabled="exportBusy"
-            @click="doExportTabular(shareableFile ? 'share' : 'download')"
-          >
-            {{ shareableFile ? t('tabularExport.share') : t('tabularExport.download') }}
-          </button>
-          <button
-            v-if="shareableFile"
-            type="button"
-            class="min-h-10 min-w-40 flex-1 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-50"
-            :disabled="exportBusy"
-            @click="doExportTabular('download')"
-          >
-            {{ t('tabularExport.download') }}
-          </button>
-        </div>
-      </div>
-
-      <TagManager kind="categories" :title="t('settings.categories')" :placeholder="t('settings.newCategory')" />
-      <TagManager kind="paymentMethods" :title="t('settings.paymentMethods')" :placeholder="t('settings.newPayment')" />
-      <TagManager kind="tags" :title="t('settings.tags')" :placeholder="t('settings.newTag')" />
-      <QuickExpenseManager />
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.colorsTitle') }}</h3>
-        <p class="text-xs text-ink-4">{{ t('settings.colorsHint') }}</p>
-        <button
-          type="button"
-          class="flex min-h-10 w-full items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
-          @click="harmonize"
-        >
-          {{ t('settings.harmonize') }}
-        </button>
-      </div>
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-language mr-1 text-recurring"></i> {{ t('settings.language') }}</h3>
-        <div class="flex gap-2">
-          <button
-            v-for="l in LOCALES"
-            :key="l.code"
-            type="button"
-            class="min-h-10 flex-1 rounded-lg border px-3 text-sm font-medium"
-            :class="locale === l.code ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
-            @click="changeLocale(l.code)"
-          >
-            {{ l.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-palette mr-1 text-recurring"></i> {{ t('settings.appearance') }}</h3>
-        <div class="space-y-1">
-          <p id="appearance-platform" class="text-xs font-medium text-ink-3">{{ t('settings.platform') }}</p>
-          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-labelledby="appearance-platform">
-            <button
-              v-for="c in PLATFORM_CHOICES"
-              :key="c"
-              type="button"
-              class="min-h-10 rounded-lg border px-3 text-sm font-medium"
-              :class="appearance.platformChoice === c ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
-              :aria-pressed="appearance.platformChoice === c"
-              @click="appearance.setPlatform(c)"
-            >
-              {{ t(`settings.platforms.${c}`) }}
-            </button>
-          </div>
-          <p v-if="appearance.platformChoice === 'auto'" class="text-xs text-ink-4">
-            {{ t('settings.platformDetected', { platform: t(`settings.platforms.${appearance.detected}`) }) }}
-          </p>
-        </div>
-        <div class="space-y-1">
-          <p id="appearance-theme" class="text-xs font-medium text-ink-3">{{ t('settings.theme') }}</p>
-          <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="appearance-theme">
-            <button
-              v-for="c in THEME_CHOICES"
-              :key="c"
-              type="button"
-              class="min-h-10 rounded-lg border px-3 text-sm font-medium"
-              :class="appearance.themeChoice === c ? 'border-accent-icon bg-accent-soft text-accent' : 'border-line-strong text-ink-3'"
-              :aria-pressed="appearance.themeChoice === c"
-              @click="appearance.setTheme(c)"
-            >
-              {{ t(`settings.themes.${c}`) }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card space-y-3">
-        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-arrows-rotate mr-1 text-recurring" aria-hidden="true"></i> {{ t('settings.updatesTitle') }}</h3>
-        <p class="text-xs text-ink-4">{{ t('settings.version', { version, build }) }}</p>
-        <button
-          type="button"
-          class="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2 disabled:opacity-60"
-          :disabled="checkingUpdate"
-          @click="checkAppUpdates"
-        >
-          <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': checkingUpdate }" aria-hidden="true"></i>
-          {{ checkingUpdate ? t('settings.checkingUpdates') : t('settings.checkUpdates') }}
-        </button>
-        <p class="text-xs text-ink-4">
-          {{ t('settings.forceReloadHint') }}
-          <button type="button" class="font-medium text-ink-2 underline underline-offset-2 hover:text-ink-1" @click="forceReloadServer">
-            {{ t('settings.forceReload') }}
-          </button>
-        </p>
-      </div>
-
-      <div class="card space-y-2 text-xs text-ink-4">
-        <h3 class="text-sm font-semibold text-ink-2"><i class="fa-solid fa-shield-halved mr-1 text-ink-3"></i> {{ t('settings.privacyTitle') }}</h3>
-        <p>{{ t('settings.privacyText') }}</p>
-        <p v-if="persistent === true" class="text-accent"><i class="fa-solid fa-check mr-1"></i>{{ t('settings.storagePersistent') }}</p>
-        <p v-else-if="persistent === false" class="text-caution"><i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('settings.storageNotPersistent') }}</p>
-      </div>
+    <!-- Intestazione principale: sull'indice su tutti gli schermi, su PC sempre visibile. -->
+    <div :class="routeSection ? 'hidden lg:block' : 'block'">
+      <PageHeader :title="t('settings.title')" />
     </div>
 
-    <BaseModal :open="!!unlock" :title="t('settings.unlockTitle')" @close="answerUnlock(null)">
-      <form class="space-y-3" @submit.prevent="answerUnlock(unlockPassword)">
-        <p class="text-sm text-ink-3">{{ t('settings.unlockText') }}</p>
-        <input
-          v-model="unlockPassword"
-          type="password"
-          autocomplete="current-password"
-          class="field"
-          :aria-label="t('settings.password', { min: MIN_PASSWORD_LENGTH })"
-        />
-        <p v-if="unlock?.retry" class="text-xs text-negative" role="alert">{{ t('settings.unlockWrong') }}</p>
-        <div class="flex gap-2">
-          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="answerUnlock(null)">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" class="btn-primary flex-1" :disabled="!unlockPassword">{{ t('settings.unlockButton') }}</button>
-        </div>
-      </form>
-    </BaseModal>
+    <!-- Intestazione pagina figlia su telefono e tablet (< lg), con ritorno all'indice come in BreakdownDetailView. -->
+    <div v-if="routeSection" class="space-y-1 lg:hidden">
+      <a
+        href="/impostazioni"
+        class="-ml-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-1 text-sm font-medium text-accent hover:text-accent-strong"
+        @click="goBack"
+      >
+        <i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i>{{ t('settings.back') }}
+      </a>
+      <h2 ref="sectionHeading" tabindex="-1" class="text-xl font-bold tracking-tight text-ink focus:outline-none">
+        {{ t(sectionMeta.titleKey) }}
+      </h2>
+    </div>
 
-    <BaseModal :open="!!excelPreview" :title="t('excelImport.previewTitle')" @close="excelPreview = null">
-      <div v-if="excelPreview" class="space-y-3">
-        <dl class="divide-y divide-line-soft rounded-lg bg-surface-2 px-3 text-sm">
-          <div v-for="key in COUNT_KEYS" :key="key" class="flex justify-between py-1.5">
-            <dt class="text-ink-3">{{ t(`excelImport.counts.${key}`) }}</dt>
-            <dd class="font-semibold text-ink tabular-nums">{{ excelPreview.stats[key] }}</dd>
-          </div>
-        </dl>
-        <details v-if="excelPreview.warnings.length" class="rounded-lg border border-caution-line bg-caution-soft px-3 py-2 text-xs text-caution-strong">
-          <summary class="cursor-pointer font-medium">
-            <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ t('excelImport.warningsTitle', { count: excelPreview.warnings.length }) }}
-          </summary>
-          <ul class="mt-2 max-h-48 list-disc space-y-1 overflow-y-auto pl-4">
-            <li v-for="(w, i) in excelPreview.warnings" :key="i">{{ warningText(w) }}</li>
-          </ul>
-        </details>
-        <p class="text-xs text-ink-3">{{ t('excelImport.replaceWarning') }}</p>
-        <div class="flex gap-2">
-          <button type="button" class="min-h-10 flex-1 rounded-lg border border-line-strong px-4 text-sm font-medium text-ink-2 hover:bg-surface-2" @click="excelPreview = null">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="button" class="btn-primary flex-1" :disabled="busy" @click="confirmExcelImport">{{ t('excelImport.confirm') }}</button>
-        </div>
+    <!-- Master-detail: su < lg mostra o l'indice o la sezione; su >= lg indice sticky a sinistra e sezione a destra. -->
+    <div class="lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <div
+        class="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6.5rem)] lg:overflow-y-auto lg:pr-1"
+        :class="routeSection ? 'hidden lg:block' : 'block'"
+      >
+        <SettingsIndex :active-section="displayedSection" :current-section="routeSection" />
       </div>
-    </BaseModal>
+
+      <div class="min-w-0 space-y-4" :class="routeSection ? 'block' : 'hidden lg:block'">
+        <h2 class="hidden text-lg font-bold tracking-tight text-ink lg:block">
+          {{ t(sectionMeta.titleKey) }}
+        </h2>
+
+        <SettingsDataSection v-if="displayedSection === 'dati'" />
+        <SyncSettings v-else-if="displayedSection === 'sincronizzazione'" />
+        <NotificationSettings v-else-if="displayedSection === 'notifiche'" />
+        <TagManager
+          v-else-if="tagSectionProps"
+          ref="tagManagerRef"
+          :kind="tagSectionProps.kind"
+          :title="tagSectionProps.title"
+          :placeholder="tagSectionProps.placeholder"
+        />
+        <QuickExpenseManager v-else-if="displayedSection === 'inserimenti-rapidi'" ref="quickExpenseRef" />
+        <SettingsAppearanceSection v-else-if="displayedSection === 'aspetto'" />
+        <SettingsAboutSection v-else-if="displayedSection === 'informazioni'" />
+      </div>
+    </div>
   </section>
 </template>

@@ -9,7 +9,8 @@ source-files:
   - src/domain/defaults.ts
   - src/domain/savings.ts
   - src/domain/search.ts
-verified: 2026-11-15
+  - src/domain/tags.ts
+verified: 2026-11-20
 ---
 
 # Riferimento: Logica di Dominio
@@ -193,6 +194,9 @@ Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi
 - `movementFor(movements, goalId, change)`: l'importo da registrare perché il salvadanaio cambi di `change` rispetto a quello che si vede. `savedAmounts` non mostra mai meno di zero, ma la somma dei movimenti può andarci (due prelievi su due dispositivi prima di sincronizzare): in quel caso il movimento copre anche il buco, così un versamento o l'importo scritto nel modulo arrivano davvero. Lo usa `finance.addSavingsMovement`.
 - `sortSavingsGoals(goals, today)`: ordina la lista degli obiettivi dando priorità a quelli scaduti, poi a quelli attivi con scadenza più prossima, collocando i completati in fondo.
 
-## 8. Ordine di categorie, metodi e tag (`tags.ts`)
+## 8. Categorie, metodi e tag (`tags.ts`)
 
 - `sortTagsByName(tags, locale)`: restituisce un elenco nuovo in ordine alfabetico secondo la lingua dell'app (`Intl.Collator` con `sensitivity: 'base'` e `numeric: true`): maiuscole e accenti non contano, «Carta 2» viene prima di «Carta 10», a parità di nome resta l'ordine di creazione. Lo store lo espone come `finance.sortedTags` (categorie, metodi e tag), usato da menu a tendina (`TagSelect`), scelta dei tag (`TagInput`), Impostazioni (`TagManager`), Budget e Previsioni. In `data` le voci restano nell'ordine di creazione: salvataggio, sincronizzazione e backup non cambiano, e i valori proposti di partenza (es. la prima categoria in un modulo nuovo) restano quelli di prima.
+- `countTagUsage(data, kind)`: calcola in un solo passaggio una `Map<Id, number>` con il numero di voci che usano ciascuna categoria, metodo di pagamento o tag (per i tag ogni movimento conta al più una volta). Esposto dallo store come `finance.tagUsageCounts` (e letto da `finance.tagUsage`).
+- `filterAndSortTags(tags, usage, options)`: filtra per testo di ricerca (`normalizeTagSearch`, insensibile a maiuscole e accenti) e stato di utilizzo (`'all' | 'used' | 'unused'`) e ordina per nome (`'name'`) o per utilizzi decrescenti con spareggio alfabetico (`'usage'`).
+- `groupTagsByLetter(tags)`: raggruppa un elenco ordinato alfabeticamente per lettera iniziale normalizzata (`A`–`Z`, oppure `#` per numeri e simboli), usato da `TagManager` per evitare elenchi troppo lunghi.
