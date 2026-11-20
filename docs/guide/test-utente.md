@@ -43,6 +43,7 @@ source-files:
   - src/utils/navStatus.ts
   - src/composables/useMonthStep.ts
   - src/domain/tags.ts
+  - src/components/TagInput.vue
   - src/services/migration.ts
   - src/types/models.ts
   - src/services/exportData.ts
@@ -118,7 +119,14 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 
 - [ ] **Focus iniziale e tastiera su mobile:** aprendo *«Nuova spesa variabile»* (`+`) il cursore si posiziona sul campo `Importo (€)` (su iPhone la tastiera numerica si apre direttamente sul campo). Aprendo una spesa esistente in modifica il focus non forza l'importo.
 - [ ] **Validazione errori sotto i campi (`useFormErrors` + `FieldError`):** prova a salvare con importo vuoto, non numerico o `0`, oppure con nome vuoto: gli errori compaiono sotto i rispettivi campi e il focus si sposta sul primo campo errato.
-- [ ] **Creazione tag al volo (`TagInput`):** digita un tag inesistente nel campo tag e crealo direttamente dal modulo; verifica che compaia come badge colorato sulla spesa e in *Impostazioni → Tag*.
+- [ ] **Campo dei tag che cerca e crea (`TagInput`, `PKT-21`):** su *iPhone*, *Android* e *PC*, in *«Nuova spesa»* e in un nuovo inserimento rapido:
+  - tocca il campo *«Cerca o crea un tag»* vuoto: sotto compaiono al massimo 6 tag, i più usati, con *«N volte»*; non compaiono più tutte le pillole;
+  - scrivi *«caf»*: compaiono solo i tag che corrispondono (prima chi inizia con «caf», poi chi lo contiene) e in fondo *«Crea «#caf»»*; scrivi *«caffe»* con un tag *«Caffè»* esistente: niente *«Crea»*, si sceglie quello esistente;
+  - scegli un tag: diventa una pillola sotto il campo, il campo si svuota e resta attivo per il successivo; la ✕ della pillola lo toglie;
+  - crea un tag nuovo dal campo: compare come pillola, sulla spesa salvata e in *Impostazioni → Tag*;
+  - sul telefono, con la tastiera aperta, l'elenco resta visibile sopra la tastiera (la pagina scorre) e non viene tagliato dal foglio;
+  - su *PC*: frecce su/giù, Invio sceglie, Esc chiude solo l'elenco (non il modulo), Invio nel campo non salva la spesa;
+  - con TalkBack / VoiceOver il campo si annuncia come casella combinata e le proposte si leggono con il numero di usi.
 - [ ] **Note e badge:** salva una spesa con note e più tag e verifica che appaiano in `EntryRow` in `/una-tantum`.
 - [ ] **Chip «Frequenti» (`frequentTemplates`):** dopo aver registrato almeno una spesa, riapri *«Nuova spesa»* e verifica che in cima appaia la riga *«Frequenti»*; toccando un chip, importo, nome, categoria, metodo, note e tag si compilano automaticamente (con data impostata ad oggi).
 - [ ] **Duplicazione (`duplicateAsNew` / `EntryRow`):** verifica la duplicazione sia dal pulsante dedicato in modifica (*«Duplica come nuova spesa»*) sia dall'azione sulla riga in `/una-tantum`; la copia propone la data di oggi e salva una nuova voce distinta.
