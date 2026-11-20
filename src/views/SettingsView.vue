@@ -28,8 +28,18 @@ const routeSection = computed<SettingsSectionId | null>(() =>
   isSettingsSection(route.params.section) ? route.params.section : null,
 )
 
+/** Larghezza `lg` di Tailwind (1024px), da cui l'indice e la sezione stanno affiancati. */
+const wideQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null
+const isWide = ref(wideQuery?.matches ?? false)
+const onWideChange = (e: MediaQueryListEvent) => {
+  isWide.value = e.matches
+}
+wideQuery?.addEventListener('change', onWideChange)
+
 /** Su PC (`>= lg`) `/impostazioni` mostra già la prima sezione a destra senza fare redirect. */
 const displayedSection = computed<SettingsSectionId>(() => routeSection.value ?? DEFAULT_DESKTOP_SECTION)
+/** Sull'indice da telefono la colonna della sezione è nascosta: non la si monta, così non carica «Dati e backup» per niente. */
+const showDetail = computed(() => routeSection.value !== null || isWide.value)
 const sectionMeta = computed(() => getSettingsSection(displayedSection.value))
 
 const sectionHeading = ref<HTMLElement | null>(null)
@@ -87,6 +97,7 @@ watch(
 )
 onBeforeUnmount(() => {
   document.title = previousTitle
+  wideQuery?.removeEventListener('change', onWideChange)
 })
 
 /**
@@ -131,7 +142,7 @@ function goBack(e: MouseEvent) {
         <SettingsIndex :active-section="displayedSection" :current-section="routeSection" />
       </div>
 
-      <div class="min-w-0 space-y-4" :class="routeSection ? 'block' : 'hidden lg:block'">
+      <div v-if="showDetail" class="min-w-0 space-y-4" :class="routeSection ? 'block' : 'hidden lg:block'">
         <h2 class="hidden text-lg font-bold tracking-tight text-ink lg:block">
           {{ t(sectionMeta.titleKey) }}
         </h2>
