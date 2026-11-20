@@ -20,12 +20,12 @@ source-files:
   - src/views/DashboardView.vue
   - src/views/LoansView.vue
   - src/views/SettingsView.vue
-verified: 2026-11-19
+verified: 2026-11-20
 ---
 
-# Progetto e Piano Implementativo: Sezione Patrimonio (PKT-21)
+# Progetto e Piano Implementativo: Sezione Patrimonio (PKT-22)
 
-Questo documento definisce l'architettura dati, la logica contabile pura, le regole di sincronizzazione e il piano operativo per introdurre la sezione **Patrimonio** (`/patrimonio`) in **Pocketly**, tracciata in [Backlog di Pocketly](../backlog.md) sotto **PKT-21** (assorbendo ed estendendo l'idea **PKT-07**).
+Questo documento definisce l'architettura dati, la logica contabile pura, le regole di sincronizzazione e il piano operativo per introdurre la sezione **Patrimonio** (`/patrimonio`) in **Pocketly**, tracciata in [Backlog di Pocketly](../backlog.md) sotto **PKT-22** (assorbendo ed estendendo l'idea **PKT-07**).
 
 ---
 
@@ -205,11 +205,11 @@ Questa regola garantisce assenza di buchi temporali (es. un giroconto PAC da Con
 
 ### 3.5 Documentazione di Progetto (nello stesso commit)
 
-Al completamento dell'implementazione di **PKT-21**, aggiornare:
+Al completamento dell'implementazione di **PKT-22**, aggiornare:
 - [`docs/riferimento/mappa-codice.md`](../riferimento/mappa-codice.md) (censimento di tutti i nuovi file in `src/`).
 - [`docs/riferimento/modello-dati.md`](../riferimento/modello-dati.md) (`CURRENT_SCHEMA_VERSION = 4` e nuove interfacce).
 - [`docs/riferimento/domain.md`](../riferimento/domain.md), [`docs/riferimento/componenti-e-viste.md`](../riferimento/componenti-e-viste.md), [`docs/panoramica.md`](../panoramica.md), [`docs/architettura/dati-e-sincronizzazione.md`](../architettura/dati-e-sincronizzazione.md), [`docs/architettura/frontend.md`](../architettura/frontend.md).
-- [`docs/backlog.md`](../backlog.md) (chiusura `PKT-21`, eventuale aggiornamento `PKT-07` e `PKT-19`).
+- [`docs/backlog.md`](../backlog.md) (chiusura `PKT-22`, eventuale aggiornamento `PKT-07` e `PKT-19`).
 
 ---
 

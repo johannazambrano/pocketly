@@ -49,7 +49,7 @@ docs/
 │   ├── dati-e-sincronizzazione.md     <-- DataStore, crittografia E2E, 3-way merge
 │   ├── backend.md                     <-- Server Python (zero-deps), API REST, VAPID
 │   ├── scalabilita.md                 <-- Analisi limiti e progetto evolutivo (PKT-13)
-│   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-21)
+│   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-22)
 │   └── deploy.md                      <-- Proxmox LXC, systemd, Nginx, proxy Vite
 ├── riferimento/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test
