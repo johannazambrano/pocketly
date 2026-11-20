@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-19
+verified: 2026-11-20
 ---
 
 # Backlog di Pocketly
@@ -28,7 +28,7 @@ collegamento, senza ripeterne il testo.
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
-| PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
+| PKT-16 | Impostazioni divise per argomento | in corso | media | Jonny |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
@@ -233,28 +233,20 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-16 — Impostazioni divise per argomento
-- **Stato:** da decidere · **Priorità:** media · **Chi:** libero
+- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
 - **Perché:** la pagina Impostazioni è un’unica lista di riquadri (backup, sincronizzazione, notifiche, import da
   Excel, esportazione, inserimenti rapidi, categorie, metodi di pagamento, tag, lingua, aspetto, aggiornamenti,
   privacy): al telefono va scorsa a lungo per trovare una funzione, e sul PC le due colonne mescolano argomenti
   diversi. Categorie, metodi e tag sono tre liste lunghe una sotto l’altra, senza ricerca né ordine.
-- **Proposta (da decidere):** un indice con le voci raggruppate, ognuna apre una sua pagina, come le impostazioni di
-  iPhone e Android. Sul PC indice a sinistra e pagina a destra.
-  1. **Dati e backup:** backup, import da Excel, esportazione Excel/CSV.
-  2. **Sincronizzazione:** server, stato, disconnessione.
-  3. **Notifiche:** promemoria delle ricorrenti.
-  4. **Categorie**, 5. **Metodi di pagamento**, 6. **Tag:** una pagina ciascuno (vedi sotto).
-  7. **Inserimenti rapidi.**
-  8. **Aspetto e lingua:** stile, tema, lingua.
-  9. **Informazioni:** aggiornamenti dell'app, privacy.
+- **Decisione:** indice raggruppato in 4 aree + pagine figlie (`/impostazioni/:section`), con `meta.navParent: 'settings'` e selettore dell'anno nascosto nell'header (`meta.hideYear: true`):
+  - *Dati e sincronizzazione:* **Dati e backup** (`/impostazioni/dati`, backup + import Excel + export Excel/CSV), **Sincronizzazione** (`/impostazioni/sincronizzazione`), **Notifiche** (`/impostazioni/notifiche`).
+  - *Organizzazione:* **Categorie** (`/impostazioni/categorie`), **Metodi di pagamento** (`/impostazioni/metodi`), **Tag** (`/impostazioni/tag`), **Inserimenti rapidi** (`/impostazioni/inserimenti-rapidi`).
+  - *Preferenze:* **Aspetto e lingua** (`/impostazioni/aspetto`, inclusa «Riarmonizza i colori»).
+  - *App:* **Informazioni** (`/impostazioni/informazioni`, aggiornamenti + privacy).
 
-  Nelle pagine di categorie, metodi e tag: elenco in ordine alfabetico, campo per cercare quando le voci sono
-  tante, accanto a ogni voce quante spese la usano; tocco sulla voce per rinominarla, cambiarne il colore o
-  eliminarla (in un foglio dal basso al telefono, invece dei pulsanti su ogni riga); «Aggiungi» in cima.
+  Su telefono e schermi `< lg`: `/impostazioni` mostra solo l'indice con righe di stato e pallini di avviso (`resolveSettingsAlert`), ogni voce apre la pagina figlia con link «← Impostazioni» nel contenuto (pattern `BreakdownDetailView`). Su PC (`>= lg`): layout master-detail a 2 colonne con indice fisso (`sticky`) a sinistra e sezione attiva a destra (`dati` predefinita su `/impostazioni`).
 
-  Ogni voce dell'indice mostra una riga di stato (es. «Ultimo backup 3 giorni fa», «Sincronizzato»), così molte
-  cose si vedono senza aprirle. Pagine figlie con un indirizzo proprio (es. `/impostazioni/dati`): si possono
-  collegare (l'avviso del backup porta a `/impostazioni/dati#backup`, PKT-10) e il «Indietro» funziona.
+  Nelle pagine di categorie, metodi e tag: form inline «Aggiungi» in cima, ricerca live sempre visibile, filtri rapidi (Tutte / In uso / Non usate + ordinamento A–Z / Più usate), raggruppamento per iniziale con barra di salto su elenchi lunghi e griglia a 2 colonne su schermi larghi per evitare lo scroll infinito; conteggio utilizzi calcolato in un solo passaggio; riga pulita cliccabile che apre un `BaseModal` (foglio dal basso su mobile) per rinominare, cambiare colore o eliminare con riassegnazione. Pulsante `+` contestuale nella barra inferiore (`usePageAction`) attivo su Categorie, Metodi, Tag e Inserimenti rapidi. Collegamenti interni aggiornati (`BackupReminder`, `QuickExpenseBar`, `AppHeader`, `WelcomePanel`, `BreakdownDetailView`) con compatibilità per le vecchie ancore `#backup` e `#inserimenti-rapidi`.
 - **Alternative:** schede in cima alla pagina (più semplici, ma al telefono 5-6 schede non entrano e si sommano alla
   barra in basso); riquadri che si aprono e chiudono nella stessa pagina (poco lavoro, ma la pagina resta lunga e
   non si collega a una sezione).
@@ -263,6 +255,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-17 aperta (Johanna).
+  - 2026-11-20 decisione condivisa e presa in carico (Jonny).
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
 - **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
