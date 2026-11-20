@@ -236,7 +236,7 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 - [ ] **Backup JSON e Promemoria (`BackupReminder`):**
   - in `/impostazioni/dati` esporta un backup in chiaro e un backup protetto con password (`AES-GCM`), verificando lo stato *«Tutti i dati sono nell'ultimo backup»*;
   - importa il backup cifrato inserendo prima una password errata (verifica errore *«Password errata»*) e poi quella corretta;
-  - verifica che quando il promemoria `BackupReminder` è attivo, *«Vai al backup»* porti a `/impostazioni/dati#backup` mettendo a fuoco il riquadro del backup (e il banner non compaia né sull'indice né nelle pagine figlie delle Impostazioni).
+  - verifica che quando il promemoria `BackupReminder` è attivo, *«Vai al backup»* porti a `/impostazioni/dati#backup` mettendo a fuoco il riquadro del backup (e il banner non compaia né sull'indice delle Impostazioni né in *Dati e backup*, ma compaia ancora nelle altre pagine come *Tag* o *Aspetto e lingua*).
 - [ ] **Importazione da Excel (`.xlsx`):** scegli un file `.xlsx` di Expense Tracker, controlla l'anteprima dei conteggi (incluse le entrate e i tag) e gli eventuali avvisi, e conferma la sostituzione dei dati.
 - [ ] **Esportazione tabellare (`exportData`):**
   - prova **Excel (`.xlsx`)** con anno selezionato e *«Tutti gli anni»*: verifica aprendo il file in Excel/LibreOffice che ci siano i 5 fogli (*Spese variabili*, *Spese ricorrenti* con promemoria e addebiti saltati/cambiati, *Entrate* con tag e note, *Prestiti*, *Categorie e metodi*) e che le cifre siano numeriche formattate correttamente;

@@ -7,8 +7,17 @@ import { useBackupStore } from '@/stores/backup'
 const { t } = useI18n()
 const backup = useBackupStore()
 const route = useRoute()
-/** Nelle Impostazioni il riquadro del backup dice già lo stato: l'avviso lì sarebbe doppio e sembrerebbe ignorare il clic. */
-const shown = computed(() => backup.reminderDue && route.name !== 'settings' && route.meta.navParent !== 'settings')
+/**
+ * Nascosto dove lo stato del backup si vede già: sull'indice delle Impostazioni (riga «Dati e backup» con il pallino,
+ * e su PC il riquadro a destra) e nella pagina `/impostazioni/dati`. Lì l'avviso sarebbe doppio e sembrerebbe ignorare
+ * il clic; nelle altre pagine delle Impostazioni (es. Tag) resta, come nel resto dell'app.
+ */
+const shown = computed(
+  () =>
+    backup.reminderDue &&
+    route.name !== 'settings' &&
+    !(route.name === 'settings-section' && route.params.section === 'dati'),
+)
 </script>
 
 <template>
