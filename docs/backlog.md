@@ -260,6 +260,8 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-20 in `develop` con `210273d` (correzioni `f5e3002` avviso del backup letto dai lettori di schermo,
     `4f168de` promemoria del backup nascosto solo sull'indice e in Dati e backup, `35f34f0` sezione non montata
     sull'indice da telefono). Da provare sui telefoni nella versione di prova di `develop`.
+  - 2026-11-20 `develop` portato in `main` con `2c25946`. Vercel ripubblica `main` da solo; resta `update.sh` sul
+    container. Il formato dei dati resta il 3, quindi i telefoni non devono aggiornarsi per sincronizzare.
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
 - **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
