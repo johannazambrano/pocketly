@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-17
+verified: 2026-11-20
 ---
 
 # Backlog di Pocketly
@@ -18,7 +18,7 @@ collegamento, senza ripeterne il testo.
 | PKT-03 | Inserimenti rapidi e Frequenti: dove sta ciascuno | fatto | — | Johanna, Jonny |
 | PKT-04 | Rivedere e unire `feature/inserimenti-rapidi` | fatto | — | Johanna |
 | PKT-05 | Rivedere e unire `feature/funzionalita-strategiche` | fatto | — | Johanna |
-| PKT-06 | Pubblicare su Proxmox e provare sui telefoni | da fare | alta | Johanna |
+| PKT-06 | Pubblicare su Proxmox e provare sui telefoni | fatto | — | Johanna |
 | PKT-07 | Conti con saldo iniziale e prestiti nel saldo | idea da decidere | bassa | libero |
 | PKT-08 | Categorie di entrata separate da quelle di spesa | idea da decidere | bassa | libero |
 | PKT-09 | Critique 12 della dashboard: P1 e P2 | fatto | — | Johanna |
@@ -28,11 +28,13 @@ collegamento, senza ripeterne il testo.
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
-| PKT-16 | Impostazioni divise per argomento | da decidere | media | libero |
+| PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
+| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | da fare | media | libero |
+| PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -131,7 +133,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     decidono dopo in `PKT-19`.
 
 ### PKT-06 — Pubblicare su Proxmox e provare sui telefoni
-- **Stato:** da fare · **Priorità:** alta · **Chi:** Johanna
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** in `main` ci sono modifiche non ancora pubblicate (critique 12, avviso del backup, tag da Excel).
 - **Fatto quando:** `update.sh` lanciato, app aggiornata su tutti i telefoni; provato su iPhone che in «Nuova
   spesa» la tastiera si apre da sola sull'importo.
@@ -149,6 +151,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     promemoria del backup con i soli rapidi (`6267392`); schede del Budget per i lettori di schermo (`ad6a404`).
     Restano fuori `csvExport.ts` (`PKT-19`) e i filtri dei tag copiati tra Entrate e Spese (da riordinare con
     `PKT-15`).
+  - 2026-11-19 `develop` portato in `main` con `2f177e6` (formato dati 3, nome «Pocketly dev» per la prova su
+    Vercel, rapidi senza importo, barra in basso `PKT-20`). Vercel ripubblica `main` da solo; restano `update.sh`
+    sul container, la ricarica dell'app su tutti i telefoni e le prove della sincronizzazione.
+  - 2026-11-19 `update.sh` lanciato sul container (Johanna): `main` a `2f177e6` pubblicato, formato dati 3.
+    Fatta. Le app sui telefoni vanno ricaricate perché sincronizzino di nuovo; le prove dei telefoni seguono la
+    [guida di prova](guide/test-utente.md).
 
 ### PKT-07 — Conti con saldo iniziale e prestiti nel saldo
 - **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
@@ -225,28 +233,20 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-16 aperta.
 
 ### PKT-16 — Impostazioni divise per argomento
-- **Stato:** da decidere · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
 - **Perché:** la pagina Impostazioni è un’unica lista di riquadri (backup, sincronizzazione, notifiche, import da
   Excel, esportazione, inserimenti rapidi, categorie, metodi di pagamento, tag, lingua, aspetto, aggiornamenti,
   privacy): al telefono va scorsa a lungo per trovare una funzione, e sul PC le due colonne mescolano argomenti
   diversi. Categorie, metodi e tag sono tre liste lunghe una sotto l’altra, senza ricerca né ordine.
-- **Proposta (da decidere):** un indice con le voci raggruppate, ognuna apre una sua pagina, come le impostazioni di
-  iPhone e Android. Sul PC indice a sinistra e pagina a destra.
-  1. **Dati e backup:** backup, import da Excel, esportazione Excel/CSV.
-  2. **Sincronizzazione:** server, stato, disconnessione.
-  3. **Notifiche:** promemoria delle ricorrenti.
-  4. **Categorie**, 5. **Metodi di pagamento**, 6. **Tag:** una pagina ciascuno (vedi sotto).
-  7. **Inserimenti rapidi.**
-  8. **Aspetto e lingua:** stile, tema, lingua.
-  9. **Informazioni:** aggiornamenti dell'app, privacy.
+- **Decisione:** indice raggruppato in 4 aree + pagine figlie (`/impostazioni/:section`), con `meta.navParent: 'settings'` e selettore dell'anno nascosto nell'header (`meta.hideYear: true`):
+  - *Dati e sincronizzazione:* **Dati e backup** (`/impostazioni/dati`, backup + import Excel + export Excel/CSV), **Sincronizzazione** (`/impostazioni/sincronizzazione`), **Notifiche** (`/impostazioni/notifiche`).
+  - *Organizzazione:* **Categorie** (`/impostazioni/categorie`), **Metodi di pagamento** (`/impostazioni/metodi`), **Tag** (`/impostazioni/tag`), **Inserimenti rapidi** (`/impostazioni/inserimenti-rapidi`).
+  - *Preferenze:* **Aspetto e lingua** (`/impostazioni/aspetto`, inclusa «Riarmonizza i colori»).
+  - *App:* **Informazioni** (`/impostazioni/informazioni`, aggiornamenti + privacy).
 
-  Nelle pagine di categorie, metodi e tag: elenco in ordine alfabetico, campo per cercare quando le voci sono
-  tante, accanto a ogni voce quante spese la usano; tocco sulla voce per rinominarla, cambiarne il colore o
-  eliminarla (in un foglio dal basso al telefono, invece dei pulsanti su ogni riga); «Aggiungi» in cima.
+  Su telefono e schermi `< lg`: `/impostazioni` mostra solo l'indice con righe di stato e pallini di avviso (`resolveSettingsAlert`), ogni voce apre la pagina figlia con link «← Impostazioni» nel contenuto (pattern `BreakdownDetailView`). Su PC (`>= lg`): layout master-detail a 2 colonne con indice fisso (`sticky`) a sinistra e sezione attiva a destra (`dati` predefinita su `/impostazioni`).
 
-  Ogni voce dell'indice mostra una riga di stato (es. «Ultimo backup 3 giorni fa», «Sincronizzato»), così molte
-  cose si vedono senza aprirle. Pagine figlie con un indirizzo proprio (es. `/impostazioni/dati`): si possono
-  collegare (l'avviso del backup porta a `/impostazioni/dati#backup`, PKT-10) e il «Indietro» funziona.
+  Nelle pagine di categorie, metodi e tag: form inline «Aggiungi» in cima, ricerca live sempre visibile, filtri rapidi (Tutte / In uso / Non usate + ordinamento A–Z / Più usate), raggruppamento per iniziale con barra di salto su elenchi lunghi e griglia a 2 colonne su schermi larghi per evitare lo scroll infinito; conteggio utilizzi calcolato in un solo passaggio; riga pulita cliccabile che apre un `BaseModal` (foglio dal basso su mobile) per rinominare, cambiare colore o eliminare con riassegnazione. Pulsante `+` contestuale nella barra inferiore (`usePageAction`) attivo su Categorie, Metodi, Tag e Inserimenti rapidi. Collegamenti interni aggiornati (`BackupReminder`, `QuickExpenseBar`, `AppHeader`, `WelcomePanel`, `BreakdownDetailView`) con compatibilità per le vecchie ancore `#backup` e `#inserimenti-rapidi`.
 - **Alternative:** schede in cima alla pagina (più semplici, ma al telefono 5-6 schede non entrano e si sommano alla
   barra in basso); riquadri che si aprono e chiudono nella stessa pagina (poco lavoro, ma la pagina resta lunga e
   non si collega a una sezione).
@@ -255,6 +255,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-17 aperta (Johanna).
+  - 2026-11-20 decisione condivisa e presa in carico (Jonny, `85faffc`).
+  - 2026-11-20 implementata nel ramo `feature/pkt-16-impostazioni-per-argomento` (Jonny): registro `settingsSections.ts`, rotte `/impostazioni/:section` con redirect vecchie ancore e `meta.hideYear`, `SettingsIndex` + 3 sotto-sezioni modulari (`SettingsDataSection`, `SettingsAppearanceSection`, `SettingsAboutSection`), master-detail desktop con indice sticky, `TagManager` riprogettato con conteggio usi `O(M)` (`countTagUsage` / `finance.tagUsageCounts`), ricerca sempre visibile, filtri utilizzo, ordinamento A–Z/più usate, salto alfabetico su elenchi lunghi, griglia 2 colonne su PC e modifica/cancellazione in `BaseModal`; azione `+` contestuale (`usePageAction`), link interni e documentazione aggiornati.
+  - 2026-11-20 in `develop` con `210273d` (correzioni `f5e3002` avviso del backup letto dai lettori di schermo,
+    `4f168de` promemoria del backup nascosto solo sull'indice e in Dati e backup, `35f34f0` sezione non montata
+    sull'indice da telefono). Da provare sui telefoni nella versione di prova di `develop`.
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
 - **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
@@ -311,3 +316,30 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     dell'intestazione da `md` in su (sempre nuova spesa).
   - 2026-11-18 in `develop` con `b40e398` (correzioni `7cf6550`, `aa7c31e`, `2fc592a`). Da provare sui telefoni
     nella versione di prova di `develop`.
+
+### PKT-21 — Scelta dei tag nel modulo con ricerca o menu a tendina
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** nel modulo di spese ed entrate (`TagInput`, usato da `TransactionForm` e `QuickExpenseForm`) tutti i
+  tag non scelti compaiono come pillole sotto il campo. Con tanti tag l'elenco diventa lungo, spinge in basso il
+  resto del modulo e quello cercato non si trova a colpo d'occhio. Categoria e metodo di pagamento invece si
+  scelgono da un menu a tendina.
+- **Come:** un solo campo che cerca e crea. Scrivendo, sotto compare un menu a tendina con i tag che corrispondono
+  (in ordine alfabetico, senza badare a maiuscole e accenti, come `PKT-17`); si sceglie con il tocco o con frecce e
+  Invio; se il nome non esiste la prima voce è «Crea #nome». A campo vuoto il menu mostra pochi tag (i più usati o
+  gli ultimi), non tutti. I tag scelti restano pillole con la ✕ sopra il campo. Da provare la tastiera del telefono
+  (il menu non deve finire sotto la tastiera) e il lettore di schermo (combobox con elenco di opzioni).
+- **Alternative:** menu a tendina a scelta multipla come per le categorie (semplice, ma con molti tag è di nuovo un
+  elenco lungo e non si crea un tag nuovo); lasciare le pillole e aggiungere solo un campo per filtrarle (poco
+  lavoro, ma il modulo resta lungo finché non si scrive).
+- **Fatto quando:** scelta la soluzione; nel modulo i tag si cercano, si scelgono e si creano dallo stesso campo su
+  iPhone, Android e PC; un test sul filtro; documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-19 aperta (Johanna).
+
+### PKT-22 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** introdurre il monitoraggio e l'analisi completa del patrimonio (`Attività − Passività = Patrimonio Netto`) con un modello ibrido: conti liquidi collegati ai metodi di pagamento (saldo iniziale + flussi + giroconti + «Allinea saldo»), investimenti/beni/passività aggiornati a valutazioni periodiche e giroconti, integrazione senza doppi conteggi con Prestiti (`Loan`) e Salvadanai (`SavingsGoal`), serie storica con grafico SVG leggero senza dipendenze esterne, riquadro sintetico in Dashboard, Omnisearch ed export XLSX/CSV. Assorbe ed estende `PKT-07` e si coordina con `PKT-19` per la lettura della liquidità libera vs accantonata.
+- **Come partire:** tutte le specifiche tecniche, il modello matematico, l'elenco file per file e la checklist di verifica sono salvati in [Progetto e Piano Implementativo: Sezione Patrimonio](architettura/patrimonio.md). Prima di scrivere codice, aprire un ramo dedicato (es. `feature/patrimonio`), confermare il posizionamento in `TABS` (menu «Altro» su mobile / sidebar su desktop) e considerare il salto a `CURRENT_SCHEMA_VERSION = 4`.
+- **Fatto quando:** modello dati v4, migrazione, merge 3-vie, logica pura `wealth.ts`, vista `PatrimonyView.vue`, grafico storico SVG, card Dashboard, integrazione Prestiti/Omnisearch/Export, traduzioni `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica visiva su tutte le 6 combinazioni piattaforma × tema.
+- **Storia:**
+  - 2026-11-19 aperta: analisi condivisa e piano implementativo completo salvato in [architettura/patrimonio.md](architettura/patrimonio.md).

@@ -20,6 +20,10 @@ function openForm(item: QuickExpense | null) {
   formOpen.value = true
 }
 
+defineExpose({
+  openCreate: () => openForm(null),
+})
+
 function removeFromModal() {
   const item = editing.value
   if (!item) return

@@ -23,14 +23,14 @@ import { normalizeNotifications } from '@/domain/notifications'
 import { groupRecurringSeries, isActiveInYear, seriesKey, withException } from '@/domain/recurrence'
 import { movementFor, savingsSummary, sortSavingsGoals, withSavedAmounts } from '@/domain/savings'
 import { createDefaultData, createEmptyData } from '@/domain/defaults'
-import { sortTagsByName } from '@/domain/tags'
+import { countTagUsage, sortTagsByName, type TagKind } from '@/domain/tags'
 import { LOCALES, i18n } from '@/i18n'
 import { deviceDataStore, type DataStore } from '@/services/storage'
 import { harmonizedColors, pickUniqueColor, randomUniqueColor } from '@/utils/colors'
 import { addDays, lastDayOfMonth, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { newId } from '@/utils/id'
 
-export type TagKind = 'categories' | 'paymentMethods' | 'tags'
+export type { TagKind }
 type WithOptionalId<T extends { id: Id }> = Omit<T, 'id'> & { id?: Id }
 
 const REF_FIELD = { categories: 'categoryId', paymentMethods: 'paymentMethodId' } as const
@@ -499,13 +499,14 @@ export const useFinanceStore = defineStore('finance', () => {
     }
   }
 
+  const tagUsageCounts = computed<Record<TagKind, Map<Id, number>>>(() => ({
+    categories: countTagUsage(data.value, 'categories'),
+    paymentMethods: countTagUsage(data.value, 'paymentMethods'),
+    tags: countTagUsage(data.value, 'tags'),
+  }))
+
   function tagUsage(kind: TagKind, id: Id): number {
-    if (kind === 'tags') {
-      return [...data.value.oneTimeExpenses, ...data.value.incomes, ...data.value.quickExpenses].filter((x) => x.tagIds?.includes(id)).length
-    }
-    const field = REF_FIELD[kind]
-    const d = data.value
-    return [...d.oneTimeExpenses, ...d.recurringExpenses, ...d.incomes, ...d.quickExpenses].filter((x) => x[field] === id).length
+    return tagUsageCounts.value[kind].get(id) ?? 0
   }
 
   /** Elimina una categoria/metodo/tag spostando le voci che lo usano su `reassignTo`. */
@@ -606,6 +607,7 @@ export const useFinanceStore = defineStore('finance', () => {
     setTagColor,
     randomizeTagColor,
     harmonizeColors,
+    tagUsageCounts,
     tagUsage,
     deleteTag,
   }

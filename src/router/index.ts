@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '@/views/DashboardView.vue'
+import { SETTINGS_SECTION_IDS } from '@/utils/settingsSections'
+
+const SETTINGS_SECTION_PATTERN = SETTINGS_SECTION_IDS.join('|')
 
 export const TABS = [
   { name: 'dashboard', path: '/', icon: 'fa-chart-pie' },
@@ -24,7 +27,23 @@ export const router = createRouter({
     { path: '/budget', name: 'budget', component: () => import('@/views/BudgetView.vue') },
     { path: '/prestiti', name: 'loans', component: () => import('@/views/LoansView.vue') },
     { path: '/previsioni', name: 'forecast', component: () => import('@/views/ForecastView.vue') },
-    { path: '/impostazioni', name: 'settings', component: () => import('@/views/SettingsView.vue') },
+    {
+      path: '/impostazioni',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { hideYear: true },
+      beforeEnter: (to) => {
+        if (to.hash === '#backup') return { name: 'settings-section', params: { section: 'dati' }, hash: '#backup', replace: true }
+        if (to.hash === '#inserimenti-rapidi') return { name: 'settings-section', params: { section: 'inserimenti-rapidi' }, replace: true }
+      },
+    },
+    {
+      path: `/impostazioni/:section(${SETTINGS_SECTION_PATTERN})`,
+      name: 'settings-section',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { navParent: 'settings', hideYear: true },
+    },
+    { path: '/impostazioni/:pathMatch(.*)*', redirect: '/impostazioni' },
     // Dettaglio di una riga della dashboard: tutte le voci di una categoria o di un metodo di pagamento nel periodo scelto.
     {
       path: '/dettaglio/:kind(categoria|metodo)/:id',

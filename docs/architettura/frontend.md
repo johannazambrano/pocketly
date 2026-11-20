@@ -15,6 +15,7 @@ source-files:
   - src/composables/useAppUpdate.ts
   - src/composables/usePageAction.ts
   - src/utils/navStatus.ts
+  - src/utils/settingsSections.ts
   - src/components/AppHeader.vue
   - src/components/BalancePanel.vue
   - src/components/BaseModal.vue
@@ -23,12 +24,16 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/ToastHost.vue
   - src/components/UpdatePrompt.vue
+  - src/components/settings/SettingsIndex.vue
+  - src/components/settings/SettingsDataSection.vue
+  - src/components/settings/SettingsAppearanceSection.vue
+  - src/components/settings/SettingsAboutSection.vue
   - src/views/BreakdownDetailView.vue
   - src/views/DashboardView.vue
   - src/views/SettingsView.vue
   - src/i18n/index.ts
   - vite.config.ts
-verified: 2026-11-18
+verified: 2026-11-20
 ---
 
 # Architettura Frontend
@@ -98,13 +103,13 @@ Nello store [`finance.ts`](../../src/stores/finance.ts):
 Il router è configurato in [`src/router/index.ts`](../../src/router/index.ts):
 - Modalità `createWebHistory()`.
 - La vista `/` (`DashboardView`) è importata in modo sincrono per velocizzare il First Contentful Paint.
-- Tutte le altre viste (`/una-tantum`, `/ricorrenti`, `/entrate`, `/budget`, `/prestiti`, `/previsioni`, `/impostazioni`, e la vista di dettaglio `/dettaglio/:kind(categoria|metodo)/:id`) utilizzano il caricamento asincrono (dynamic `import()`) per ridurre il bundle iniziale.
+- Tutte le altre viste (`/una-tantum`, `/ricorrenti`, `/entrate`, `/budget`, `/prestiti`, `/previsioni`, `/impostazioni` con le 9 sezioni figlie `/impostazioni/:section` definite in [`settingsSections.ts`](../../src/utils/settingsSections.ts), e la vista di dettaglio `/dettaglio/:kind(categoria|metodo)/:id`) utilizzano il caricamento asincrono (dynamic `import()`) per ridurre il bundle iniziale. Le vecchie ancore dirette `/impostazioni#backup` e `/impostazioni#inserimenti-rapidi` vengono reindirizzate alle rispettive sezioni figlie; eventuali sottopercorsi non validi sotto `/impostazioni/*` tornano a `/impostazioni`.
 - Eventuali rotte non corrispondenti reindirizzano a `/`.
 - I tab della barra inferiore sono definiti nella costante esportata `TABS`, utilizzata dal componente [`BottomNav.vue`](../../src/components/BottomNav.vue).
-- **Routing gerarchico e `meta.navParent`:**
-  Le viste di secondo livello o di approfondimento non possiedono una tab autonoma nella barra di navigazione. Per rendere evidente il contesto di appartenenza, definiscono nei metadati di rotta la proprietà `meta.navParent` con il nome della vista genitore (es. `/dettaglio/:kind(categoria|metodo)/:id` specifica `meta: { navParent: 'dashboard' }`). [`BottomNav.vue`](../../src/components/BottomNav.vue) interroga `route.meta.navParent` e mantiene evidenziata la tab padre sia su dispositivi mobili (`bg-dock-pill text-accent` su iOS e PC o pillola M3 `bg-dock-pill text-ink` su Android) sia nella barra laterale desktop (`!bg-accent-soft !text-accent`).
+- **Routing gerarchico, `meta.navParent` e `meta.hideYear`:**
+  Le viste di secondo livello o di approfondimento non possiedono una tab autonoma nella barra di navigazione. Per rendere evidente il contesto di appartenenza, definiscono nei metadati di rotta la proprietà `meta.navParent` con il nome della vista genitore (es. `/dettaglio/:kind(categoria|metodo)/:id` specifica `meta: { navParent: 'dashboard' }`; `/impostazioni/:section` specifica `meta: { navParent: 'settings', hideYear: true }`). [`BottomNav.vue`](../../src/components/BottomNav.vue) interroga `route.meta.navParent` e mantiene evidenziata la tab padre sia su dispositivi mobili (`bg-dock-pill text-accent` su iOS e PC o pillola M3 `bg-dock-pill text-ink` su Android) sia nella barra laterale desktop (`!bg-accent-soft !text-accent`). `meta.hideYear` nasconde il selettore dell'anno in [`AppHeader.vue`](../../src/components/AppHeader.vue) nelle schermate che non filtrano per anno (Impostazioni).
 - **Comportamento dello scroll (`scrollBehavior`):**
-  Il router adotta la politica `savedPosition`, poi l'ancora (`{ el: to.hash, top }`, con `top` = altezza della barra in alto se è `sticky` + 16 px), altrimenti `{ top: 0 }`. Quando si torna indietro nella cronologia dalla schermata di dettaglio alla dashboard, la pagina ripristina la posizione di scorrimento esatta in cui si trovava in precedenza; con un'ancora (es. `/impostazioni#backup`, usata dall'avviso del backup) scorre fino a quell'elemento; per qualsiasi altra transizione l'utente viene riposizionato in cima alla pagina.
+  Il router adotta la politica `savedPosition`, poi l'ancora (`{ el: to.hash, top }`, con `top` = altezza della barra in alto se è `sticky` + 16 px), altrimenti `{ top: 0 }`. Quando si torna indietro nella cronologia dalla schermata di dettaglio alla dashboard o da una sezione delle Impostazioni all'indice, la pagina ripristina la posizione di scorrimento esatta in cui si trovava in precedenza; con un'ancora (es. `/impostazioni/dati#backup`, usata dall'avviso del backup) scorre fino a quell'elemento; per qualsiasi altra transizione l'utente viene riposizionato in cima alla pagina.
 
 ---
 
@@ -134,7 +139,7 @@ La configurazione PWA risiede in [`vite.config.ts`](../../vite.config.ts) tramit
   - **Quando si controlla:** all'avvio, al ritorno in primo piano (`visibilitychange`, `pageshow`, `focus`: su iPhone, con l'app aperta dalla Home, il solo `visibilitychange` non sempre arriva), al ritorno della rete, ogni 15 minuti e al risveglio dalla sospensione (battito ogni 2 s: un salto oltre 5 s vuol dire processo congelato). Solo con l'app in vista e al massimo una volta al minuto per i segnali di risveglio: al PC `focus` scatta di continuo, e i timer delle schede in sottofondo rallentati sembrerebbero sempre un risveglio.
   - **Versione pronta:** `checkForUpdate` aspetta che il worker scaricato finisca l'installazione (`update()` si risolve prima) e conta come aggiornamento solo un worker in attesa con la pagina già controllata. Risponde `available`, `none`, `offline` o `error`.
   - **Ricarica:** si ricarica da sola solo la finestra che ha chiesto l'aggiornamento (`applyUpdate` → `SKIP_WAITING`). Le altre finestre, su `controllerchange`, mostrano l'avviso e aspettano il tocco, così un modulo con modifiche non salvate non si perde. Anche il ricaricamento automatico di Workbox passa da qui (`onNeedReload`).
-- Nelle Impostazioni ([`SettingsView.vue`](../../src/views/SettingsView.vue)) la scheda «Aggiornamenti» mostra la versione con l'ora della build (`__APP_VERSION__`, `__APP_BUILT_AT__` da `vite.config.ts`, così si vede quale build gira su un telefono). La versione è automatica: le prime due cifre vengono da `package.json` e si alzano a mano per i passaggi grandi, l'ultima è il numero di commit (`git rev-list --count HEAD`, es. 0.1.315). In un clone parziale («shallow», come su Vercel) il conteggio non sarebbe giusto e la versione resta «0.1»: la build si riconosce dall'ora e offre «Verifica aggiornamenti» (se trova una versione nuova la applica subito; offline o in errore lo dice, non risponde «già aggiornata») e, come via d'uscita, «Ricarica dal server»: toglie il service worker e svuota la Cache Storage, poi ricarica; i dati in IndexedDB restano. Togliere il worker cancella anche l'iscrizione alle notifiche push del dispositivo: la rifà la sincronizzazione successiva (`runSyncPushSchedule` vede che manca), e la conferma lo dice quando le notifiche sono attive. Su iPhone la nuova iscrizione senza un tocco dell'utente è da verificare.
+- Nelle Impostazioni ([`SettingsView.vue`](../../src/views/SettingsView.vue), sezione Informazioni [`SettingsAboutSection.vue`](../../src/components/settings/SettingsAboutSection.vue)) la scheda «Aggiornamenti» mostra la versione con l'ora della build (`__APP_VERSION__`, `__APP_BUILT_AT__` da `vite.config.ts`, così si vede quale build gira su un telefono). La versione è automatica: le prime due cifre vengono da `package.json` e si alzano a mano per i passaggi grandi, l'ultima è il numero di commit (`git rev-list --count HEAD`, es. 0.1.315). In un clone parziale («shallow», come su Vercel) il conteggio non sarebbe giusto e la versione resta «0.1»: la build si riconosce dall'ora e offre «Verifica aggiornamenti» (se trova una versione nuova la applica subito; offline o in errore lo dice, non risponde «già aggiornata») e, come via d'uscita, «Ricarica dal server»: toglie il service worker e svuota la Cache Storage, poi ricarica; i dati in IndexedDB restano. Togliere il worker cancella anche l'iscrizione alle notifiche push del dispositivo: la rifà la sincronizzazione successiva (`runSyncPushSchedule` vede che manca), e la conferma lo dice quando le notifiche sono attive. Su iPhone la nuova iscrizione senza un tocco dell'utente è da verificare.
 
 ---
 

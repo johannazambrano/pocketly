@@ -141,7 +141,7 @@ function back(e: MouseEvent) {
       <div class="flex flex-wrap gap-2">
         <a href="/" class="btn-primary" @click="back">{{ t('detail.back') }}</a>
         <RouterLink
-          to="/impostazioni"
+          :to="{ name: 'settings-section', params: { section: kind === 'paymentMethods' ? 'metodi' : 'categorie' } }"
           class="inline-flex min-h-10 items-center justify-center rounded-lg border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-ink-2 hover:bg-surface-2"
         >
           {{ t('detail.manageTags') }}
