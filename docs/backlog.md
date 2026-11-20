@@ -320,6 +320,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta da `PKT-05` (Johanna).
   - 2026-11-20 prese le due decisioni con Jonny (vedi **Decisione**); presa in carico (Johanna). `csvExport.ts`
     tolto nel ramo `chore/togli-csv-export` (`38da887`).
+  - 2026-11-20 `csvExport.ts` tolto in `develop` con `b1daf55`. Resta la parte dei salvadanai.
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
