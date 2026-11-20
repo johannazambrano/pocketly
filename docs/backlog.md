@@ -31,10 +31,12 @@ collegamento, senza ripeterne il testo.
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
-| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
+| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da fare | media | Johanna |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
 | PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | fatto | — | Johanna |
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
+| PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
+| PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -288,17 +290,36 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta da analisi PKT-13 (Jonny).
 
 ### PKT-19 — Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05)
-- **Stato:** da decidere · **Priorità:** bassa · **Chi:** libero
+- **Stato:** da fare · **Priorità:** media · **Chi:** Johanna
 - **Perché:** due decisioni rimaste aperte da `PKT-05`, rimandate per pubblicare intanto quello che c'è.
   1. I soldi messi nei salvadanai oggi non riducono la cifra principale della Dashboard: chi mette da parte 200 €
      vede ancora quei 200 € come disponibili. Si può aggiungere una riga «di cui messi da parte» o contare il
      versamento come un'uscita. Vedi [Stato e Difetti Noti](known-issues.md) §5.
   2. `src/services/csvExport.ts` (con il suo test) non è usato dall'app: l'esportazione passa da `exportData.ts`.
      Va tolto o collegato.
+- **Decisione (Johanna, Jonny, 2026-11-20):**
+  1. I soldi nei salvadanai sono messi da parte apposta per non usarli: se restano nella cifra grande si rischia di
+     farci affidamento. Nella cifra grande della Dashboard («Risultato di …», «Risultato a oggi», «Risultato
+     dell'anno») i versamenti nei salvadanai contano come uscite e i prelievi come entrate; contano solo i movimenti
+     già fatti. Il confronto con la media dei mesi precedenti usa la stessa regola anche sugli altri mesi. Il
+     dettaglio per categoria e per metodo di pagamento resta delle sole spese (i versamenti non hanno categoria);
+     previsioni, Budget e formato dei dati non cambiano.
+     Sotto la cifra una riga, solo se c'è almeno un salvadanaio attivo, che porta a Budget → Salvadanai:
+     ```
+     Risultato di novembre
+     +300 €
+     200 € nei salvadanai · consigliati 350 € questo mese  ›
+     ```
+     La quota è la «quota mensile consigliata» che l'app calcola già (`savingsSummary`); raggiunta la quota la riga
+     lo dice («in linea»). Niente riquadro nuovo nella Dashboard. Da aggiornare anche
+     [Stato e Difetti Noti](known-issues.md) §5.
+  2. `csvExport.ts` si toglie: l'esportazione per sezioni di `exportData.ts` copre già tutto.
 - **Fatto quando:** prese le due decisioni con Jonny; fatto quello che ne segue; documentazione e mappa del codice
   aggiornate.
 - **Storia:**
   - 2026-11-17 aperta da `PKT-05` (Johanna).
+  - 2026-11-20 prese le due decisioni con Jonny (vedi **Decisione**); presa in carico (Johanna). `csvExport.ts`
+    tolto nel ramo `chore/togli-csv-export` (`38da887`).
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
@@ -349,3 +370,27 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** modello dati v4, migrazione, merge 3-vie, logica pura `wealth.ts`, vista `PatrimonyView.vue`, grafico storico SVG, card Dashboard, integrazione Prestiti/Omnisearch/Export, traduzioni `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica visiva su tutte le 6 combinazioni piattaforma × tema.
 - **Storia:**
   - 2026-11-19 aperta: analisi condivisa e piano implementativo completo salvato in [architettura/patrimonio.md](architettura/patrimonio.md).
+
+### PKT-23 — Nascondere gli importi con un tocco
+- **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
+- **Perché:** idea di Jonny (2026-11-20). Chi apre l'app in pubblico o la mostra a qualcuno non vuole che si
+  leggano le cifre.
+- **Come (da decidere):** un tasto (es. l'icona dell'occhio nell'intestazione) che copre gli importi con «••••» in
+  tutta l'app finché non lo si tocca di nuovo; la scelta resta salvata sul dispositivo. Da decidere se vale per
+  tutte le cifre o solo per quelle della Dashboard, e cosa leggono i lettori di schermo («importo nascosto»).
+- **Fatto quando:** decisa la soluzione; gli importi si nascondono e si mostrano su iPhone, Android e PC;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-20 aperta dall'idea di Jonny (Johanna).
+
+### PKT-24 — Scegliere cosa mostrare nella Dashboard
+- **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
+- **Perché:** idea di Jonny (2026-11-20). Non a tutti servono gli stessi blocchi: chi non usa i salvadanai o gli
+  inserimenti rapidi vorrebbe una Dashboard più corta.
+- **Come (da decidere):** in Impostazioni → Aspetto un elenco dei blocchi della Dashboard (riga dei salvadanai di
+  `PKT-19`, inserimenti rapidi, prossimi addebiti, categorie, metodi di pagamento) con un interruttore ciascuno; la
+  cifra principale resta sempre. Da decidere se la scelta vale per il dispositivo o si sincronizza.
+- **Fatto quando:** decisa la soluzione; i blocchi si accendono e si spengono su iPhone, Android e PC;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-20 aperta dall'idea di Jonny (Johanna).
