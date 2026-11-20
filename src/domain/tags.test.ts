@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyData } from './defaults'
-import { countTagUsage, filterAndSortTags, groupTagsByLetter, sortTagsByName } from './tags'
+import { countTagUsage, filterAndSortTags, groupTagsByLetter, sortTagsByName, suggestTags } from './tags'
 
 const names = (list: { name: string }[]) => list.map((x) => x.name)
 
@@ -127,5 +127,50 @@ describe('groupTagsByLetter', () => {
       ['A', ['Affitto', 'auto']],
       ['E', ['Élite', 'Energia']],
     ])
+  })
+})
+
+describe('suggestTags', () => {
+  const tags = [
+    { id: 'a', name: 'Auto' },
+    { id: 'b', name: 'Bar' },
+    { id: 'c', name: 'Caffè' },
+    { id: 'd', name: 'Caffetteria' },
+    { id: 'e', name: 'Macchina caffè' },
+    { id: 'f', name: 'Spesa' },
+    { id: 'g', name: 'Svago' },
+    { id: 'h', name: 'Vacanze' },
+  ]
+  const usage = new Map([
+    ['a', 1],
+    ['c', 2],
+    ['d', 9],
+    ['e', 20],
+    ['f', 5],
+  ])
+
+  it('a campo vuoto propone i più usati, al massimo sei, senza quelli già scelti', () => {
+    const { items, exact } = suggestTags(tags, usage, { query: '', excludeIds: ['e'] })
+    expect(names(items)).toEqual(['Caffetteria', 'Spesa', 'Caffè', 'Auto', 'Bar', 'Svago'])
+    expect(exact).toBeUndefined()
+  })
+
+  it('scrivendo mette prima chi inizia con il testo, poi chi lo contiene, senza badare ad accenti e maiuscole', () => {
+    const { items } = suggestTags(tags, usage, { query: 'CAFFE' })
+    expect(names(items)).toEqual(['Caffè', 'Caffetteria', 'Macchina caffè'])
+  })
+
+  it('il nome identico va per primo e si trova anche se è già scelto', () => {
+    const free = suggestTags(tags, usage, { query: ' caffe ' })
+    expect(free.exact?.id).toBe('c')
+    expect(names(free.items)[0]).toBe('Caffè')
+
+    const taken = suggestTags(tags, usage, { query: 'caffe', excludeIds: ['c'] })
+    expect(taken.exact?.id).toBe('c')
+    expect(names(taken.items)).toEqual(['Caffetteria', 'Macchina caffè'])
+  })
+
+  it('senza corrispondenze non propone nulla e non trova un nome identico', () => {
+    expect(suggestTags(tags, usage, { query: 'palestra' })).toEqual({ items: [], exact: undefined })
   })
 })
