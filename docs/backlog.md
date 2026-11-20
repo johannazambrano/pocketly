@@ -33,7 +33,7 @@ collegamento, senza ripeterne il testo.
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
 | PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
-| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | da fare | media | libero |
+| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | fatto | — | Johanna |
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
@@ -320,7 +320,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     nella versione di prova di `develop`.
 
 ### PKT-21 — Scelta dei tag nel modulo con ricerca o menu a tendina
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** nel modulo di spese ed entrate (`TagInput`, usato da `TransactionForm` e `QuickExpenseForm`) tutti i
   tag non scelti compaiono come pillole sotto il campo. Con tanti tag l'elenco diventa lungo, spinge in basso il
   resto del modulo e quello cercato non si trova a colpo d'occhio. Categoria e metodo di pagamento invece si
@@ -337,6 +337,10 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   iPhone, Android e PC; un test sul filtro; documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-19 aperta (Johanna).
+  - 2026-11-20 scelta la soluzione del campo unico che cerca e crea, con l'elenco dentro il modulo (Johanna).
+    In `develop` con `040c0b7` (`29b3649` `suggestTags` con i test, `f0e55d5` nuovo `TagInput`): a campo vuoto i 6
+    tag più usati, scrivendo quelli che corrispondono senza badare a maiuscole e accenti, «Crea #nome» se il nome
+    non esiste; tag scelti come pillole sotto il campo. Da provare sui telefoni nella versione di prova di `develop`.
 
 ### PKT-22 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
