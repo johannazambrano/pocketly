@@ -10,7 +10,7 @@ source-files:
   - src/domain/savings.ts
   - src/domain/search.ts
   - src/domain/tags.ts
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Riferimento: Logica di Dominio
@@ -69,8 +69,14 @@ Spese variabili (una tantum) del mese di oggi: `total` (tutto il mese), `toDate`
 ### `compareToAverage(value, average, tolerance = 0.1): Verdict`
 Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'inline'` | `'below'`): è `'inline'` se lo scarto resta entro il 10% di `|average|`.
 
+### `monthBalanceAfterSavings(data, year, month, today): Cents`
+Il risultato di un mese come lo mostra la cifra grande della Dashboard: `monthSummary(...).balance` meno quanto è andato nei salvadanai nel mese (`savedBetween`, `PKT-19`).
+
 ### `averageBalanceBefore(data, year, month, today): Cents | null`
-Media del saldo (entrate meno uscite, da `monthSummary`) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+Media del risultato (`monthBalanceAfterSavings`: entrate meno uscite, meno quanto è andato nei salvadanai nel mese, come la cifra grande della Dashboard) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+
+### `balanceVsAverage(data, year, month, today): { verdict, average } | null`
+Il giudizio sotto la cifra grande per un mese passato: `compareToAverage` tra `monthBalanceAfterSavings` del mese e `averageBalanceBefore`. Le due parti tolgono i salvadanai allo stesso modo, così la frase parla della cifra che si vede. `null` senza mesi precedenti.
 
 ### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
 Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno:
@@ -185,6 +191,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 
 Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi finanziari specifici (`SavingsGoal`):
 - `savedAmounts(movements)` e `withSavedAmounts(goals, movements)`: l'importo accantonato di ogni salvadanaio è la somma dei suoi movimenti (`SavingsMovement`), mai sotto zero. Le funzioni sotto lavorano sul tipo `SavedGoal` (salvadanaio + `currentAmount` calcolato).
+- `savedBetween(movements, from, to, today)`: quanto è andato nei salvadanai tra due date (estremi compresi), versamenti meno prelievi, contando solo i movimenti fino a oggi; negativo se si è prelevato di più. La Dashboard lo toglie dalla cifra grande (`PKT-19`) e `averageBalanceBefore` dai mesi con cui la confronta.
 - `calculateMonthsRemaining(today, targetDate)`: calcola quanti mesi effettivi mancano alla scadenza, arrotondando sui giorni solari (~30.4375 giorni/mese) con un minimo di 1 mese se entro lo stesso mese.
 - `calculateRemainingAmount(goal)`: calcola l'importo ancora mancante (`targetAmount - currentAmount`), mai negativo.
 - `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.
@@ -200,3 +207,4 @@ Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi
 - `countTagUsage(data, kind)`: calcola in un solo passaggio una `Map<Id, number>` con il numero di voci che usano ciascuna categoria, metodo di pagamento o tag (per i tag ogni movimento conta al più una volta). Esposto dallo store come `finance.tagUsageCounts` (e letto da `finance.tagUsage`).
 - `filterAndSortTags(tags, usage, options)`: filtra per testo di ricerca (`normalizeTagSearch`, insensibile a maiuscole e accenti) e stato di utilizzo (`'all' | 'used' | 'unused'`) e ordina per nome (`'name'`) o per utilizzi decrescenti con spareggio alfabetico (`'usage'`).
 - `groupTagsByLetter(tags)`: raggruppa un elenco ordinato alfabeticamente per lettera iniziale normalizzata (`A`–`Z`, oppure `#` per numeri e simboli), usato da `TagManager` per evitare elenchi troppo lunghi.
+- `suggestTags(tags, usage, { query, excludeIds })`: i tag da proporre nel campo che cerca e crea (`TagInput`, `PKT-21`). A campo vuoto i più usati (al massimo `TAG_SUGGESTIONS_EMPTY`, 6); scrivendo prima il nome identico, poi chi inizia con il testo, poi chi lo contiene, ognuno dal più usato (al massimo `TAG_SUGGESTIONS_QUERY`, 8). Restituisce anche `exact`, il tag con il nome scritto senza badare a maiuscole e accenti, anche se già scelto: così il modulo non crea «caffe» se esiste «caffè». I tag già scelti non vengono proposti.

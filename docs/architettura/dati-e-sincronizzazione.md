@@ -7,13 +7,12 @@ source-files:
   - src/services/backupCrypto.ts
   - src/services/sync/api.ts
   - src/services/sync/engine.ts
-  - src/services/csvExport.ts
   - src/services/exportData.ts
   - src/services/xlsx/writer.ts
   - src/services/xlsx/zipWriter.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-15
+verified: 2026-11-20
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -147,4 +146,4 @@ Il servizio [`src/services/exportData.ts`](../../src/services/exportData.ts) org
 - **Prestiti**: elenco dei prestiti concessi/ricevuti, importo, data, rimborsato, residuo e storico rimborsi.
 - **Categorie e metodi**: elenco delle entità ausiliarie con relativi colori.
 
-La generazione delle cartelle di lavoro Excel con più fogli avviene client-side in puro TypeScript tramite [`src/services/xlsx/writer.ts`](../../src/services/xlsx/writer.ts) e [`src/services/xlsx/zipWriter.ts`](../../src/services/xlsx/zipWriter.ts), senza alcuna libreria esterna. È inoltre supportata l'esportazione di archivi ZIP con i singoli file CSV per sezione e di file CSV dedicati a singole sezioni tramite [`src/services/csvExport.ts`](../../src/services/csvExport.ts).
+La generazione delle cartelle di lavoro Excel con più fogli avviene client-side in puro TypeScript tramite [`src/services/xlsx/writer.ts`](../../src/services/xlsx/writer.ts) e [`src/services/xlsx/zipWriter.ts`](../../src/services/xlsx/zipWriter.ts), senza alcuna libreria esterna. È inoltre supportata l'esportazione di archivi ZIP con i singoli file CSV per sezione (`exportToCsvZip`) e di file CSV dedicati a singole sezioni (`exportSectionToCsv`), sempre tramite [`src/services/exportData.ts`](../../src/services/exportData.ts).

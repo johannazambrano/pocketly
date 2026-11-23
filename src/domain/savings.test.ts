@@ -7,6 +7,7 @@ import {
   goalStatus,
   movementFor,
   savedAmounts,
+  savedBetween,
   savingsSummary,
   sortSavingsGoals,
   withSavedAmounts,
@@ -26,6 +27,28 @@ describe('savings domain', () => {
       ...overrides,
     }
   }
+
+  describe('savedBetween', () => {
+    const movements = [
+      { id: 'm1', goalId: 'a', date: '2026-04-30', amount: 9000 },
+      { id: 'm2', goalId: 'a', date: '2026-05-01', amount: 20000 },
+      { id: 'm3', goalId: 'b', date: '2026-05-10', amount: -5000 },
+      { id: 'm4', goalId: 'a', date: '2026-05-20', amount: 7000 },
+    ]
+
+    it('somma versamenti e prelievi del periodo, estremi compresi, fino a oggi', () => {
+      // maggio fino al 15: 200 − 50; quello di aprile e quello del 20 maggio (dopo oggi) non contano
+      expect(savedBetween(movements, '2026-05-01', '2026-05-31', TODAY)).toBe(15000)
+    })
+
+    it('è negativo quando si è prelevato più di quanto si è versato', () => {
+      expect(savedBetween(movements, '2026-05-02', '2026-05-31', TODAY)).toBe(-5000)
+    })
+
+    it('per un periodo tutto futuro è zero', () => {
+      expect(savedBetween(movements, '2026-06-01', '2026-06-30', TODAY)).toBe(0)
+    })
+  })
 
   describe('withSavedAmounts', () => {
     it("somma versamenti e prelievi di ogni salvadanaio, senza scendere sotto zero", () => {

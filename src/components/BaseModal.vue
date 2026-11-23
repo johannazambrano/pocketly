@@ -1,13 +1,17 @@
 <script lang="ts">
+import { createBackgroundScrollLock } from '@/utils/modalViewport'
+
 /**
  * Finché una finestra è aperta, il resto dell'app è inerte: non si raggiunge con Tab né con il lettore di schermo, e
  * il focus non può finire dietro lo sfondo scuro. Le finestre possono sovrapporsi (una conferma sopra un modulo):
- * il contatore, condiviso da tutte le finestre, tiene inerte l'app finché non si chiude l'ultima. Le finestre stesse
- * stanno fuori da #app (Teleport), quindi restano usabili.
+ * il contatore, condiviso da tutte le finestre, tiene inerte l'app e bloccato lo scroll di fondo finché non si chiude
+ * l'ultima. Le finestre stesse stanno fuori da #app (Teleport), quindi restano usabili.
  */
 let openCount = 0
 /** Le finestre aperte, dall'ultima in cima: solo quella in cima risponde a Esc e tiene il Tab. */
 const stack: symbol[] = []
+/** Blocco scroll di sfondo compatibile con iOS WebKit (condiviso tra modali sovrapposte). */
+const scrollLock = createBackgroundScrollLock()
 /** C'è almeno una finestra aperta (es. per non aprire la ricerca sopra un modulo con Ctrl+K). */
 export function isAnyModalOpen(): boolean {
   return openCount > 0
@@ -19,10 +23,19 @@ function setAppInert(on: boolean) {
 </script>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore } from '@/stores/appearance'
+import {
+  createHorizontalDragFallback,
+  findModalScrollables,
+  isRangeInput,
+  readVisualViewportBox,
+  refreshHorizontalScrollers,
+  shouldPreventModalTouchMove,
+  type ViewportBox,
+} from '@/utils/modalViewport'
 
 /**
  * `dirty`: il modulo dentro ha modifiche non salvate; chiudendo con Esc, ✕ o lo sfondo si chiede prima conferma.
@@ -64,9 +77,155 @@ async function requestClose() {
   emit('close')
 }
 
+const overlay = ref<HTMLElement | null>(null)
 const dialog = ref<HTMLElement | null>(null)
+const scrollBody = ref<HTMLElement | null>(null)
 const heading = ref<HTMLElement | null>(null)
 const titleId = useId()
+const viewportBox = ref<ViewportBox | null>(null)
+
+const overlayStyle = computed(() => ({
+  zIndex: layer.value,
+  ...(viewportBox.value
+    ? { top: `${viewportBox.value.top}px`, height: `${viewportBox.value.height}px` }
+    : { top: '0px', bottom: '0px' }),
+}))
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+let lastResetOffset = 0
+function cancelHorizontalRefresh() {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer)
+    refreshTimer = null
+  }
+}
+function scheduleHorizontalRefresh(delayMs = 0) {
+  cancelHorizontalRefresh()
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    if (isOpen) refreshHorizontalScrollers(scrollBody.value)
+  }, delayMs)
+}
+
+function syncViewport() {
+  const vv = window.visualViewport
+  if (vv && (!vv.scale || vv.scale <= 1.01) && scrollLock.isLocked()) {
+    if (vv.offsetTop > 0 && vv.offsetTop !== lastResetOffset) {
+      lastResetOffset = vv.offsetTop
+      window.scrollTo(0, 0)
+    } else if (vv.offsetTop <= 0) {
+      lastResetOffset = 0
+    }
+  }
+  const prevHeight = viewportBox.value?.height
+  const next = readVisualViewportBox(vv)
+  viewportBox.value = next
+  if (next && prevHeight !== undefined && next.height !== prevHeight) {
+    // Su iOS la tastiera impiega ~300 ms ad assestarsi: rifresca gli scroller orizzontali a fine animazione.
+    scheduleHorizontalRefresh(350)
+  }
+}
+
+function onAfterEnter() {
+  if (!isOpen) return
+  syncViewport()
+  scheduleHorizontalRefresh(0)
+}
+
+const horizontalFallback = createHorizontalDragFallback()
+let hasTouch = false
+let lastTouchX = 0
+let lastTouchY = 0
+let attachedOverlay: HTMLElement | null = null
+let suppressClickTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearClickSuppressor() {
+  if (suppressClickTimer !== null) {
+    clearTimeout(suppressClickTimer)
+    suppressClickTimer = null
+  }
+  attachedOverlay?.removeEventListener('click', blockClickOnce, true)
+}
+
+function blockClickOnce(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  clearClickSuppressor()
+}
+
+function onTouchStart(e: TouchEvent) {
+  clearClickSuppressor()
+  if (e.touches.length !== 1) {
+    hasTouch = false
+    horizontalFallback.end()
+    return
+  }
+  const touch = e.touches[0]!
+  hasTouch = true
+  lastTouchX = touch.clientX
+  lastTouchY = touch.clientY
+  const { xScroller } = findModalScrollables(e.target, scrollBody.value)
+  horizontalFallback.start(xScroller)
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (e.touches.length !== 1 || isRangeInput(e.target)) {
+    hasTouch = false
+    horizontalFallback.end()
+    return
+  }
+  const touch = e.touches[0]!
+  if (!hasTouch) {
+    hasTouch = true
+    lastTouchX = touch.clientX
+    lastTouchY = touch.clientY
+    return
+  }
+  const dx = touch.clientX - lastTouchX
+  const dy = touch.clientY - lastTouchY
+  lastTouchX = touch.clientX
+  lastTouchY = touch.clientY
+
+  const fbResult = horizontalFallback.step(dx, dy)
+  if (fbResult === 'handled') {
+    e.preventDefault()
+    return
+  }
+  if (fbResult === 'native') return
+
+  const { inScrollBody, xScroller, yScroller } = findModalScrollables(e.target, scrollBody.value)
+  if (shouldPreventModalTouchMove({ inScrollBody, dx, dy, xScroller, yScroller })) {
+    e.preventDefault()
+  }
+}
+
+function onTouchEnd(e: TouchEvent) {
+  const draggedHorizontally = horizontalFallback.end()
+  if (draggedHorizontally && attachedOverlay) {
+    attachedOverlay.addEventListener('click', blockClickOnce, { capture: true, once: true })
+    suppressClickTimer = setTimeout(clearClickSuppressor, 120)
+  }
+  if (e.touches.length !== 1) {
+    hasTouch = false
+    return
+  }
+  const touch = e.touches[0]!
+  hasTouch = true
+  lastTouchX = touch.clientX
+  lastTouchY = touch.clientY
+}
+
+function detachOverlayTouch() {
+  clearClickSuppressor()
+  horizontalFallback.end()
+  hasTouch = false
+  if (!attachedOverlay) return
+  attachedOverlay.removeEventListener('touchstart', onTouchStart)
+  attachedOverlay.removeEventListener('touchmove', onTouchMove)
+  attachedOverlay.removeEventListener('touchend', onTouchEnd)
+  attachedOverlay.removeEventListener('touchcancel', onTouchEnd)
+  attachedOverlay = null
+}
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
@@ -103,29 +262,52 @@ async function onOpen() {
   isOpen = true
   opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
   document.addEventListener('keydown', onKey)
-  document.body.style.overflow = 'hidden'
+  if (openCount === 0) {
+    scrollLock.lock()
+    setAppInert(true)
+  }
+  syncViewport()
+  window.visualViewport?.addEventListener('resize', syncViewport)
+  window.visualViewport?.addEventListener('scroll', syncViewport)
+  window.addEventListener('resize', syncViewport)
   openCount++
   stack.push(me)
   layer.value = 50 + stack.length
-  setAppInert(true)
   await nextTick()
+  if (!isOpen) return
+  syncViewport()
+  if (overlay.value) {
+    detachOverlayTouch()
+    attachedOverlay = overlay.value
+    attachedOverlay.addEventListener('touchstart', onTouchStart, { passive: true })
+    attachedOverlay.addEventListener('touchmove', onTouchMove, { passive: false })
+    attachedOverlay.addEventListener('touchend', onTouchEnd, { passive: true })
+    attachedOverlay.addEventListener('touchcancel', onTouchEnd, { passive: true })
+  }
   const field = props.initialFocus ? dialog.value?.querySelector<HTMLElement>(props.initialFocus) : null
-  ;(field ?? heading.value)?.focus()
+  ;(field ?? heading.value)?.focus({ preventScroll: true })
+  if (field) scheduleHorizontalRefresh(350)
 }
 function onClose() {
   if (!isOpen) return
   isOpen = false
+  lastResetOffset = 0
+  cancelHorizontalRefresh()
   document.removeEventListener('keydown', onKey)
+  window.visualViewport?.removeEventListener('resize', syncViewport)
+  window.visualViewport?.removeEventListener('scroll', syncViewport)
+  window.removeEventListener('resize', syncViewport)
+  detachOverlayTouch()
   openCount = Math.max(0, openCount - 1)
   const at = stack.indexOf(me)
   if (at >= 0) stack.splice(at, 1)
   if (openCount === 0) {
-    document.body.style.overflow = ''
+    scrollLock.unlock()
     setAppInert(false)
   }
   const target = opener
   opener = null
-  if (target?.isConnected) target.focus()
+  if (target?.isConnected) target.focus({ preventScroll: true })
 }
 
 watch(
@@ -144,32 +326,37 @@ onBeforeUnmount(onClose)
       leave-to-class="opacity-0"
       enter-active-class="transition duration-150"
       leave-active-class="transition duration-150"
+      @after-enter="onAfterEnter"
     >
       <div
         v-if="open"
-        class="fixed inset-0 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
-        :style="{ zIndex: layer }"
-        @click.self="requestClose"
+        ref="overlay"
+        class="fixed inset-x-0 flex items-end justify-center overflow-hidden overscroll-none sm:items-center sm:p-4"
+        :style="overlayStyle"
       >
+        <!-- Sfondo scuro separato dal foglio: `touch-none` blocca il trascinamento fuori dal foglio senza impedire lo scroll interno. -->
+        <div class="absolute inset-0 bg-black/60 touch-none" aria-hidden="true" @click="requestClose"></div>
+
         <div
           ref="dialog"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="titleId"
-          class="sheet pb-safe max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain shadow-xl sm:max-w-lg"
+          class="sheet relative z-10 flex max-h-[92%] w-full max-w-md flex-col overflow-hidden overscroll-none shadow-xl sm:max-h-[90%] sm:max-w-lg"
           :class="{
             'rounded-t-xl bg-canvas sm:rounded-xl': appearance.platform === 'ios',
             'rounded-t-[28px] bg-surface sm:rounded-[28px]': appearance.platform === 'android',
             'rounded-t-2xl bg-surface sm:rounded-xl': appearance.platform === 'desktop',
           }"
         >
-          <!-- Telefono: la maniglia in cima al foglio, come in iOS e Android. -->
-          <div v-if="appearance.platform !== 'desktop'" class="flex justify-center pt-2 sm:hidden" aria-hidden="true">
-            <span class="h-1.5 w-9 rounded-full bg-ink-6/60"></span>
-          </div>
-          <div :class="appearance.platform === 'desktop' ? 'p-5' : 'px-4 pt-2 pb-5'">
+          <!-- Testata fissa (maniglia + barra titolo): non scorre e non trascina il viewport su iPhone. -->
+          <div class="shrink-0 touch-none" :class="appearance.platform === 'desktop' ? 'px-5 pt-5' : 'px-4 pt-2'">
+            <!-- Telefono: la maniglia in cima al foglio, come in iOS e Android. -->
+            <div v-if="appearance.platform !== 'desktop'" class="mb-2 flex justify-center sm:hidden" aria-hidden="true">
+              <span class="h-1.5 w-9 rounded-full bg-ink-6/60"></span>
+            </div>
             <!-- iPhone con un modulo: Annulla · titolo · Fine, Fine invia il modulo. -->
-            <div v-if="appearance.platform === 'ios' && formId" class="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div v-if="appearance.platform === 'ios' && formId" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-3">
               <!-- "Annulla" è una scelta esplicita come quello in fondo ai moduli: chiude subito, senza chiedere. -->
               <button type="button" class="justify-self-start py-2 text-[17px] text-accent" @click="emit('close')">{{ t('common.cancel') }}</button>
               <h3 :id="titleId" ref="heading" tabindex="-1" class="truncate text-center text-[17px] font-semibold text-ink focus:outline-none">{{ title }}</h3>
@@ -177,8 +364,8 @@ onBeforeUnmount(onClose)
             </div>
             <div
               v-else
-              class="mb-3 flex items-center justify-between gap-2"
-              :class="{ 'border-b border-line pb-2': appearance.platform === 'desktop' }"
+              class="flex items-center justify-between gap-2 pb-2"
+              :class="{ 'border-b border-line': appearance.platform === 'desktop' }"
             >
               <h3
                 :id="titleId"
@@ -204,6 +391,18 @@ onBeforeUnmount(onClose)
                 <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
               </button>
             </div>
+          </div>
+
+          <!-- Corpo scorrevole solo in verticale: impedisce lo spostamento libero in 2D su iPhone senza bloccare eventuali righe orizzontali interne. -->
+          <div
+            ref="scrollBody"
+            class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain touch-manipulation"
+            :class="
+              appearance.platform === 'desktop'
+                ? 'px-5 pt-3 pb-5'
+                : 'px-4 pt-1 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5'
+            "
+          >
             <slot />
           </div>
         </div>

@@ -22,7 +22,7 @@ source-files:
   - server/webpush.py
   - deploy/proxmox/nginx/pocketly.conf
   - deploy/proxmox/pocketly-sync.service
-verified: 2026-11-17
+verified: 2026-11-20
 ---
 
 # Analisi e Progetto di Scalabilità (PKT-13)
@@ -108,10 +108,10 @@ Obiettivo: portare il tetto pratico ben oltre i 10–15 anni di utilizzo e ridur
 - **Partizione per anno (se i dati superano anche la compressione):** separare i dati "caldi" (anagrafiche + anno corrente/futuro + prestiti/salvadanai attivi) dagli anni chiusi (`archive-YYYY`), eseguendo merge a 3 vie (`mergeFinanceData`) e sync solo sui blocchi cambiati.
 - **Riduzione copie reattive:** sostituire `JSON.parse(JSON.stringify(...))` con `structuredClone(toRaw(...))` in `storage.ts` / `sync.ts` / `engine.ts`, e valutare il backoff esponenziale lato server sui fallimenti temporanei Web Push.
 
-### Fase 3 — Evoluzione Multi-Tenant / Multi-Utente (coordinata con `PKT-12`)
+### Fase 3 — Evoluzione Multi-Tenant / Multi-Utente (coordinata con `PKT-12` / `PKT-25`)
 Obiettivo: permettere a più utenti/famiglie indipendenti di usare la stessa istanza server in isolamento e sicurezza.
-- **Persistenza SQLite Zero-Dependency (`sqlite3` in modalità `WAL`):** sostituire la coppia globale `current.json` / `push.json` eliminando la riscrittura completa del file ad ogni sync/notifica, il lock globale su JSON e introducendo query indicizzate per `tenant_id` e `fire_at <= now`.
-- **Autenticazione e quote per tenant:** sostituire `POCKETLY_SYNC_KEY` condivisa con il modello di identità/sessione definito in [`PKT-12`](../backlog.md), applicando limiti (`MAX_BODY_BYTES`, `MAX_PUSH_DEVICES`, `MAX_PUSH_SCHEDULE`, rate limit) per singolo tenant.
+- **Persistenza SQLite Zero-Dependency (`sqlite3` in modalità `WAL`):** sostituire la coppia globale `current.json` / `push.json` eliminando la riscrittura completa del file ad ogni sync/notifica, il lock globale su JSON e introducendo query indicizzate per `vault_id` (`tenant_id`) e `fire_at <= now`.
+- **Autenticazione e quote per archivio:** sostituire `POCKETLY_SYNC_KEY` condivisa con il modello di identità, sessioni revocabili e archivi personali/condivisi definito in [Progetto Autenticazione](./autenticazione.md) (`PKT-12`, implementazione in `PKT-25`), applicando limiti (`MAX_BODY_BYTES`, `MAX_PUSH_DEVICES`, `MAX_PUSH_SCHEDULE`, rate limit) per singolo archivio/utente.
 - **Worker HTTP:** sostituire `ThreadingHTTPServer` con un server WSGI/ASGI con pool limitato se la concorrenza supera poche decine di richieste/sec.
 
 ---
@@ -161,8 +161,8 @@ Questa sezione raccoglie i dettagli tecnici pronti all'uso per suddividere e svo
 - **Flusso:** in cifratura (`encryptWithKey` / `encryptBackup`) comprimere il JSON UTF-8 con `CompressionStream('gzip')` (se disponibile) prima di `crypto.subtle.encrypt` e impostare `compression: 'gzip'`; in decifratura (`decryptWithKey`), dopo `crypto.subtle.decrypt`, se `file.compression === 'gzip'` decomprimere con `DecompressionStream('gzip')`, altrimenti decodificare direttamente UTF-8 (retrocompatibilità totale con tutti i backup `version: 1` esistenti).
 - **Vincolo operativo:** prima di attivare la compressione sul sync, tutti i dispositivi collegati allo stesso server devono essere aggiornati a una versione dell'app che sappia leggere i payload compressi.
 
-### 4.5 Schema SQLite Multi-Tenant (Fase 3, coordinata con `PKT-12`)
-- Usare `sqlite3` della libreria standard Python (`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;`) in `POCKETLY_DATA_DIR/pocketly.db`:
+### 4.5 Schema SQLite Multi-Tenant (Fase 3, coordinata con `PKT-12` / `PKT-25`)
+- Usare `sqlite3` della libreria standard Python (`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;`) in `POCKETLY_DATA_DIR/pocketly.db` (nel modello di [autenticazione.md](./autenticazione.md) §5.2 il `tenant_id` corrisponde a `vault_id`, unificando archivi personali e condivisi):
   - `sync_state(tenant_id TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at TEXT, payload_json TEXT NOT NULL)`
   - `sync_history(tenant_id TEXT NOT NULL, version INTEGER NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY (tenant_id, version))`
   - `push_devices(tenant_id TEXT NOT NULL, device_id TEXT NOT NULL, endpoint TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (tenant_id, device_id))`
@@ -176,4 +176,4 @@ Questa sezione raccoglie i dettagli tecnici pronti all'uso per suddividere e svo
 
 L'esecuzione di questo piano è tracciata in [Backlog di Pocketly](../backlog.md) sotto l'attività:
 - **PKT-18** — Implementazione piano di scalabilità (da PKT-13) *(stato: `da fare`, collegata direttamente a questo documento; chi la prenderà in carico potrà dividerla in sotto-attività per Fase 1 / Fase 2)*.
-- L'evoluzione multi-tenant (Fase 3) resta coordinata con la progettazione dell'autenticazione in **PKT-12**.
+- L'evoluzione multi-tenant (Fase 3) è progettata in [Progetto Autenticazione](./autenticazione.md) (`PKT-12`) e coordinata con l'implementazione in **PKT-25**.

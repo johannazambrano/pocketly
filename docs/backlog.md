@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Backlog di Pocketly
@@ -24,17 +24,21 @@ collegamento, senza ripeterne il testo.
 | PKT-09 | Critique 12 della dashboard: P1 e P2 | fatto | — | Johanna |
 | PKT-10 | L'avviso del backup porta al riquadro del backup | fatto | — | Johanna |
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
-| PKT-12 | Progettare l'autenticazione nell'app | da fare | media | libero |
+| PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
-| PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
+| PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Johanna |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
-| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da decidere | bassa | libero |
+| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | fatto | — | Johanna |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
-| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | da fare | media | libero |
+| PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | fatto | — | Johanna |
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
+| PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
+| PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
+| PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
+| PKT-26 | Blocco scroll e viewport delle modali su iPhone | fatto nel ramo, da unire | media | Jonny |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -201,11 +205,13 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     (`2250894`); in `main` (`384514e`).
 
 ### PKT-12 — Progettare l'autenticazione nell'app
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Chi:** Jonny
 - **Perché:** definire un meccanismo di autenticazione per l'app in linea con l'architettura di Pocketly.
+- **Risultato:** progetto completo e piano implementativo a 3 fasi documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md) (blocco locale con cifratura IndexedDB at-rest incluso `SyncState.base`, Master Password unica Zero-Knowledge con envelope encryption `vaultDEK` e Recovery Key, piena compatibilità password manager e WebAuthn PRF, account su invito/admin con sessioni `HttpOnly` revocabili su SQLite WAL coordinato con `PKT-13`/`PKT-18`, archivi condivisi coppia/famiglia via ECDH P-256). Aperta l'attività operativa `PKT-25`.
 - **Fatto quando:** progetto dell'autenticazione completato e documentato (requisiti, flussi, sessione/credenziali, impatti su dati locali, sync e server); eventuali attività di sviluppo aperte nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-20 analisi condivisa e progetto completato (Jonny): redatta [autenticazione.md](architettura/autenticazione.md), aggiornati [README.md](README.md) e [scalabilita.md](architettura/scalabilita.md), aperta `PKT-25` con link diretto al piano implementativo.
 
 ### PKT-13 — Analisi di scalabilità e progettazione dell'eventuale evoluzione
 - **Stato:** fatto · **Chi:** Jonny
@@ -219,11 +225,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 in `develop` con `5e53524` (ramo `docs/scalabilita`, commit `0c3a83e`).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** in corso · **Priorità:** media · **Chi:** Johanna
 - **Perché:** eseguire un'analisi di sicurezza dell'app (frontend, crittografia, sync, notifiche, backend e deploy) e applicare gli eventuali fix necessari.
 - **Fatto quando:** analisi di sicurezza completata e documentata; eventuali fix applicati e verificati (o tracciati in attività dedicate se richiedono interventi ampi).
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-23 presa in carico (Johanna).
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -260,6 +267,8 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-20 in `develop` con `210273d` (correzioni `f5e3002` avviso del backup letto dai lettori di schermo,
     `4f168de` promemoria del backup nascosto solo sull'indice e in Dati e backup, `35f34f0` sezione non montata
     sull'indice da telefono). Da provare sui telefoni nella versione di prova di `develop`.
+  - 2026-11-20 `develop` portato in `main` con `2c25946`. Vercel ripubblica `main` da solo; resta `update.sh` sul
+    container. Il formato dei dati resta il 3, quindi i telefoni non devono aggiornarsi per sincronizzare.
 
 ### PKT-17 — Categorie, metodi e tag in ordine alfabetico
 - **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
@@ -286,17 +295,48 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta da analisi PKT-13 (Jonny).
 
 ### PKT-19 — Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05)
-- **Stato:** da decidere · **Priorità:** bassa · **Chi:** libero
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** due decisioni rimaste aperte da `PKT-05`, rimandate per pubblicare intanto quello che c'è.
   1. I soldi messi nei salvadanai oggi non riducono la cifra principale della Dashboard: chi mette da parte 200 €
      vede ancora quei 200 € come disponibili. Si può aggiungere una riga «di cui messi da parte» o contare il
      versamento come un'uscita. Vedi [Stato e Difetti Noti](known-issues.md) §5.
   2. `src/services/csvExport.ts` (con il suo test) non è usato dall'app: l'esportazione passa da `exportData.ts`.
      Va tolto o collegato.
+- **Decisione (Johanna, Jonny, 2026-11-20):**
+  1. I soldi nei salvadanai sono messi da parte apposta per non usarli: se restano nella cifra grande si rischia di
+     farci affidamento. Nella cifra grande della Dashboard («Risultato di …», «Risultato a oggi», «Risultato
+     dell'anno») i versamenti nei salvadanai contano come uscite e i prelievi come entrate; contano solo i movimenti
+     già fatti. Il confronto con la media dei mesi precedenti usa la stessa regola anche sugli altri mesi. Il
+     dettaglio per categoria e per metodo di pagamento resta delle sole spese (i versamenti non hanno categoria);
+     previsioni, Budget e formato dei dati non cambiano.
+     Sotto la cifra una riga, solo se c'è almeno un salvadanaio attivo, che porta a Budget → Salvadanai:
+     ```
+     Risultato di novembre
+     +300 €
+     200 € nei salvadanai · consigliati 350 € questo mese  ›
+     ```
+     La quota è la «quota mensile consigliata» che l'app calcola già (`savingsSummary`); raggiunta la quota la riga
+     lo dice («in linea»). Niente riquadro nuovo nella Dashboard. Da aggiornare anche
+     [Stato e Difetti Noti](known-issues.md) §5.
+  2. `csvExport.ts` si toglie: l'esportazione per sezioni di `exportData.ts` copre già tutto.
 - **Fatto quando:** prese le due decisioni con Jonny; fatto quello che ne segue; documentazione e mappa del codice
   aggiornate.
 - **Storia:**
   - 2026-11-17 aperta da `PKT-05` (Johanna).
+  - 2026-11-20 prese le due decisioni con Jonny (vedi **Decisione**); presa in carico (Johanna). `csvExport.ts`
+    tolto nel ramo `chore/togli-csv-export` (`38da887`).
+  - 2026-11-20 `csvExport.ts` tolto in `develop` con `b1daf55`. Resta la parte dei salvadanai.
+  - 2026-11-23 parte dei salvadanai fatta nel ramo `feature/pkt-19-salvadanai-dashboard` (Johanna): `savedBetween`
+    in `savings.ts`; risultato, previsto e media dei mesi precedenti al netto dei salvadanai; riga sotto la cifra
+    che porta a Budget → Salvadanai, con la quota consigliata nel mese in corso e «in linea» quando è raggiunta.
+    Provata su iPhone, Android e PC. Per un mese passato o per l'anno la riga dice solo quanto è andato nei
+    salvadanai; per un mese futuro solo la quota.
+  - 2026-11-23 in `develop` con `511cdc9` (commit `34f3e03`). Da provare sui telefoni nella versione di prova di
+    `develop`.
+  - 2026-11-23 corretto nel ramo `fix/pkt-19-verdetto-mese` (Johanna): per un mese passato la frase «meglio/peggio
+    della media» confrontava il risultato senza togliere i salvadanai del mese con una media che li toglieva; ora
+    `balanceVsAverage` li toglie da tutte e due le parti. Nello stesso ramo, fuori da `PKT-19`: sulla Dashboard il
+    messaggio «nessun addebito in arrivo» compariva anche sotto un elenco corto di prossimi addebiti.
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
@@ -318,7 +358,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     nella versione di prova di `develop`.
 
 ### PKT-21 — Scelta dei tag nel modulo con ricerca o menu a tendina
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Priorità:** — · **Chi:** Johanna
 - **Perché:** nel modulo di spese ed entrate (`TagInput`, usato da `TransactionForm` e `QuickExpenseForm`) tutti i
   tag non scelti compaiono come pillole sotto il campo. Con tanti tag l'elenco diventa lungo, spinge in basso il
   resto del modulo e quello cercato non si trova a colpo d'occhio. Categoria e metodo di pagamento invece si
@@ -335,6 +375,10 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   iPhone, Android e PC; un test sul filtro; documentazione e mappa del codice aggiornate.
 - **Storia:**
   - 2026-11-19 aperta (Johanna).
+  - 2026-11-20 scelta la soluzione del campo unico che cerca e crea, con l'elenco dentro il modulo (Johanna).
+    In `develop` con `040c0b7` (`29b3649` `suggestTags` con i test, `f0e55d5` nuovo `TagInput`): a campo vuoto i 6
+    tag più usati, scrivendo quelli che corrispondono senza badare a maiuscole e accenti, «Crea #nome» se il nome
+    non esiste; tag scelti come pillole sotto il campo. Da provare sui telefoni nella versione di prova di `develop`.
 
 ### PKT-22 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -343,3 +387,45 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** modello dati v4, migrazione, merge 3-vie, logica pura `wealth.ts`, vista `PatrimonyView.vue`, grafico storico SVG, card Dashboard, integrazione Prestiti/Omnisearch/Export, traduzioni `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica visiva su tutte le 6 combinazioni piattaforma × tema.
 - **Storia:**
   - 2026-11-19 aperta: analisi condivisa e piano implementativo completo salvato in [architettura/patrimonio.md](architettura/patrimonio.md).
+
+### PKT-23 — Nascondere gli importi con un tocco
+- **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
+- **Perché:** idea di Jonny (2026-11-20). Chi apre l'app in pubblico o la mostra a qualcuno non vuole che si
+  leggano le cifre.
+- **Come (da decidere):** un tasto (es. l'icona dell'occhio nell'intestazione) che copre gli importi con «••••» in
+  tutta l'app finché non lo si tocca di nuovo; la scelta resta salvata sul dispositivo. Da decidere se vale per
+  tutte le cifre o solo per quelle della Dashboard, e cosa leggono i lettori di schermo («importo nascosto»).
+- **Fatto quando:** decisa la soluzione; gli importi si nascondono e si mostrano su iPhone, Android e PC;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-20 aperta dall'idea di Jonny (Johanna).
+
+### PKT-24 — Scegliere cosa mostrare nella Dashboard
+- **Stato:** idea da decidere · **Priorità:** bassa · **Chi:** libero
+- **Perché:** idea di Jonny (2026-11-20). Non a tutti servono gli stessi blocchi: chi non usa i salvadanai o gli
+  inserimenti rapidi vorrebbe una Dashboard più corta.
+- **Come (da decidere):** in Impostazioni → Aspetto un elenco dei blocchi della Dashboard (riga dei salvadanai di
+  `PKT-19`, inserimenti rapidi, prossimi addebiti, categorie, metodi di pagamento) con un interruttore ciascuno; la
+  cifra principale resta sempre. Da decidere se la scelta vale per il dispositivo o si sincronizza.
+- **Fatto quando:** decisa la soluzione; i blocchi si accendono e si spengono su iPhone, Android e PC;
+  documentazione e mappa del codice aggiornate.
+- **Storia:**
+  - 2026-11-20 aperta dall'idea di Jonny (Johanna).
+
+### PKT-25 — Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12)
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** implementare l'autenticazione progettata in `PKT-12` (blocco locale opzionale con cifratura IndexedDB at-rest, Master Password unica Zero-Knowledge con compatibilità password manager, account su invito/admin con sessioni revocabili su SQLite WAL e archivi condivisi coppia/famiglia). Tutte le specifiche crittografiche, le API, lo schema SQLite e i contratti HTML per password manager sono documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md).
+- **Come partire:** seguire il piano operativo in 3 fasi indipendenti della [Sezione 7 di autenticazione.md](architettura/autenticazione.md#7-piano-implementativo-a-3-fasi-guida-operativa-per-pkt-25) (chi prende in carico il lavoro può dividerle in sotto-task): **Fase A** blocco locale + cifratura IndexedDB at-rest (`'finance-data'` e `SyncState.base`, solo frontend, offline-first); **Fase B1** account Zero-Knowledge, sessioni `HttpOnly` revocabili e backend SQLite WAL (coordinata con `PKT-18` Fase 3); **Fase B2** archivi condivisi coppia/famiglia via ECDH P-256.
+- **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
+- **Storia:**
+  - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
+
+### PKT-26 — Blocco scroll e viewport delle modali su iPhone
+- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny
+- **Perché:** su iPhone, aprendo la modale per inserire una spesa (`TransactionForm` dentro `BaseModal`), trascinando il dito in orizzontale, verticale o con movimenti combinati 2D il contenuto del foglio si spostava liberamente come una pagina web senza vincoli (`body.style.overflow = 'hidden'` ignorato da iOS WebKit, mancanza di `overflow-x-hidden` e `touch-pan-y`, intestazione dentro l'area scorrevole e `fixed inset-0` / `90dvh` non adattati a `window.visualViewport` con tastiera virtuale aperta).
+- **Come:** utility testata [`modalViewport.ts`](../src/utils/modalViewport.ts) (`createBackgroundScrollLock`, `readVisualViewportBox`, `shouldPreventModalTouchMove`, `findModalScrollables`, `refreshHorizontalScrollers`, `createHorizontalDragFallback`) integrata in `BaseModal.vue`: blocco scroll di sfondo compatibile con iOS e modali sovrapposte, overlay ancorato a `visualViewport` (con azzeramento derive `offsetTop`), sfondo separato `touch-none`, testata fissa (`shrink-0 touch-none`) e corpo scorrevole solo in verticale (`overflow-x-hidden overflow-y-auto overscroll-contain touch-manipulation`), preservando fin dalla prima apertura con tastiera lo scorrimento orizzontale interno (chip «Frequenti» in `TransactionForm.vue` con `overflow-y-hidden touch-pan-x will-change-scroll`, reflow post-tastiera e fallback `scrollLeft` quando WebKit congela lo scroller nativo). Aggiunto `overflow-x: clip` su `html`/`body` e `max-w-full` su `.field` in `src/style.css`.
+- **Fatto quando:** test unitari verdi, `typecheck`, `test:server`, `build` e `docs:check` verdi, documentazione aggiornata; verificato su iPhone (Safari e PWA) che la modale resti ferma su scorrimenti orizzontali/2D e scorra solo in verticale quando serve.
+- **Storia:**
+  - 2026-11-23 aperta e implementata nel ramo `fix/modale-scroll-ios` (Jonny, `ecc4017`): introdotta `modalViewport.ts` con test unitari, aggiornati `BaseModal.vue`, `TransactionForm.vue`, `style.css` e documentazione (`mappa-codice.md`, `componenti-e-viste.md`, `frontend.md`).
+  - 2026-11-23 seconda iterazione dopo prova su iPhone (`1b514c6`): `touch-manipulation` sul corpo e `overflow-y-hidden touch-pan-x will-change-scroll` sui chip «Frequenti».
+  - 2026-11-23 terza iterazione dopo prova su iPhone: azzeramento derive `visualViewport.offsetTop`, reflow reale post-tastiera (`refreshHorizontalScrollers` a 350 ms) e fallback `createHorizontalDragFallback` su `scrollLeft` (con soppressione click accidentali) se `WKChildScrollView` resta bloccato alla prima apertura con tastiera. Da riprovare su iPhone e unire in `develop`.

@@ -4,8 +4,9 @@ import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
-import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
-import { lastDayOfMonth, parseIsoDate, yearOf } from '@/utils/dates'
+import { balanceVsAverage, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
+import { lastDayOfMonth, parseIsoDate, toIsoDate, yearOf } from '@/utils/dates'
+import { savedBetween } from '@/domain/savings'
 import BalancePanel from '@/components/BalancePanel.vue'
 import BreakdownList from '@/components/BreakdownList.vue'
 import MonthSelector from '@/components/MonthSelector.vue'
@@ -156,26 +157,68 @@ const expensesHint = computed(() => {
  * registrato. Nell'interfaccia si chiama sempre "Risultato": non è il saldo del conto, che l'app non conosce, e un nome
  * solo per ogni periodo evita che la stessa grandezza sembri tre cose diverse.
  */
-const displayBalance = computed(() => {
-  if (!ms.value) return s.value.balanceToDate
-  return monthToDate.value ? ms.value.balanceToDate : ms.value.balance
+/**
+ * Quanto è andato nei salvadanai nel periodo scelto, al netto dei prelievi, contando solo i movimenti già fatti
+ * (`PKT-19`). I soldi messi da parte non sono più disponibili: la cifra grande li toglie come un'uscita, e i prelievi
+ * la fanno risalire come un'entrata. Entrate, uscite e ripartizioni restano invece quelle di spese ed entrate.
+ */
+const savedInPeriod = computed(() => {
+  const year = finance.selectedYear
+  const m = finance.selectedMonth
+  const from = toIsoDate(year, m === 'all' ? 0 : m, 1)
+  const to = m === 'all' ? toIsoDate(year, 11, 31) : lastDayOfMonth(year, m)
+  return savedBetween(finance.data.savingsMovements ?? [], from, to, finance.today)
 })
-/** Il previsto a fine periodo; null per un periodo passato, dove coinciderebbe con il saldo. */
+
+const displayBalance = computed(() => {
+  const base = !ms.value ? s.value.balanceToDate : monthToDate.value ? ms.value.balanceToDate : ms.value.balance
+  return base - savedInPeriod.value
+})
+/**
+ * Il previsto a fine periodo; null per un periodo passato, dove coinciderebbe con il saldo. Toglie anche lui i
+ * versamenti già fatti nei salvadanai, ma non quelli consigliati: la previsione resta su ciò che è registrato.
+ */
 const projected = computed(() => {
-  if (ms.value) return ms.value.timing === 'past' ? null : ms.value.projectedBalance
-  return isPastYear.value ? null : s.value.projectedBalance
+  const base = ms.value ? (ms.value.timing === 'past' ? null : ms.value.projectedBalance) : isPastYear.value ? null : s.value.projectedBalance
+  return base === null ? null : base - savedInPeriod.value
 })
 
 /**
- * Un mese chiuso dice com'è andato: il suo saldo rispetto alla media dei mesi precedenti dell'anno.
+ * La riga dei salvadanai sotto la cifra grande, che porta a Budget → Salvadanai. Spiega perché la cifra non è entrate
+ * meno uscite (quanto è andato nei salvadanai nel periodo) e, per il mese in corso, quanto l'app consiglia di metterci
+ * («in linea» quando la quota è raggiunta). Senza movimenti nel periodo e senza quota da consigliare non c'è.
+ */
+const savingsLine = computed(() => {
+  const saved = savedInPeriod.value
+  const quota = finance.savingsSummaryData.totalMonthlyQuota
+  const timing = ms.value?.timing
+  const scope = ms.value ? t('dashboard.savingsInMonth', monthArgs.value) : t('dashboard.savingsInYear', { year: finance.selectedYear })
+  const moved =
+    saved > 0
+      ? t('dashboard.savingsPut', { amount: money(saved) })
+      : saved < 0
+        ? t('dashboard.savingsTaken', { amount: money(-saved) })
+        : ''
+  if (timing === 'current' && quota > 0) {
+    if (saved >= quota) return t('dashboard.savingsInline', { amount: money(saved), quota: money(quota) })
+    if (saved > 0) return t('dashboard.savingsBelowQuota', { amount: money(saved), quota: money(quota) })
+    if (saved < 0) return t('dashboard.savingsTakenQuota', { amount: money(-saved), quota: money(quota) })
+    return t('dashboard.savingsQuota', { quota: money(quota) })
+  }
+  if (timing === 'future') return quota > 0 ? t('dashboard.savingsQuotaFuture', { quota: money(quota) }) : undefined
+  return moved ? `${moved} ${scope}` : undefined
+})
+
+/**
+ * Un mese chiuso dice com'è andato: la cifra grande (al netto dei salvadanai) rispetto alla media dei mesi precedenti
+ * dell'anno, contata allo stesso modo (`balanceVsAverage`).
  * Per un saldo "sopra" vuol dire meglio, quindi la frase dice meglio o peggio, non sopra o sotto.
  */
 const pastMonthVerdict = computed(() => {
   if (ms.value?.timing !== 'past') return undefined
-  const average = averageBalanceBefore(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
-  if (average === null) return undefined
-  const verdict = compareToAverage(ms.value.balance, average)
-  return t(`dashboard.balanceVs${VERDICT_KEY[verdict]}`, { average: money(average) })
+  const result = balanceVsAverage(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
+  if (!result) return undefined
+  return t(`dashboard.balanceVs${VERDICT_KEY[result.verdict]}`, { average: money(result.average) })
 })
 
 /**
@@ -260,6 +303,9 @@ const mainFigure = computed(() => {
  * Le righe sommano sempre al previsto: risultato fino a oggi (o, per un mese futuro, niente), più le entrate che devono
  * ancora arrivare (registrate e stimate separate), meno le uscite in arrivo.
  */
+/** La cifra grande con, sotto, la riga dei salvadanai. */
+const mainPanel = computed(() => ({ ...mainFigure.value, savings: savingsLine.value }))
+
 const explain = computed(() => {
   const main = mainFigure.value
   if (projected.value === null || main.value !== projected.value || (!('today' in main) && !isFutureMonth.value)) return null
@@ -506,7 +552,7 @@ const showUpcoming = computed(
       <BalancePanel
         @touchstart.passive="onTouchStart"
         @touchend.passive="onTouchEnd"
-        :main="mainFigure"
+        :main="mainPanel"
         :income="incomeFigure"
         :expenses="expensesFigure"
         :split="expensesSplit"
@@ -572,8 +618,9 @@ const showUpcoming = computed(
               </ul>
             </div>
           </div>
+          <p v-if="!upcoming.length" class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
           <button
-            v-if="upcomingCollapsible"
+            v-else-if="upcomingCollapsible"
             type="button"
             class="-ml-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-accent hover:text-accent-strong"
             :aria-expanded="upcomingExpanded"
@@ -581,7 +628,6 @@ const showUpcoming = computed(
           >
             {{ upcomingExpanded ? t('dashboard.upcomingFewer') : t('dashboard.upcomingAll', { n: upcoming.length }) }}
           </button>
-          <p v-else class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
         </div>
 
         <div class="card space-y-3">

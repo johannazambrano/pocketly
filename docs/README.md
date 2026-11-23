@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-19
+verified: 2026-11-20
 ---
 
 # Indice della Documentazione di Pocketly
@@ -23,6 +23,7 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Devo capire come funziona la **sync cifrata** e il merge a 3 vie | [Dati e Sincronizzazione](architettura/dati-e-sincronizzazione.md) |
 | Devo comprendere il **server Python** e le notifiche Web Push | [Architettura Backend](architettura/backend.md) |
 | Voglio valutare la **scalabilità** dell'app e il piano evolutivo | [Analisi e Progetto di Scalabilità](architettura/scalabilita.md) |
+| Voglio consultare il progetto di **autenticazione, blocco locale e multi-utente** | [Progetto Autenticazione](architettura/autenticazione.md) |
 | Voglio consultare il progetto e piano della **sezione Patrimonio** | [Progetto Sezione Patrimonio](architettura/patrimonio.md) |
 | Voglio **aggiungere una nuova schermata/vista** | [Guida: Aggiungere una Vista](guide/aggiungere-una-vista.md) |
 | Voglio **aggiungere un nuovo campo** a una transazione o modello | [Guida: Aggiungere un Campo ai Dati](guide/aggiungere-un-campo-ai-dati.md) |
@@ -49,7 +50,8 @@ docs/
 │   ├── dati-e-sincronizzazione.md     <-- DataStore, crittografia E2E, 3-way merge
 │   ├── backend.md                     <-- Server Python (zero-deps), API REST, VAPID
 │   ├── scalabilita.md                 <-- Analisi limiti e progetto evolutivo (PKT-13)
-│   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-21)
+│   ├── autenticazione.md              <-- Progetto e piano autenticazione Zero-Knowledge (PKT-12)
+│   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-22)
 │   └── deploy.md                      <-- Proxmox LXC, systemd, Nginx, proxy Vite
 ├── riferimento/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test

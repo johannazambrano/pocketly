@@ -122,3 +122,55 @@ export function groupTagsByLetter<T extends Pick<Tag, 'name'>>(tags: readonly T[
   }
   return [...groups.entries()].map(([letter, items]) => ({ letter, items }))
 }
+
+/** Quanti tag propone il campo dei tag (`TagInput`) a campo vuoto: i più usati, non tutti. */
+export const TAG_SUGGESTIONS_EMPTY = 6
+/** Quanti tag propone al massimo mentre si scrive. */
+export const TAG_SUGGESTIONS_QUERY = 8
+
+export interface TagSuggestions<T> {
+  /** Tag da proporre, già nell'ordine in cui mostrarli. */
+  items: T[]
+  /** Il tag che ha esattamente il nome scritto (senza badare a maiuscole e accenti), anche se è già scelto. */
+  exact: T | undefined
+}
+
+/**
+ * I tag da proporre nel campo che cerca e crea (`TagInput`, `PKT-21`). `tags` arriva già in ordine alfabetico
+ * (`finance.sortedTags`), così a parità di utilizzi resta quell'ordine.
+ * - A campo vuoto: i più usati, al massimo `TAG_SUGGESTIONS_EMPTY`.
+ * - Scrivendo: prima il nome identico, poi quelli che iniziano con il testo, poi quelli che lo contengono; dentro ogni
+ *   gruppo i più usati prima. Al massimo `TAG_SUGGESTIONS_QUERY`.
+ * I tag in `excludeIds` (già scelti) non vengono proposti, ma `exact` li trova lo stesso: serve a non creare un doppione.
+ */
+export function suggestTags<T extends Pick<Tag, 'id' | 'name'>>(
+  tags: readonly T[],
+  usage: ReadonlyMap<Id, number>,
+  options: { query: string; excludeIds?: readonly Id[] },
+): TagSuggestions<T> {
+  const q = normalizeTagSearch(options.query)
+  const excluded = new Set(options.excludeIds ?? [])
+  const byUsage = (a: T, b: T) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0)
+
+  if (!q) {
+    const items = tags.filter((item) => !excluded.has(item.id)).sort(byUsage)
+    return { items: items.slice(0, TAG_SUGGESTIONS_EMPTY), exact: undefined }
+  }
+
+  let exact: T | undefined
+  const starts: T[] = []
+  const contains: T[] = []
+  for (const item of tags) {
+    const name = normalizeTagSearch(item.name)
+    if (name === q) {
+      exact ??= item
+      continue
+    }
+    if (excluded.has(item.id)) continue
+    if (name.startsWith(q)) starts.push(item)
+    else if (name.includes(q)) contains.push(item)
+  }
+  const items = [...starts.sort(byUsage), ...contains.sort(byUsage)]
+  if (exact && !excluded.has(exact.id)) items.unshift(exact)
+  return { items: items.slice(0, TAG_SUGGESTIONS_QUERY), exact }
+}

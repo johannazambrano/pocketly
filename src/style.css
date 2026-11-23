@@ -360,6 +360,7 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    overflow-x: clip;
     /*
      * L'intestazione in alto e, sul telefono, la barra in basso restano fisse: quando la tastiera porta il focus su un
      * elemento, la pagina scorre tenendolo fuori da entrambe invece di lasciarlo nascosto sotto.
@@ -388,6 +389,7 @@
   }
   body {
     @apply min-h-dvh font-sans antialiased;
+    overflow-x: clip;
     /* Cifre tutte della stessa larghezza: gli importi si incolonnano e non "ballano" quando cambiano. */
     font-variant-numeric: tabular-nums;
   }
@@ -431,7 +433,7 @@
 }
 
 @utility field {
-  @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent-bright focus:ring-2 focus:ring-accent-bright/20;
+  @apply w-full max-w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent-bright focus:ring-2 focus:ring-accent-bright/20;
   min-height: 2.5rem;
 }
 
@@ -529,8 +531,7 @@
   border-radius: 10px;
   background-color: var(--color-surface);
 }
-/* `.field-compact`: i campi piccoli accanto a un pulsante (il nuovo tag) tengono la loro altezza e il loro rientro. */
-:root[data-platform='ios'] .sheet .field:not(.field-compact) {
+:root[data-platform='ios'] .sheet .field {
   min-height: 2.75rem;
 }
 /* Al buio iOS alza i fogli: fondo grigio "elevato" (#1c1c1e) invece del nero, campi un tono più chiari. */
@@ -566,7 +567,7 @@
   background-color: transparent;
   border-radius: 4px;
 }
-:root[data-platform='android'] .sheet .field:not(.field-compact) {
+:root[data-platform='android'] .sheet .field {
   min-height: 3.5rem;
   padding-left: 1rem;
   padding-right: 1rem;
