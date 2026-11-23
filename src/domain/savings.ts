@@ -33,6 +33,21 @@ export function movementFor(movements: SavingsMovement[], goalId: string, change
   return raw < 0 ? change - raw : change
 }
 
+/**
+ * Quanto è andato nei salvadanai tra `from` e `to` (estremi compresi): versamenti meno prelievi, quindi negativo se si
+ * è prelevato più di quanto si è versato. Contano solo i movimenti già fatti (data fino a `today`): un movimento con
+ * una data futura, arrivato da un dispositivo con l'orologio avanti, non tocca ancora la cifra della Dashboard.
+ *
+ * È la regola di `PKT-19`: i soldi messi da parte non sono più disponibili, quindi il risultato della Dashboard li
+ * conta come un'uscita (e i prelievi come un'entrata).
+ */
+export function savedBetween(movements: SavingsMovement[], from: IsoDate, to: IsoDate, today: IsoDate): Cents {
+  const until = to < today ? to : today
+  let total: Cents = 0
+  for (const m of movements) if (m.date >= from && m.date <= until) total += m.amount
+  return total
+}
+
 /** Aggiunge a ogni salvadanaio l'importo accantonato. */
 export function withSavedAmounts(goals: SavingsGoal[], movements: SavingsMovement[]): SavedGoal[] {
   const totals = savedAmounts(movements)

@@ -31,6 +31,11 @@ interface Main extends Figure {
    */
   withoutEstimate?: { label: string; value: number }
   note?: string
+  /**
+   * La riga dei salvadanai (`PKT-19`): quanto è andato nei salvadanai nel periodo, che la cifra grande toglie come
+   * un'uscita, e la quota consigliata. Porta a Budget → Salvadanai.
+   */
+  savings?: string
 }
 
 /**
@@ -140,6 +145,20 @@ const pairSize = (v: number) => (money(v).length > LONG + 1 ? 'text-base' : 'tex
         </p>
         <p v-if="main.note" class="mt-1.5 text-sm font-medium text-ink-2">{{ main.note }}</p>
         <p v-if="main.hint" class="mt-1 text-xs text-ink-4">{{ main.hint }}</p>
+        <!--
+          Il collegamento ai salvadanai: una frase come le altre sotto la cifra, con la freccia che dice che porta altrove.
+          Sta dopo le frasi che spiegano la cifra, perché è un'altra cosa: dove sono andati una parte dei soldi. Alto almeno
+          40 px per il tocco, recuperati dal margine sotto.
+        -->
+        <RouterLink
+          v-if="main.savings"
+          :to="{ path: '/budget', query: { tab: 'savings' } }"
+          class="mt-1 -mb-2 flex min-h-10 items-center gap-1.5 text-sm font-medium text-ink-2 hover:text-ink"
+        >
+          <i class="fa-solid fa-piggy-bank text-xs text-ink-4" aria-hidden="true"></i>
+          <span class="min-w-0 text-pretty">{{ main.savings }}<span class="sr-only"> · {{ t('dashboard.savingsLink') }}</span></span>
+          <i class="fa-solid fa-chevron-right shrink-0 text-xs text-ink-5" aria-hidden="true"></i>
+        </RouterLink>
 
         <template v-if="explain">
           <button type="button" :class="explainButton" :aria-expanded="explainOpen" :aria-controls="explainId" @click="explainOpen = !explainOpen">
