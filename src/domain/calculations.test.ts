@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, balanceVsAverage, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -257,6 +257,30 @@ describe('averageBalanceBefore', () => {
     )
     // marzo 1250 − 300 = 950, aprile 1300 + 100 = 1400 → media 1175
     expect(averageBalanceBefore(d, 2026, 4, TODAY)).toBe(117500)
+  })
+})
+
+describe('balanceVsAverage', () => {
+  it('confronta il mese con la media dei precedenti, tutti e due al netto dei salvadanai (PKT-19)', () => {
+    const d = sample()
+    // aprile come marzo: 2000 − 700 = 1300 (marzo 1250); 400 € nei salvadanai ogni mese
+    d.savingsMovements.push(
+      { id: 's1', goalId: 'g', date: '2026-03-05', amount: 40000 },
+      { id: 's2', goalId: 'g', date: '2026-04-05', amount: 40000 },
+    )
+    // marzo 1250 − 400 = 850; aprile 1300 − 400 = 900: in linea, non «meglio» come se aprile valesse 1300
+    expect(balanceVsAverage(d, 2026, 3, TODAY)).toEqual({ verdict: 'inline', average: 85000 })
+  })
+
+  it('i soldi messi da parte nel mese abbassano il suo risultato', () => {
+    const d = sample()
+    d.savingsMovements.push({ id: 's1', goalId: 'g', date: '2026-04-10', amount: 50000 })
+    // aprile 1300 − 500 = 800 contro marzo 1250
+    expect(balanceVsAverage(d, 2026, 3, TODAY)).toEqual({ verdict: 'below', average: 125000 })
+  })
+
+  it('senza mesi precedenti non c’è confronto', () => {
+    expect(balanceVsAverage(sample(), 2026, 2, TODAY)).toBeNull()
   })
 })
 

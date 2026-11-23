@@ -333,6 +333,10 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     salvadanai; per un mese futuro solo la quota.
   - 2026-11-23 in `develop` con `511cdc9` (commit `34f3e03`). Da provare sui telefoni nella versione di prova di
     `develop`.
+  - 2026-11-23 corretto nel ramo `fix/pkt-19-verdetto-mese` (Johanna): per un mese passato la frase «meglio/peggio
+    della media» confrontava il risultato senza togliere i salvadanai del mese con una media che li toglieva; ora
+    `balanceVsAverage` li toglie da tutte e due le parti. Nello stesso ramo, fuori da `PKT-19`: sulla Dashboard il
+    messaggio «nessun addebito in arrivo» compariva anche sotto un elenco corto di prossimi addebiti.
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
