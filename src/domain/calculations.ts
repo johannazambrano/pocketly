@@ -479,18 +479,39 @@ export function compareToAverage(value: Cents, average: Cents, tolerance = 0.1):
 }
 
 /**
+ * Il risultato di un mese come lo mostra la cifra grande della Dashboard: entrate meno uscite, meno quanto è andato nei
+ * salvadanai (`PKT-19`, i versamenti contano come uscite e i prelievi come entrate).
+ */
+export function monthBalanceAfterSavings(data: FinanceData, year: number, month: number, today: string): Cents {
+  const saved = savedBetween(data.savingsMovements ?? [], toIsoDate(year, month, 1), lastDayOfMonth(year, month), today)
+  return monthSummary(data, year, month, today).balance - saved
+}
+
+/**
  * La media del risultato (entrate meno uscite, meno quanto messo nei salvadanai) dei mesi dell'anno prima di `month`,
  * dal primo mese con movimenti: lo stesso conto della cifra grande della Dashboard, così il confronto è alla pari.
  * Null se non ci sono mesi precedenti da confrontare.
  */
 export function averageBalanceBefore(data: FinanceData, year: number, month: number, today: string): Cents | null {
   const balances: Cents[] = []
-  for (let m = periodStartMonth(data, year); m < month; m++) {
-    // Stessa regola della cifra grande (PKT-19): i versamenti nei salvadanai del mese contano come uscite.
-    const saved = savedBetween(data.savingsMovements ?? [], toIsoDate(year, m, 1), lastDayOfMonth(year, m), today)
-    balances.push(monthSummary(data, year, m, today).balance - saved)
-  }
+  for (let m = periodStartMonth(data, year); m < month; m++) balances.push(monthBalanceAfterSavings(data, year, m, today))
   return balances.length ? Math.round(sum(balances) / balances.length) : null
+}
+
+/**
+ * Com'è andato un mese rispetto alla media dei mesi precedenti dell'anno. Le due parti del confronto tolgono i
+ * salvadanai allo stesso modo, così la frase sotto la cifra grande parla della cifra che si vede. Null se non ci sono
+ * mesi precedenti.
+ */
+export function balanceVsAverage(
+  data: FinanceData,
+  year: number,
+  month: number,
+  today: string,
+): { verdict: Verdict; average: Cents } | null {
+  const average = averageBalanceBefore(data, year, month, today)
+  if (average === null) return null
+  return { verdict: compareToAverage(monthBalanceAfterSavings(data, year, month, today), average), average }
 }
 
 export interface TagTrendInfo {

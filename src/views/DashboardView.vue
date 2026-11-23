@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useFinanceStore } from '@/stores/finance'
 import { useAppearanceStore } from '@/stores/appearance'
 import { useFormat } from '@/i18n'
-import { averageBalanceBefore, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
+import { balanceVsAverage, compareToAverage, ESTIMATE_MONTHS, upcomingCharges, type UpcomingCharge } from '@/domain/calculations'
 import { lastDayOfMonth, parseIsoDate, toIsoDate, yearOf } from '@/utils/dates'
 import { savedBetween } from '@/domain/savings'
 import BalancePanel from '@/components/BalancePanel.vue'
@@ -210,15 +210,15 @@ const savingsLine = computed(() => {
 })
 
 /**
- * Un mese chiuso dice com'è andato: il suo saldo rispetto alla media dei mesi precedenti dell'anno.
+ * Un mese chiuso dice com'è andato: la cifra grande (al netto dei salvadanai) rispetto alla media dei mesi precedenti
+ * dell'anno, contata allo stesso modo (`balanceVsAverage`).
  * Per un saldo "sopra" vuol dire meglio, quindi la frase dice meglio o peggio, non sopra o sotto.
  */
 const pastMonthVerdict = computed(() => {
   if (ms.value?.timing !== 'past') return undefined
-  const average = averageBalanceBefore(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
-  if (average === null) return undefined
-  const verdict = compareToAverage(ms.value.balance, average)
-  return t(`dashboard.balanceVs${VERDICT_KEY[verdict]}`, { average: money(average) })
+  const result = balanceVsAverage(finance.data, finance.selectedYear, finance.selectedMonth as number, finance.today)
+  if (!result) return undefined
+  return t(`dashboard.balanceVs${VERDICT_KEY[result.verdict]}`, { average: money(result.average) })
 })
 
 /**
