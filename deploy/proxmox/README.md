@@ -119,7 +119,12 @@ curl -ksI https://localhost/ | head -1        # deve mostrare HTTP/1.1 200 OK
 ## 6. Installare la CA sui dispositivi (una sola volta per dispositivo)
 
 Dal dispositivo apri **`http://IP-DEL-CONTAINER/ca.crt`**: nginx lo serve in HTTP apposta, perché
-il certificato è pubblico (la chiave no). Installalo come certificato attendibile:
+il certificato è pubblico (la chiave no). Proprio perché arriva in HTTP, qualcuno sulla stessa rete potrebbe
+sostituirlo: **prima di installarlo confronta l'impronta SHA-256** che il dispositivo mostra nei dettagli del
+certificato con quella del container (la stampa `make-cert.sh`; per rileggerla:
+`openssl x509 -in /etc/nginx/ssl/ca.crt -noout -fingerprint -sha256`). Se non coincidono, non installarlo.
+
+Installalo come certificato attendibile:
 
 - **Windows:** apri il file → *Installa certificato* → archivio *Autorità di certificazione radice attendibili*.
   Firefox usa un archivio proprio: *Impostazioni → Certificati → Importa*.

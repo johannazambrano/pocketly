@@ -38,3 +38,8 @@ chmod 600 pocketly.key
 echo
 echo "Certificato per $IP creato in $DIR (scade tra 825 giorni)."
 echo "Da installare sui dispositivi come certificato attendibile: $DIR/ca.crt"
+echo
+# ca.crt si scarica in HTTP (PKT-14): prima di dargli fiducia, sul dispositivo si confronta questa impronta con quella
+# che il telefono o il PC mostrano nei dettagli del certificato.
+echo "Impronta SHA-256 della CA (da confrontare sul dispositivo prima di installarla):"
+openssl x509 -in ca.crt -noout -fingerprint -sha256 | sed 's/^.*=/    /'
