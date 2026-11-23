@@ -230,6 +230,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Storia:**
   - 2026-11-16 aperta.
   - 2026-11-23 presa in carico (Johanna).
+  - 2026-11-23 analisi nel ramo `fix/pkt-14-sicurezza` (Johanna), scritta in
+    [Analisi di Sicurezza](architettura/sicurezza.md). Corretti: intestazioni di sicurezza su nginx e Vercel (CSP e
+    altre), notifiche solo verso https pubblici e senza redirect, indirizzi dei dispositivi tolti dai log, tocco sulla
+    notifica solo verso pagine dell'app, `vue-i18n` aggiornato, impronta della CA nella guida. Restano da decidere la
+    CA locale senza vincoli (punto 1) e il minimo della password di sincronizzazione (punto 4); i dati in chiaro sul
+    dispositivo (punto 3) li copre `PKT-25` fase A.
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero

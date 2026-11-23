@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Indice della Documentazione di Pocketly
@@ -32,6 +32,7 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Voglio vedere **cosa c'è da fare** o prendere in carico un task | [Backlog del Progetto](backlog.md) |
 | Voglio verificare i **limiti o bug noti** dell'applicazione | [Stato e Difetti Noti](known-issues.md) |
 | Voglio configurare il **deploy su Proxmox LXC con Nginx** | [Deploy Proxmox](architettura/deploy.md) |
+| Voglio sapere cosa protegge l'app e cosa resta da fare sulla **sicurezza** | [Analisi di Sicurezza](architettura/sicurezza.md) |
 
 ---
 
@@ -52,6 +53,7 @@ docs/
 │   ├── scalabilita.md                 <-- Analisi limiti e progetto evolutivo (PKT-13)
 │   ├── autenticazione.md              <-- Progetto e piano autenticazione Zero-Knowledge (PKT-12)
 │   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-22)
+│   ├── sicurezza.md                   <-- Analisi di sicurezza e correzioni (PKT-14)
 │   └── deploy.md                      <-- Proxmox LXC, systemd, Nginx, proxy Vite
 ├── riferimento/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test
