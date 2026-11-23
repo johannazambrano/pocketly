@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createBackgroundScrollLock,
+  nudgeHorizontalScrollers,
   readVisualViewportBox,
   shouldPreventModalTouchMove,
+  type HorizontalScrollerCandidate,
   type ScrollLockDocument,
   type ScrollLockWindow,
   type ScrollableElement,
@@ -136,13 +138,55 @@ describe('shouldPreventModalTouchMove', () => {
     // Lieve arco del pollice in un gesto quasi verticale -> non interrompe lo scroll verticale
     expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: 6, dy: -5.5, xScroller: null, yScroller: mid })).toBe(false)
 
-    // Barra orizzontale dei Frequenti: scorre all'interno e si ferma ai bordi
+    // Barra orizzontale dei Frequenti: lascia scorrere (anche con lieve inclinazione o a scrollLeft=0), blocca solo pull verticale al bordo
     const strip = horizontalStrip({ scrollLeft: 40 })
     expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: -15, dy: 2, xScroller: strip, yScroller: mid })).toBe(false)
     expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: 15, dy: 2, xScroller: strip, yScroller: mid })).toBe(false)
 
     const stripAtLeft = horizontalStrip({ scrollLeft: 0 })
-    expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: 15, dy: 0, xScroller: stripAtLeft, yScroller: mid })).toBe(true)
-    expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: -15, dy: 0, xScroller: stripAtLeft, yScroller: mid })).toBe(false)
+    const atTop = verticalBox({ scrollTop: 0 })
+    expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: -6, dy: 10, xScroller: stripAtLeft, yScroller: atTop })).toBe(false)
+    expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: 2, dy: 0, xScroller: stripAtLeft, yScroller: atTop })).toBe(false)
+    expect(shouldPreventModalTouchMove({ inScrollBody: true, dx: 0, dy: 15, xScroller: stripAtLeft, yScroller: atTop })).toBe(true)
+  })
+})
+
+describe('nudgeHorizontalScrollers', () => {
+  it('esegue un micro-nudge sincrono (1 -> 0) solo sugli scroller orizzontali fermi a 0 con reale overflow', () => {
+    const writes = new Map<HorizontalScrollerCandidate, number[]>()
+    const makeNode = (scrollLeft: number, scrollWidth: number, clientWidth: number, overflowX: string) => {
+      let current = scrollLeft
+      const node: HorizontalScrollerCandidate & { overflowX: string } = {
+        get scrollLeft() {
+          return current
+        },
+        set scrollLeft(v: number) {
+          current = v
+          const list = writes.get(node) ?? []
+          list.push(v)
+          writes.set(node, list)
+        },
+        scrollWidth,
+        clientWidth,
+        overflowX,
+      }
+      return node
+    }
+
+    const activeStrip = makeNode(0, 520, 320, 'auto')
+    const alreadyScrolled = makeNode(45, 520, 320, 'auto')
+    const noOverflow = makeNode(0, 320, 320, 'auto')
+    const hiddenBox = makeNode(0, 520, 320, 'hidden')
+
+    nudgeHorizontalScrollers(
+      { querySelectorAll: () => [activeStrip, alreadyScrolled, noOverflow, hiddenBox] },
+      (el) => (el as HorizontalScrollerCandidate & { overflowX: string }).overflowX,
+    )
+
+    expect(writes.get(activeStrip)).toEqual([1, 0])
+    expect(activeStrip.scrollLeft).toBe(0)
+    expect(writes.get(alreadyScrolled)).toBeUndefined()
+    expect(writes.get(noOverflow)).toBeUndefined()
+    expect(writes.get(hiddenBox)).toBeUndefined()
   })
 })

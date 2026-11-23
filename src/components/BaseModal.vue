@@ -30,6 +30,7 @@ import { useAppearanceStore } from '@/stores/appearance'
 import {
   findModalScrollables,
   isRangeInput,
+  nudgeHorizontalScrollers,
   readVisualViewportBox,
   shouldPreventModalTouchMove,
   type ViewportBox,
@@ -89,8 +90,34 @@ const overlayStyle = computed(() => ({
     : { top: '0px', bottom: '0px' }),
 }))
 
+let nudgeFrame = 0
+function cancelHorizontalNudge() {
+  if (!nudgeFrame) return
+  cancelAnimationFrame(nudgeFrame)
+  nudgeFrame = 0
+}
+function scheduleHorizontalNudge() {
+  if (typeof requestAnimationFrame === 'undefined') return
+  cancelHorizontalNudge()
+  nudgeFrame = requestAnimationFrame(() => {
+    nudgeFrame = 0
+    if (isOpen) nudgeHorizontalScrollers(scrollBody.value)
+  })
+}
+
 function syncViewport() {
-  viewportBox.value = readVisualViewportBox(window.visualViewport)
+  const prevHeight = viewportBox.value?.height
+  const next = readVisualViewportBox(window.visualViewport)
+  viewportBox.value = next
+  if (next && prevHeight !== undefined && next.height !== prevHeight) {
+    scheduleHorizontalNudge()
+  }
+}
+
+function onAfterEnter() {
+  if (!isOpen) return
+  syncViewport()
+  scheduleHorizontalNudge()
 }
 
 let hasTouch = false
@@ -215,6 +242,7 @@ async function onOpen() {
 function onClose() {
   if (!isOpen) return
   isOpen = false
+  cancelHorizontalNudge()
   document.removeEventListener('keydown', onKey)
   window.visualViewport?.removeEventListener('resize', syncViewport)
   window.visualViewport?.removeEventListener('scroll', syncViewport)
@@ -248,6 +276,7 @@ onBeforeUnmount(onClose)
       leave-to-class="opacity-0"
       enter-active-class="transition duration-150"
       leave-active-class="transition duration-150"
+      @after-enter="onAfterEnter"
     >
       <div
         v-if="open"
@@ -314,10 +343,10 @@ onBeforeUnmount(onClose)
             </div>
           </div>
 
-          <!-- Corpo scorrevole solo in verticale: impedisce lo spostamento libero in 2D su iPhone. -->
+          <!-- Corpo scorrevole solo in verticale: impedisce lo spostamento libero in 2D su iPhone senza bloccare eventuali righe orizzontali interne. -->
           <div
             ref="scrollBody"
-            class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y touch-pinch-zoom"
+            class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain touch-manipulation"
             :class="
               appearance.platform === 'desktop'
                 ? 'px-5 pt-3 pb-5'

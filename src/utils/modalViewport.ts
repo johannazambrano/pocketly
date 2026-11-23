@@ -182,7 +182,9 @@ export interface ModalTouchDecisionInput {
  * rimbalzare il viewport in 2D:
  * - fuori dal corpo scorrevole (sfondo, maniglia, intestazione): blocca sempre;
  * - senza overflow su nessun asse (modale corta): blocca sempre;
- * - su gesti orizzontali: consente solo se esiste uno scroller orizzontale interno non al bordo;
+ * - dentro uno scroller orizzontale interno (es. chip «Frequenti» con `overscroll-x-contain`): lascia passare gesti
+ *   con componente orizzontale così micro-oscillazioni del dito o `scrollLeft === 0` non annullano lo scroll su iOS;
+ * - altrove su gesti orizzontali/2D: blocca;
  * - su gesti verticali: consente solo finché lo scroller verticale non sta tirando oltre il bordo superiore o inferiore.
  */
 export function shouldPreventModalTouchMove({ inScrollBody, dx, dy, xScroller, yScroller }: ModalTouchDecisionInput): boolean {
@@ -193,12 +195,9 @@ export function shouldPreventModalTouchMove({ inScrollBody, dx, dy, xScroller, y
   const absY = Math.abs(dy)
   if (absX === 0 && absY === 0) return false
 
+  if (xScroller && absX >= absY * 0.5) return false
+
   if (absX > absY) {
-    if (xScroller) {
-      const atLeft = xScroller.scrollLeft <= 0
-      const atRight = xScroller.scrollLeft + xScroller.clientWidth >= xScroller.scrollWidth - 1
-      return (atLeft && dx > 0) || (atRight && dx < 0)
-    }
     if (!yScroller) return true
     // Gesto nettamente orizzontale (o rotatorio) senza scroller X: blocca; tollera un lieve arco del pollice in verticale.
     if (absX > absY * 1.2) return true
@@ -251,4 +250,36 @@ export function findModalScrollables(
 
 export function isRangeInput(target: EventTarget | null): boolean {
   return typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement && target.type === 'range'
+}
+
+export interface HorizontalScrollerCandidate {
+  scrollLeft: number
+  scrollWidth: number
+  clientWidth: number
+}
+
+/**
+ * Su iOS WebKit, quando una modale apre subito la tastiera (`initialFocus`) durante la transizione di ingresso e il
+ * ridimensionamento di `visualViewport`, un contenitore `overflow-x: auto` annidato nel corpo può non attivare subito
+ * il proprio `WKChildScrollView`. Un micro-aggiornamento sincrono pre-paint (`1 -> 0`) sui soli contenitori fermi a
+ * `scrollLeft === 0` forza WebKit a registrarlo senza alcun salto visivo.
+ */
+export function nudgeHorizontalScrollers(
+  root: { querySelectorAll: (selector: string) => Iterable<HorizontalScrollerCandidate> } | null,
+  getOverflowX?: (el: HorizontalScrollerCandidate) => string,
+): void {
+  if (!root) return
+  const resolveOverflowX =
+    getOverflowX ??
+    ((el) => (typeof getComputedStyle === 'function' ? getComputedStyle(el as unknown as Element).overflowX : ''))
+  const candidates: HorizontalScrollerCandidate[] = []
+  for (const el of root.querySelectorAll('*')) {
+    if (el.scrollLeft !== 0) continue
+    if (!isScrollableOverflow(resolveOverflowX(el))) continue
+    if (el.scrollWidth > el.clientWidth + 1) candidates.push(el)
+  }
+  for (const el of candidates) {
+    el.scrollLeft = 1
+    el.scrollLeft = 0
+  }
 }
