@@ -26,7 +26,7 @@ collegamento, senza ripeterne il testo.
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
-| PKT-14 | Analisi di sicurezza ed eventuali fix | da fare | media | libero |
+| PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Johanna |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
@@ -224,11 +224,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 in `develop` con `5e53524` (ramo `docs/scalabilita`, commit `0c3a83e`).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** in corso · **Priorità:** media · **Chi:** Johanna
 - **Perché:** eseguire un'analisi di sicurezza dell'app (frontend, crittografia, sync, notifiche, backend e deploy) e applicare gli eventuali fix necessari.
 - **Fatto quando:** analisi di sicurezza completata e documentata; eventuali fix applicati e verificati (o tracciati in attività dedicate se richiedono interventi ampi).
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-23 presa in carico (Johanna).
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
