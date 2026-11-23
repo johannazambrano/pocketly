@@ -38,6 +38,7 @@ collegamento, senza ripeterne il testo.
 | PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
 | PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
 | PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
+| PKT-26 | Blocco scroll e viewport delle modali su iPhone | fatto nel ramo, da unire | media | Jonny |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -414,3 +415,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
 - **Storia:**
   - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
+
+### PKT-26 — Blocco scroll e viewport delle modali su iPhone
+- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny
+- **Perché:** su iPhone, aprendo la modale per inserire una spesa (`TransactionForm` dentro `BaseModal`), trascinando il dito in orizzontale, verticale o con movimenti combinati 2D il contenuto del foglio si spostava liberamente come una pagina web senza vincoli (`body.style.overflow = 'hidden'` ignorato da iOS WebKit, mancanza di `overflow-x-hidden` e `touch-pan-y`, intestazione dentro l'area scorrevole e `fixed inset-0` / `90dvh` non adattati a `window.visualViewport` con tastiera virtuale aperta).
+- **Come:** utility testata [`modalViewport.ts`](../src/utils/modalViewport.ts) (`createBackgroundScrollLock`, `readVisualViewportBox`, `shouldPreventModalTouchMove`, `findModalScrollables`) integrata in `BaseModal.vue`: blocco scroll di sfondo compatibile con iOS e modali sovrapposte, overlay ancorato a `visualViewport`, sfondo separato `touch-none`, testata fissa (`shrink-0 touch-none`) e corpo scorrevole solo in verticale (`overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y touch-pinch-zoom`), preservando lo scorrimento orizzontale interno (chip «Frequenti» in `TransactionForm.vue`). Aggiunto `overflow-x: clip` su `html`/`body` e `max-w-full` su `.field` in `src/style.css`.
+- **Fatto quando:** test unitari verdi, `typecheck`, `test:server`, `build` e `docs:check` verdi, documentazione aggiornata; verificato su iPhone (Safari e PWA) che la modale resti ferma su scorrimenti orizzontali/2D e scorra solo in verticale quando serve.
+- **Storia:**
+  - 2026-11-23 aperta e implementata nel ramo `fix/modale-scroll-ios` (Jonny): introdotta `modalViewport.ts` con test unitari, aggiornati `BaseModal.vue`, `TransactionForm.vue`, `style.css` e documentazione (`mappa-codice.md`, `componenti-e-viste.md`, `frontend.md`). Da provare su iPhone e unire in `develop`.

@@ -169,7 +169,7 @@ function submit() {
         <span class="text-[11px] font-medium text-ink-4 flex items-center gap-1">
           <i class="fa-solid fa-bolt text-accent-icon text-[10px]"></i> {{ t('common.frequent') }}
         </span>
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <div class="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-1 no-scrollbar touch-pan-x touch-pan-y">
           <button
             v-for="tpl in frequentList"
             :key="tpl.name"
