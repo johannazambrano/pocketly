@@ -8,7 +8,7 @@ source-files:
   - deploy/proxmox/pocketly-sync.service
   - deploy/proxmox/nginx/pocketly.conf
   - vite.config.ts
-verified: 2026-11-12
+verified: 2026-11-23
 ---
 
 # Architettura di Deploy e Infrastruttura
@@ -35,6 +35,8 @@ flowchart LR
 - Nessun caching per `index.html`, `/sw.js` e `/push-worker.js` (`Cache-Control: no-cache, no-store, must-revalidate; Pragma: no-cache; Expires: 0`); `/manifest.webmanifest` è servito come `application/manifest+json` con `Cache-Control: no-cache, no-store, must-revalidate`.
 - Blocco `/api/`: inoltro a `http://127.0.0.1:8787` con header `Host` e `X-Real-IP` (è l'indirizzo che il server usa per il rate limiting, `client_ip`) e `Cache-Control: no-store`.
 - Limite dimensione body HTTP su `/api/`: `client_max_body_size 6m` (il server rifiuta comunque corpi oltre 5 MB, `MAX_BODY_BYTES`).
+- Intestazioni di sicurezza (`PKT-14`): `Content-Security-Policy` (solo file del sito), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, e `server_tokens off`. Le stesse intestazioni le manda Vercel (`vercel.json`). nginx non eredita gli `add_header` in un blocco che ne ha uno suo: `/index.html` le ripete tutte, gli altri blocchi almeno `nosniff`. Dettagli e motivi in [Analisi di Sicurezza](sicurezza.md).
+- La CA locale non ha vincoli sui nomi e `ca.key` sta in `/etc/nginx/ssl`: vedi il punto 1 di [Analisi di Sicurezza](sicurezza.md). `make-cert.sh` stampa l'impronta SHA-256 della CA, da confrontare sul dispositivo prima di installarla.
 
 ---
 
