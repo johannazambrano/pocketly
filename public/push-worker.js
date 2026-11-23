@@ -98,9 +98,19 @@ self.addEventListener('push', (event) => {
   )
 })
 
+/**
+ * Il percorso da aprire al tocco, solo dentro l'app (PKT-14): un indirizzo assoluto o che comincia con `//` o `/\`
+ * porterebbe su un altro sito, quindi si torna a `/ricorrenti`.
+ */
+function safeAppPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return '/ricorrenti'
+  const url = new URL(value, self.location.origin)
+  return url.origin === self.location.origin ? url.pathname + url.search + url.hash : '/ricorrenti'
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetPath = (event.notification.data && event.notification.data.url) || '/ricorrenti'
+  const targetPath = safeAppPath(event.notification.data && event.notification.data.url)
   const fullUrl = new URL(targetPath, self.location.origin).href
 
   event.waitUntil(
