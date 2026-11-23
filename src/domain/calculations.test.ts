@@ -248,6 +248,16 @@ describe('averageBalanceBefore', () => {
   it('il primo mese del periodo non ha mesi con cui confrontarsi', () => {
     expect(averageBalanceBefore(sample(), 2026, 2, TODAY)).toBeNull()
   })
+
+  it('toglie dal risultato di ogni mese quanto è andato nei salvadanai (PKT-19)', () => {
+    const d = sample()
+    d.savingsMovements.push(
+      { id: 's1', goalId: 'g', date: '2026-03-05', amount: 30000 },
+      { id: 's2', goalId: 'g', date: '2026-04-05', amount: -10000 },
+    )
+    // marzo 1250 − 300 = 950, aprile 1300 + 100 = 1400 → media 1175
+    expect(averageBalanceBefore(d, 2026, 4, TODAY)).toBe(117500)
+  })
 })
 
 describe('variableSpending', () => {

@@ -1,6 +1,7 @@
 import type { Cents, FinanceData, Id, IsoDate, Loan } from '@/types/models'
-import { lastDayOfMonth, monthIndex, parseIsoDate, todayIso, yearOf } from '@/utils/dates'
+import { lastDayOfMonth, monthIndex, parseIsoDate, toIsoDate, todayIso, yearOf } from '@/utils/dates'
 import { amountInMonth, chargeIn, isActiveInYear, monthlyEquivalent } from './recurrence'
+import { savedBetween } from './savings'
 
 export interface TagTotal {
   id: Id
@@ -478,12 +479,17 @@ export function compareToAverage(value: Cents, average: Cents, tolerance = 0.1):
 }
 
 /**
- * La media del saldo (entrate meno uscite) dei mesi dell'anno prima di `month`, dal primo mese con movimenti.
+ * La media del risultato (entrate meno uscite, meno quanto messo nei salvadanai) dei mesi dell'anno prima di `month`,
+ * dal primo mese con movimenti: lo stesso conto della cifra grande della Dashboard, così il confronto è alla pari.
  * Null se non ci sono mesi precedenti da confrontare.
  */
 export function averageBalanceBefore(data: FinanceData, year: number, month: number, today: string): Cents | null {
   const balances: Cents[] = []
-  for (let m = periodStartMonth(data, year); m < month; m++) balances.push(monthSummary(data, year, m, today).balance)
+  for (let m = periodStartMonth(data, year); m < month; m++) {
+    // Stessa regola della cifra grande (PKT-19): i versamenti nei salvadanai del mese contano come uscite.
+    const saved = savedBetween(data.savingsMovements ?? [], toIsoDate(year, m, 1), lastDayOfMonth(year, m), today)
+    balances.push(monthSummary(data, year, m, today).balance - saved)
+  }
   return balances.length ? Math.round(sum(balances) / balances.length) : null
 }
 

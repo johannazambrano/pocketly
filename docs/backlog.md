@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Backlog di Pocketly
@@ -31,7 +31,7 @@ collegamento, senza ripeterne il testo.
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
-| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | da fare | media | Johanna |
+| PKT-19 | Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05) | fatto nel ramo, da unire | — | Johanna |
 | PKT-20 | Barra in basso per iPhone, Android e PC con «+» che segue la pagina | fatto | — | Jonny, Johanna |
 | PKT-21 | Scelta dei tag nel modulo con ricerca o menu a tendina | fatto | — | Johanna |
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
@@ -293,7 +293,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 aperta da analisi PKT-13 (Jonny).
 
 ### PKT-19 — Salvadanai nella cifra della Dashboard e `csvExport.ts` (da PKT-05)
-- **Stato:** da fare · **Priorità:** media · **Chi:** Johanna
+- **Stato:** fatto nel ramo, da unire · **Priorità:** — · **Chi:** Johanna
 - **Perché:** due decisioni rimaste aperte da `PKT-05`, rimandate per pubblicare intanto quello che c'è.
   1. I soldi messi nei salvadanai oggi non riducono la cifra principale della Dashboard: chi mette da parte 200 €
      vede ancora quei 200 € come disponibili. Si può aggiungere una riga «di cui messi da parte» o contare il
@@ -324,6 +324,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-20 prese le due decisioni con Jonny (vedi **Decisione**); presa in carico (Johanna). `csvExport.ts`
     tolto nel ramo `chore/togli-csv-export` (`38da887`).
   - 2026-11-20 `csvExport.ts` tolto in `develop` con `b1daf55`. Resta la parte dei salvadanai.
+  - 2026-11-23 parte dei salvadanai fatta nel ramo `feature/pkt-19-salvadanai-dashboard` (Johanna): `savedBetween`
+    in `savings.ts`; risultato, previsto e media dei mesi precedenti al netto dei salvadanai; riga sotto la cifra
+    che porta a Budget → Salvadanai, con la quota consigliata nel mese in corso e «in linea» quando è raggiunta.
+    Provata su iPhone, Android e PC. Per un mese passato o per l'anno la riga dice solo quanto è andato nei
+    salvadanai; per un mese futuro solo la quota.
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna

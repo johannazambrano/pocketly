@@ -50,7 +50,7 @@ source-files:
   - src/services/excelImport.ts
   - src/services/backup.ts
   - deploy/proxmox/update.sh
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Guida: Piano di Test Utente (UAT)
@@ -176,6 +176,7 @@ Quando il rilascio alza il formato dati allo schema v3 (`CURRENT_SCHEMA_VERSION 
 - [ ] **Pannello saldo (`BalancePanel`):**
   - verifica la cifra grande del previsto a fine mese/anno e la frase sotto con il risultato fino a oggi;
   - apri e chiudi *«Come si arriva a questa cifra»* (`explainToggle`), controllando che la somma delle righe coincida con la cifra grande;
+  - con un salvadanaio attivo e un versamento questo mese, verifica che la cifra grande sia entrate − uscite − versamento e che la riga *«… nei salvadanai · consigliati … questo mese»* porti a Budget → *Salvadanai*; versando quanto consigliato la riga dice *«in linea»* (`PKT-19`);
   - verifica la barra *«Come si dividono le uscite»* (*Ricorrenti* vs *Variabili*) con i verdetti rispetto alla media dei mesi precedenti.
 - [ ] **Colore neutro con stima decisiva:** con entrate stimate attive in un periodo che senza stima sarebbe negativo, verifica che la cifra grande resti neutra (`text-ink`) e compaia la riga *«Se le entrate stimate non arrivano: …»* in rosso.
 - [ ] **Trend per categoria e metodo (`BreakdownList` + `tagTrends`):** seleziona un mese con movimenti in mesi precedenti dell'anno e verifica la comparsa discreta di *«più del solito»* / *«meno del solito»* sotto le righe che si discostano dalla media.

@@ -10,7 +10,7 @@ source-files:
   - src/domain/savings.ts
   - src/domain/search.ts
   - src/domain/tags.ts
-verified: 2026-11-20
+verified: 2026-11-23
 ---
 
 # Riferimento: Logica di Dominio
@@ -70,7 +70,7 @@ Spese variabili (una tantum) del mese di oggi: `total` (tutto il mese), `toDate`
 Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'inline'` | `'below'`): è `'inline'` se lo scarto resta entro il 10% di `|average|`.
 
 ### `averageBalanceBefore(data, year, month, today): Cents | null`
-Media del saldo (entrate meno uscite, da `monthSummary`) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+Media del risultato (entrate meno uscite, da `monthSummary`, meno quanto è andato nei salvadanai nel mese con `savedBetween`, come la cifra grande della Dashboard) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
 
 ### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
 Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno:
@@ -185,6 +185,7 @@ Implementa l'algoritmo di merge deterministico tra `base`, `local` e `remote`.
 
 Questo modulo governa la pianificazione e l'accantonamento fondi verso traguardi finanziari specifici (`SavingsGoal`):
 - `savedAmounts(movements)` e `withSavedAmounts(goals, movements)`: l'importo accantonato di ogni salvadanaio è la somma dei suoi movimenti (`SavingsMovement`), mai sotto zero. Le funzioni sotto lavorano sul tipo `SavedGoal` (salvadanaio + `currentAmount` calcolato).
+- `savedBetween(movements, from, to, today)`: quanto è andato nei salvadanai tra due date (estremi compresi), versamenti meno prelievi, contando solo i movimenti fino a oggi; negativo se si è prelevato di più. La Dashboard lo toglie dalla cifra grande (`PKT-19`) e `averageBalanceBefore` dai mesi con cui la confronta.
 - `calculateMonthsRemaining(today, targetDate)`: calcola quanti mesi effettivi mancano alla scadenza, arrotondando sui giorni solari (~30.4375 giorni/mese) con un minimo di 1 mese se entro lo stesso mese.
 - `calculateRemainingAmount(goal)`: calcola l'importo ancora mancante (`targetAmount - currentAmount`), mai negativo.
 - `calculateSavingsQuota(goal, today)`: calcola la quota mensile raccomandata (in centesimi interi, arrotondata per eccesso con `Math.ceil`) per raggiungere il target entro la data obiettivo. Se scaduto e non raggiunto, richiede l'intero importo residuo; se già completato restituisce 0.
