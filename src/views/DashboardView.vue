@@ -618,8 +618,9 @@ const showUpcoming = computed(
               </ul>
             </div>
           </div>
+          <p v-if="!upcoming.length" class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
           <button
-            v-if="upcomingCollapsible"
+            v-else-if="upcomingCollapsible"
             type="button"
             class="-ml-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-1 text-sm font-medium text-accent hover:text-accent-strong"
             :aria-expanded="upcomingExpanded"
@@ -627,7 +628,6 @@ const showUpcoming = computed(
           >
             {{ upcomingExpanded ? t('dashboard.upcomingFewer') : t('dashboard.upcomingAll', { n: upcoming.length }) }}
           </button>
-          <p v-else class="text-xs text-ink-4">{{ upcomingEmpty }}</p>
         </div>
 
         <div class="card space-y-3">
