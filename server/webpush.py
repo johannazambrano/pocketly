@@ -265,11 +265,19 @@ def valid_endpoint(value: object) -> bool:
         return False
     parsed = urllib.parse.urlsplit(value)
     # Il server fa una richiesta verso questo indirizzo: solo https verso host pubblici, così con la chiave di
-    # sincronizzazione non si possono far partire richieste verso la rete locale del container.
-    if parsed.scheme == 'https' and _public_host(parsed.hostname):
-        return True
-    # In test locale si consente http su 127.0.0.1 / localhost
-    return parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost')
+    # sincronizzazione non si possono far partire richieste verso la rete locale del container. Niente eccezioni per
+    # http su localhost (PKT-14): in produzione avrebbero aperto la strada ai servizi del container stesso.
+    return parsed.scheme == 'https' and _public_host(parsed.hostname)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """I servizi push rispondono e basta: un redirect non si segue, così non porta il server verso un altro indirizzo."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401
+        return None
+
+
+_opener = urllib.request.build_opener(_NoRedirect)
 
 
 def valid_aes128gcm_payload(value: object) -> bool:
@@ -321,11 +329,11 @@ def send_web_push(
     }
     req = urllib.request.Request(endpoint, data=body, headers=headers, method='POST')
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _opener.open(req, timeout=timeout) as resp:
             status = int(resp.status)
             body_text = resp.read().decode('utf-8', errors='replace')
             if status < 200 or status >= 300:
-                logger.warning('Push gateway HTTP %d for endpoint %s: %s', status, endpoint, body_text)
+                logger.warning('Push gateway HTTP %d for %s: %s', status, endpoint_host(endpoint), body_text)
             return PushResponse(status, body_text)
     except urllib.error.HTTPError as e:
         body_text = ''
@@ -333,8 +341,8 @@ def send_web_push(
             body_text = e.read().decode('utf-8', errors='replace')
         except Exception:
             pass
-        logger.warning('Push gateway HTTP error %d for endpoint %s: %s', e.code, endpoint, body_text)
+        logger.warning('Push gateway HTTP error %d for %s: %s', e.code, endpoint_host(endpoint), body_text)
         return PushResponse(int(e.code), body_text)
     except Exception as e:
-        logger.warning('Push gateway network/client error for endpoint %s: %s', endpoint, e)
+        logger.warning('Push gateway network/client error for %s: %s', endpoint_host(endpoint), e)
         return PushResponse(0, str(e))

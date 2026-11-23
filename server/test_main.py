@@ -458,7 +458,8 @@ class WebPushTest(unittest.TestCase):
     def test_rifiuta_endpoint_verso_la_rete_locale(self):
         self.assertTrue(webpush.valid_endpoint('https://web.push.apple.com/Q1'))
         for bad in ('https://192.168.1.10/push', 'https://10.0.0.1/x', 'https://[::1]/x', 'https://localhost/x',
-                    'https://router.lan/x', 'https://nas.local/x', 'https://intranet/x', 'ftp://web.push.apple.com/x'):
+                    'https://router.lan/x', 'https://nas.local/x', 'https://intranet/x', 'ftp://web.push.apple.com/x',
+                    'http://127.0.0.1:8787/api/sync', 'http://localhost/x', 'http://web.push.apple.com/x'):
             self.assertFalse(webpush.valid_endpoint(bad), bad)
 
     def test_chiavi_nuove_tolgono_le_voci_cifrate_con_le_vecchie(self):
@@ -491,6 +492,45 @@ class WebPushTest(unittest.TestCase):
         # Nel log c'è il servizio, non l'indirizzo completo del dispositivo.
         self.assertIn('fcm.googleapis.com', cm.output[0])
         self.assertNotIn('segreto', cm.output[0])
+
+
+class NoRedirectTest(unittest.TestCase):
+    """PKT-14: un servizio push che risponde con un redirect non porta il server verso un altro indirizzo."""
+
+    def test_il_redirect_non_si_segue(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        hits: list[str] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                hits.append(self.path)
+                self.send_response(302)
+                self.send_header('Location', '/interno')
+                self.send_header('Content-Length', '0')
+                self.end_headers()
+
+            do_GET = do_POST
+
+            def log_message(self, *args):
+                pass
+
+        srv = HTTPServer(('127.0.0.1', 0), Handler)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        try:
+            client = webpush.generate_vapid_keys()
+            payload = webpush.b64url_encode(b'\x00' * 16 + (4096).to_bytes(4, 'big') + b'A'
+                                            + webpush.b64url_decode(client['publicKey']) + b'\x00' * 32)
+            with self.assertLogs('pocketly.webpush', level='WARNING'):
+                status = webpush.send_web_push(
+                    f'http://127.0.0.1:{srv.server_address[1]}/push', payload, webpush.generate_vapid_keys(),
+                    subject='mailto:prova@esempio.it')
+            self.assertEqual(int(status), 302)
+            self.assertEqual(hits, ['/push'])
+        finally:
+            srv.shutdown()
+            srv.server_close()
 
 
 class StartupTest(unittest.TestCase):

@@ -3,7 +3,7 @@ source-files:
   - server/main.py
   - server/webpush.py
   - server/test_main.py
-verified: 2026-11-11
+verified: 2026-11-23
 ---
 
 # Architettura Backend
@@ -85,5 +85,5 @@ Al momento dell'avvio del server viene avviato un thread daemon in background:
 - Inoltra il payload al gateway Web Push del browser (es. Google FCM, Apple Push, Mozilla Autopush).
 - Se il gateway risponde con `404 Not Found` o `410 Gone` (il dispositivo ha revocato il permesso o disinstallato l'app), il server cancella automaticamente la sottoscrizione del dispositivo per evitare sprechi di risorse.
 - All'avvio viene verificato il mittente `POCKETLY_VAPID_SUBJECT` tramite `vapid_subject_problem`: se l'indirizzo usa suffissi non pubblici (es. `.local`, `.lan`, `localhost`), il server emette un warning esplicito per prevenire rifiuti 403 da parte dei servizi push di Apple.
-- Validazione anti-SSRF: la funzione `valid_endpoint` in [`server/webpush.py`](../../server/webpush.py) blocca qualsiasi tentativo di registrare endpoint push verso indirizzi IP privati o host non pubblici (`_public_host`), impedendo che client autenticati usino il server come proxy per sonde di rete interna.
+- Validazione anti-SSRF: la funzione `valid_endpoint` in [`server/webpush.py`](../../server/webpush.py) blocca qualsiasi tentativo di registrare endpoint push verso indirizzi IP privati o host non pubblici (`_public_host`), impedendo che client autenticati usino il server come proxy per sonde di rete interna. Dal `PKT-14` accetta solo `https` (niente più eccezione per `http://127.0.0.1` e `localhost`) e `send_web_push` non segue i redirect (`_NoRedirect`); nei log compare solo il nome del servizio (`endpoint_host`), mai l'indirizzo completo. Vedi [Analisi di Sicurezza](sicurezza.md).
 - Invalidazione schedulazione su cambio chiavi: se un dispositivo rinnova le chiavi Web Push (`p256dh`/`auth`), il server rimuove le voci precedentemente pianificate cifrate con le vecchie chiavi, in attesa del nuovo scadenzario aggiornato inviato dal client.
