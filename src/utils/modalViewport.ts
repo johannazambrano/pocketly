@@ -252,34 +252,97 @@ export function isRangeInput(target: EventTarget | null): boolean {
   return typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement && target.type === 'range'
 }
 
-export interface HorizontalScrollerCandidate {
+export interface HorizontalScrollerNode {
   scrollLeft: number
   scrollWidth: number
   clientWidth: number
+  style: { overflowX: string }
+  readonly offsetWidth: number
 }
 
 /**
  * Su iOS WebKit, quando una modale apre subito la tastiera (`initialFocus`) durante la transizione di ingresso e il
- * ridimensionamento di `visualViewport`, un contenitore `overflow-x: auto` annidato nel corpo può non attivare subito
- * il proprio `WKChildScrollView`. Un micro-aggiornamento sincrono pre-paint (`1 -> 0`) sui soli contenitori fermi a
- * `scrollLeft === 0` forza WebKit a registrarlo senza alcun salto visivo.
+ * ridimensionamento di `visualViewport`, un contenitore `overflow-x: auto` annidato nel corpo può non attivare il
+ * proprio `WKChildScrollView`. Un toggle di `overflowX` separato da un reflow sincrono (`offsetWidth`) sui soli
+ * contenitori fermi a `scrollLeft === 0` forza WebKit a ricrearlo senza salto visivo.
  */
-export function nudgeHorizontalScrollers(
-  root: { querySelectorAll: (selector: string) => Iterable<HorizontalScrollerCandidate> } | null,
-  getOverflowX?: (el: HorizontalScrollerCandidate) => string,
+export function refreshHorizontalScrollers(
+  root: { querySelectorAll: (selector: string) => Iterable<HorizontalScrollerNode> } | null,
+  getOverflowX?: (el: HorizontalScrollerNode) => string,
 ): void {
   if (!root) return
   const resolveOverflowX =
     getOverflowX ??
     ((el) => (typeof getComputedStyle === 'function' ? getComputedStyle(el as unknown as Element).overflowX : ''))
-  const candidates: HorizontalScrollerCandidate[] = []
+  const candidates: HorizontalScrollerNode[] = []
   for (const el of root.querySelectorAll('*')) {
     if (el.scrollLeft !== 0) continue
     if (!isScrollableOverflow(resolveOverflowX(el))) continue
     if (el.scrollWidth > el.clientWidth + 1) candidates.push(el)
   }
   for (const el of candidates) {
-    el.scrollLeft = 1
-    el.scrollLeft = 0
+    const prev = el.style.overflowX
+    el.style.overflowX = 'hidden'
+    void el.offsetWidth
+    el.style.overflowX = prev
   }
+}
+
+export function canScrollHorizontally(el: ScrollableElement, deltaX: number): boolean {
+  if (deltaX < 0) return el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+  if (deltaX > 0) return el.scrollLeft > 0
+  return false
+}
+
+const HORIZONTAL_FALLBACK_SLOP_PX = 14
+
+/**
+ * Fallback per il bug iOS WebKit in cui uno scroller orizzontale (`overflow-x: auto`, es. chip «Frequenti») resta
+ * congelato alla prima apertura della modale con tastiera attiva.
+ * - Se lo scroll nativo muove `scrollLeft` entro la soglia (`14px`), si fa da parte completamente (`'native'`).
+ * - Se dopo `14px` di trascinamento orizzontale in una direzione scorrevole `scrollLeft` è ancora immobile, aggiorna
+ *   direttamente `scrollLeft` (`'handled'`), rendendo la barra subito utilizzabile e risvegliando lo scroller.
+ */
+export function createHorizontalDragFallback() {
+  let scroller: ScrollableElement | null = null
+  let startScrollLeft = 0
+  let accumDx = 0
+  let engaged = false
+
+  function start(el: ScrollableElement | null) {
+    scroller = el
+    startScrollLeft = el ? el.scrollLeft : 0
+    accumDx = 0
+    engaged = false
+  }
+
+  function step(dx: number, dy: number): 'none' | 'native' | 'handled' {
+    if (!scroller) return 'none'
+    if (engaged) {
+      scroller.scrollLeft -= dx
+      return 'handled'
+    }
+    if (scroller.scrollLeft !== startScrollLeft) {
+      scroller = null
+      return 'native'
+    }
+    if (Math.abs(dx) < Math.abs(dy) * 0.5) return 'none'
+    accumDx += dx
+    if (Math.abs(accumDx) >= HORIZONTAL_FALLBACK_SLOP_PX && canScrollHorizontally(scroller, accumDx)) {
+      engaged = true
+      scroller.scrollLeft -= accumDx
+      return 'handled'
+    }
+    return 'none'
+  }
+
+  function end(): boolean {
+    const wasEngaged = engaged
+    scroller = null
+    accumDx = 0
+    engaged = false
+    return wasEngaged
+  }
+
+  return { start, step, end }
 }

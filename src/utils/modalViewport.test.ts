@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createBackgroundScrollLock,
-  nudgeHorizontalScrollers,
+  createHorizontalDragFallback,
   readVisualViewportBox,
+  refreshHorizontalScrollers,
   shouldPreventModalTouchMove,
-  type HorizontalScrollerCandidate,
+  type HorizontalScrollerNode,
   type ScrollLockDocument,
   type ScrollLockWindow,
   type ScrollableElement,
@@ -151,24 +152,33 @@ describe('shouldPreventModalTouchMove', () => {
   })
 })
 
-describe('nudgeHorizontalScrollers', () => {
-  it('esegue un micro-nudge sincrono (1 -> 0) solo sugli scroller orizzontali fermi a 0 con reale overflow', () => {
-    const writes = new Map<HorizontalScrollerCandidate, number[]>()
-    const makeNode = (scrollLeft: number, scrollWidth: number, clientWidth: number, overflowX: string) => {
-      let current = scrollLeft
-      const node: HorizontalScrollerCandidate & { overflowX: string } = {
-        get scrollLeft() {
-          return current
-        },
-        set scrollLeft(v: number) {
-          current = v
-          const list = writes.get(node) ?? []
-          list.push(v)
-          writes.set(node, list)
-        },
+describe('refreshHorizontalScrollers', () => {
+  it('forza un reflow (overflowX hidden -> ripristino) solo sugli scroller orizzontali fermi a 0 con overflow reale', () => {
+    const events = new Map<HorizontalScrollerNode, string[]>()
+    const makeNode = (scrollLeft: number, scrollWidth: number, clientWidth: number, computedOverflowX: string) => {
+      let inlineOverflowX = ''
+      const node: HorizontalScrollerNode & { computedOverflowX: string } = {
+        scrollLeft,
         scrollWidth,
         clientWidth,
-        overflowX,
+        computedOverflowX,
+        style: {
+          get overflowX() {
+            return inlineOverflowX
+          },
+          set overflowX(v: string) {
+            inlineOverflowX = v
+            const list = events.get(node) ?? []
+            list.push(`set:${v}`)
+            events.set(node, list)
+          },
+        },
+        get offsetWidth() {
+          const list = events.get(node) ?? []
+          list.push('reflow')
+          events.set(node, list)
+          return clientWidth
+        },
       }
       return node
     }
@@ -178,15 +188,59 @@ describe('nudgeHorizontalScrollers', () => {
     const noOverflow = makeNode(0, 320, 320, 'auto')
     const hiddenBox = makeNode(0, 520, 320, 'hidden')
 
-    nudgeHorizontalScrollers(
+    refreshHorizontalScrollers(
       { querySelectorAll: () => [activeStrip, alreadyScrolled, noOverflow, hiddenBox] },
-      (el) => (el as HorizontalScrollerCandidate & { overflowX: string }).overflowX,
+      (el) => (el as HorizontalScrollerNode & { computedOverflowX: string }).computedOverflowX,
     )
 
-    expect(writes.get(activeStrip)).toEqual([1, 0])
-    expect(activeStrip.scrollLeft).toBe(0)
-    expect(writes.get(alreadyScrolled)).toBeUndefined()
-    expect(writes.get(noOverflow)).toBeUndefined()
-    expect(writes.get(hiddenBox)).toBeUndefined()
+    expect(events.get(activeStrip)).toEqual(['set:hidden', 'reflow', 'set:'])
+    expect(events.get(alreadyScrolled)).toBeUndefined()
+    expect(events.get(noOverflow)).toBeUndefined()
+    expect(events.get(hiddenBox)).toBeUndefined()
+  })
+})
+
+describe('createHorizontalDragFallback', () => {
+  it('si fa da parte se lo scroll nativo muove scrollLeft prima della soglia', () => {
+    const strip = horizontalStrip({ scrollLeft: 0 })
+    const fb = createHorizontalDragFallback()
+    fb.start(strip)
+    expect(fb.step(-6, 0)).toBe('none')
+    // Lo scroll nativo prende in carico il movimento
+    strip.scrollLeft = 8
+    expect(fb.step(-10, 0)).toBe('native')
+    expect(strip.scrollLeft).toBe(8)
+    expect(fb.end()).toBe(false)
+  })
+
+  it('muove scrollLeft direttamente se lo scroller nativo resta bloccato oltre 14px e segnala di sopprimere il click', () => {
+    const strip = horizontalStrip({ scrollLeft: 0, scrollWidth: 600, clientWidth: 320 })
+    const fb = createHorizontalDragFallback()
+    fb.start(strip)
+
+    expect(fb.step(-8, 1)).toBe('none')
+    expect(strip.scrollLeft).toBe(0)
+    // Superati 14px senza risposta nativa: aggancia e applica tutto il delta accumulato
+    expect(fb.step(-8, 0)).toBe('handled')
+    expect(strip.scrollLeft).toBe(16)
+    // Passi successivi seguono il dito
+    expect(fb.step(-12, 2)).toBe('handled')
+    expect(strip.scrollLeft).toBe(28)
+    expect(fb.end()).toBe(true)
+  })
+
+  it('non interviene su tap brevi, su pull a destra già a scrollLeft=0 o su gesti verticali', () => {
+    const strip = horizontalStrip({ scrollLeft: 0, scrollWidth: 600, clientWidth: 320 })
+    const fb = createHorizontalDragFallback()
+
+    fb.start(strip)
+    expect(fb.step(20, 0)).toBe('none')
+    expect(strip.scrollLeft).toBe(0)
+    expect(fb.end()).toBe(false)
+
+    fb.start(strip)
+    expect(fb.step(-4, -30)).toBe('none')
+    expect(strip.scrollLeft).toBe(0)
+    expect(fb.end()).toBe(false)
   })
 })

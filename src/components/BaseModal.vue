@@ -28,10 +28,11 @@ import { useI18n } from 'vue-i18n'
 import { useUiStore } from '@/stores/ui'
 import { useAppearanceStore } from '@/stores/appearance'
 import {
+  createHorizontalDragFallback,
   findModalScrollables,
   isRangeInput,
-  nudgeHorizontalScrollers,
   readVisualViewportBox,
+  refreshHorizontalScrollers,
   shouldPreventModalTouchMove,
   type ViewportBox,
 } from '@/utils/modalViewport'
@@ -90,55 +91,87 @@ const overlayStyle = computed(() => ({
     : { top: '0px', bottom: '0px' }),
 }))
 
-let nudgeFrame = 0
-function cancelHorizontalNudge() {
-  if (!nudgeFrame) return
-  cancelAnimationFrame(nudgeFrame)
-  nudgeFrame = 0
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+let lastResetOffset = 0
+function cancelHorizontalRefresh() {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer)
+    refreshTimer = null
+  }
 }
-function scheduleHorizontalNudge() {
-  if (typeof requestAnimationFrame === 'undefined') return
-  cancelHorizontalNudge()
-  nudgeFrame = requestAnimationFrame(() => {
-    nudgeFrame = 0
-    if (isOpen) nudgeHorizontalScrollers(scrollBody.value)
-  })
+function scheduleHorizontalRefresh(delayMs = 0) {
+  cancelHorizontalRefresh()
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    if (isOpen) refreshHorizontalScrollers(scrollBody.value)
+  }, delayMs)
 }
 
 function syncViewport() {
+  const vv = window.visualViewport
+  if (vv && (!vv.scale || vv.scale <= 1.01) && scrollLock.isLocked()) {
+    if (vv.offsetTop > 0 && vv.offsetTop !== lastResetOffset) {
+      lastResetOffset = vv.offsetTop
+      window.scrollTo(0, 0)
+    } else if (vv.offsetTop <= 0) {
+      lastResetOffset = 0
+    }
+  }
   const prevHeight = viewportBox.value?.height
-  const next = readVisualViewportBox(window.visualViewport)
+  const next = readVisualViewportBox(vv)
   viewportBox.value = next
   if (next && prevHeight !== undefined && next.height !== prevHeight) {
-    scheduleHorizontalNudge()
+    // Su iOS la tastiera impiega ~300 ms ad assestarsi: rifresca gli scroller orizzontali a fine animazione.
+    scheduleHorizontalRefresh(350)
   }
 }
 
 function onAfterEnter() {
   if (!isOpen) return
   syncViewport()
-  scheduleHorizontalNudge()
+  scheduleHorizontalRefresh(0)
 }
 
+const horizontalFallback = createHorizontalDragFallback()
 let hasTouch = false
 let lastTouchX = 0
 let lastTouchY = 0
 let attachedOverlay: HTMLElement | null = null
+let suppressClickTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearClickSuppressor() {
+  if (suppressClickTimer !== null) {
+    clearTimeout(suppressClickTimer)
+    suppressClickTimer = null
+  }
+  attachedOverlay?.removeEventListener('click', blockClickOnce, true)
+}
+
+function blockClickOnce(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  clearClickSuppressor()
+}
 
 function onTouchStart(e: TouchEvent) {
+  clearClickSuppressor()
   if (e.touches.length !== 1) {
     hasTouch = false
+    horizontalFallback.end()
     return
   }
   const touch = e.touches[0]!
   hasTouch = true
   lastTouchX = touch.clientX
   lastTouchY = touch.clientY
+  const { xScroller } = findModalScrollables(e.target, scrollBody.value)
+  horizontalFallback.start(xScroller)
 }
 
 function onTouchMove(e: TouchEvent) {
   if (e.touches.length !== 1 || isRangeInput(e.target)) {
     hasTouch = false
+    horizontalFallback.end()
     return
   }
   const touch = e.touches[0]!
@@ -152,6 +185,14 @@ function onTouchMove(e: TouchEvent) {
   const dy = touch.clientY - lastTouchY
   lastTouchX = touch.clientX
   lastTouchY = touch.clientY
+
+  const fbResult = horizontalFallback.step(dx, dy)
+  if (fbResult === 'handled') {
+    e.preventDefault()
+    return
+  }
+  if (fbResult === 'native') return
+
   const { inScrollBody, xScroller, yScroller } = findModalScrollables(e.target, scrollBody.value)
   if (shouldPreventModalTouchMove({ inScrollBody, dx, dy, xScroller, yScroller })) {
     e.preventDefault()
@@ -159,6 +200,11 @@ function onTouchMove(e: TouchEvent) {
 }
 
 function onTouchEnd(e: TouchEvent) {
+  const draggedHorizontally = horizontalFallback.end()
+  if (draggedHorizontally && attachedOverlay) {
+    attachedOverlay.addEventListener('click', blockClickOnce, { capture: true, once: true })
+    suppressClickTimer = setTimeout(clearClickSuppressor, 120)
+  }
   if (e.touches.length !== 1) {
     hasTouch = false
     return
@@ -170,6 +216,8 @@ function onTouchEnd(e: TouchEvent) {
 }
 
 function detachOverlayTouch() {
+  clearClickSuppressor()
+  horizontalFallback.end()
   hasTouch = false
   if (!attachedOverlay) return
   attachedOverlay.removeEventListener('touchstart', onTouchStart)
@@ -238,11 +286,13 @@ async function onOpen() {
   }
   const field = props.initialFocus ? dialog.value?.querySelector<HTMLElement>(props.initialFocus) : null
   ;(field ?? heading.value)?.focus({ preventScroll: true })
+  if (field) scheduleHorizontalRefresh(350)
 }
 function onClose() {
   if (!isOpen) return
   isOpen = false
-  cancelHorizontalNudge()
+  lastResetOffset = 0
+  cancelHorizontalRefresh()
   document.removeEventListener('keydown', onKey)
   window.visualViewport?.removeEventListener('resize', syncViewport)
   window.visualViewport?.removeEventListener('scroll', syncViewport)
