@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-23
+verified: 2026-11-24
 ---
 
 # Backlog di Pocketly
@@ -27,7 +27,7 @@ collegamento, senza ripeterne il testo.
 | PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Johanna |
-| PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
+| PKT-15 | Analisi per migliorare la struttura attuale dell'app | in corso | media | Jonny |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
@@ -233,11 +233,12 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-23 presa in carico (Johanna).
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
 - **Perché:** analizzare la struttura attuale dell'app per individuare possibili miglioramenti architetturali, organizzativi e di manutenibilità.
 - **Fatto quando:** analisi completata e documentata con proposte concrete di miglioramento e relativi task operativi aperti nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-24 presa in carico (Jonny).
 
 ### PKT-16 — Impostazioni divise per argomento
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
