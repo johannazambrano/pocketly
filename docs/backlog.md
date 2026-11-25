@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-24
+verified: 2026-11-25
 ---
 
 # Backlog di Pocketly
@@ -40,6 +40,7 @@ collegamento, senza ripeterne il testo.
 | PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
 | PKT-26 | Blocco scroll e viewport delle modali su iPhone | fatto | — | Jonny |
 | PKT-27 | Implementazione piano di miglioramento strutturale e manutenibilità (da PKT-15) | da fare | media | libero |
+| PKT-28 | Interazione nativa PWA, long press e animazioni OS-adattive | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -444,3 +445,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** gli interventi prioritari (o i rispettivi sotto-task) sono implementati con zero breaking changes, `mappa-codice.md` e documentazione aggiornati, verifica visiva sulle 6 combinazioni piattaforma × tema per i refactor UI/CSS, e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
 - **Storia:**
   - 2026-11-24 aperta da analisi PKT-15 (Jonny), collegata a [architettura/struttura-e-manutenibilita.md](architettura/struttura-e-manutenibilita.md).
+
+### PKT-28 — Interazione nativa PWA, long press e animazioni OS-adattive
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** eliminare i comportamenti tipici da pagina web nella PWA (selezione accidentale del testo, callout nativo di Safari/Chrome, doppio tap per zoom, pull-to-refresh involontario, trascinamento icone) e introdurre un sistema unificato di pressione prolungata (long press su mobile / tasto destro su PC), feedback tattile/aptico, menu contestuale dinamico e animazioni conformi agli standard del sistema operativo in cui gira l'app (**iOS** Haptic Touch `UIMenu` Liquid Glass con curve spring, **Android** Material 3 Expressive Modal Bottom Sheet con ripple radiale, vibrazione e drag-to-dismiss, **Desktop** Popover al cursore navigabile da tastiera).
+- **Come partire:** tutte le decisioni confermate, la matrice grafica/animazioni per piattaforma, le specifiche file per file e la checklist di verifica sono salvate in [Progetto e Piano Implementativo: Interazione Nativa PWA](architettura/interazione-nativa-pwa.md). Intervento puramente frontend senza cambi a `FinanceData` v3 né al backend; aprire un ramo dedicato (es. `feature/pkt-28-interazione-nativa`) e seguire le 6 fasi del documento (preservando `PKT-26` su `BaseModal` e `modalViewport.ts`).
+- **Fatto quando:** regole native app shell e gettoni movimento/pressione su tutte e 6 le combinazioni in `src/style.css`, utility pure testate (`longPress`, `contextMenuLayout`, `sheetDrag`, `overlayStack`, `haptics`), composable `useLongPress`, `ContextMenuHost` integrato in `App.vue` + viste/componenti target, animazioni OS e drag-to-dismiss su `BaseModal`/`BottomNav`, chiavi `it`/`en` e documentazione aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi; verifica manuale sulle 6 combinazioni piattaforma × tema e sui dispositivi reali.
+- **Storia:**
+  - 2026-11-25 aperta con progetto e piano implementativo salvato in [architettura/interazione-nativa-pwa.md](architettura/interazione-nativa-pwa.md).

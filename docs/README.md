@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-24
+verified: 2026-11-25
 ---
 
 # Indice della Documentazione di Pocketly
@@ -26,6 +26,7 @@ Benvenuto nella documentazione di **Pocketly**. Questo indice è strutturato per
 | Voglio consultare il progetto di **autenticazione, blocco locale e multi-utente** | [Progetto Autenticazione](architettura/autenticazione.md) |
 | Voglio consultare il progetto e piano della **sezione Patrimonio** | [Progetto Sezione Patrimonio](architettura/patrimonio.md) |
 | Voglio consultare l'analisi su **struttura, modularità e manutenibilità** | [Analisi e Piano di Miglioramento Strutturale](architettura/struttura-e-manutenibilita.md) |
+| Voglio consultare il progetto di **interazione nativa PWA, long press e animazioni OS** | [Progetto Interazione Nativa PWA](architettura/interazione-nativa-pwa.md) |
 | Voglio **aggiungere una nuova schermata/vista** | [Guida: Aggiungere una Vista](guide/aggiungere-una-vista.md) |
 | Voglio **aggiungere un nuovo campo** a una transazione o modello | [Guida: Aggiungere un Campo ai Dati](guide/aggiungere-un-campo-ai-dati.md) |
 | Voglio eseguire i **test** o preparare una nuova build | [Guida: Test e Release](guide/test-e-release.md) |
@@ -54,6 +55,7 @@ docs/
 │   ├── autenticazione.md              <-- Progetto e piano autenticazione Zero-Knowledge (PKT-12)
 │   ├── patrimonio.md                  <-- Progetto e piano implementativo Patrimonio (PKT-22)
 │   ├── struttura-e-manutenibilita.md  <-- Analisi struttura e piano refactoring (PKT-15)
+│   ├── interazione-nativa-pwa.md      <-- Progetto interazione nativa, long press e animazioni OS (PKT-28)
 │   └── deploy.md                      <-- Proxmox LXC, systemd, Nginx, proxy Vite
 ├── riferimento/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test
