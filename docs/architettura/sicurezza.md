@@ -12,7 +12,7 @@ source-files:
   - src/stores/sync.ts
   - src/services/exportData.ts
   - src/services/xlsx/zip.ts
-verified: 2026-11-23
+verified: 2026-11-25
 ---
 
 # Analisi di Sicurezza (PKT-14)
@@ -59,17 +59,17 @@ come versione di prova. Nell'analisi si considerano:
 
 | # | Punto | Peso | Stato |
 |---|---|---|---|
-| 1 | La CA locale installata sui dispositivi vale per qualsiasi sito, e la sua chiave sta sul container | alto | aperto, da decidere |
+| 1 | La CA locale installata sui dispositivi vale per qualsiasi sito, e la sua chiave sta sul container | alto | deciso (CA nuova limitata all'IP), da fare |
 | 2 | Il sito non mandava intestazioni di sicurezza (CSP, protezione dall'inserimento in altre pagine…) | medio | risolto |
 | 3 | Sul dispositivo dati, chiave del server e chiave di cifratura sono salvati in chiaro | medio | rimandato a `PKT-25` fase A |
-| 4 | La password della sincronizzazione può avere solo 8 caratteri | medio-basso | aperto, da decidere |
+| 4 | La password della sincronizzazione può avere solo 8 caratteri | medio-basso | spostato in `PKT-25` fase B1 |
 | 5 | Il server delle notifiche accettava `http://127.0.0.1` e `localhost` anche in produzione, e seguiva i redirect | basso | risolto |
 | 6 | `vue-i18n` con una vulnerabilità nota | basso | risolto |
 | 7 | Gli indirizzi completi dei dispositivi finivano nei log del server | basso | risolto |
 | 8 | Il tocco su una notifica poteva aprire un sito esterno | basso | risolto |
 | 9 | `ca.crt` si scarica in HTTP senza un modo di verificarlo | basso | risolto (guida) |
 
-### 1. CA locale senza limiti (alto, aperto)
+### 1. CA locale senza limiti (alto, deciso, da fare)
 [`make-cert.sh`](../../deploy/proxmox/make-cert.sh) crea una CA radice che i dispositivi installano come attendibile. La CA
 non ha `nameConstraints`: un certificato firmato con la sua chiave vale per **qualsiasi** sito, non solo per l'IP del
 container. La chiave (`ca.key`) sta in `/etc/nginx/ssl` sul container. Chi entra nel container può quindi fingersi
@@ -82,7 +82,10 @@ qualsiasi sito (banca, posta…) sui dispositivi che hanno installato la CA, sen
 - **Solo togliere `ca.key` dal container**, conservandola altrove. Niente da reinstallare; riduce il rischio (chi entra
   nel container non trova la chiave), ma la CA resta valida per tutti i siti.
 
-Da decidere chi usa l'app; fino ad allora il punto resta aperto.
+**Deciso il 2026-11-25:** CA nuova con il vincolo sull'IP del container e chiave fuori dal container. Ogni dispositivo
+va aggiornato: prima un backup dei dati, poi si toglie la CA vecchia e si installa la nuova (controllando l'impronta,
+punto 9). Da fare in [`make-cert.sh`](../../deploy/proxmox/make-cert.sh) e nella
+[guida](../../deploy/proxmox/README.md).
 
 ### 2. Intestazioni di sicurezza (medio, risolto)
 Né nginx né Vercel mandavano intestazioni di sicurezza. Ora le mandano entrambi
@@ -111,14 +114,18 @@ sincronizzazione (un `CryptoKey` non estraibile, ma usabile da chi apre l'app). 
 backup del browser, ha tutto. È il problema che risolve il blocco locale con cifratura dei dati, fase A di `PKT-25`
 ([autenticazione.md](autenticazione.md)): non si duplica qui.
 
-### 4. Password della sincronizzazione corta (medio-basso, aperto)
+### 4. Password della sincronizzazione corta (medio-basso, spostato in `PKT-25`)
 La password che cifra i dati della sincronizzazione deve avere almeno 8 caratteri (`MIN_PASSWORD_LENGTH`). Chi conosce la
 chiave del server può scaricare i dati cifrati (e il server tiene le ultime 30 versioni in `history/`) e provare le
 password sul proprio computer, senza limiti di tentativi. Con 600.000 iterazioni ogni prova è lenta, ma una password di 8
 caratteri comune resta alla portata.
 
 **Rimedi possibili:** minimo di 12 caratteri per le password nuove (quelle già in uso continuano a funzionare), oppure solo
-un avviso sotto il campo quando la password è corta o semplice. Da decidere chi usa l'app.
+un avviso sotto il campo quando la password è corta o semplice.
+
+**Deciso il 2026-11-25:** non si corregge a parte. La sincronizzazione si attiverà solo con un account registrato e userà
+le sue credenziali: è la fase B1 di `PKT-25` ([autenticazione.md](autenticazione.md)), con un'unica password principale.
+La lunghezza minima e il controllo della robustezza si decidono lì.
 
 ### 5. Notifiche verso indirizzi interni (basso, risolto)
 `valid_endpoint` accettava `http://127.0.0.1` e `http://localhost`, pensati per i test ma attivi anche in produzione: con la

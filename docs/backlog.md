@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-24
+verified: 2026-11-25
 ---
 
 # Backlog di Pocketly
@@ -26,7 +26,7 @@ collegamento, senza ripeterne il testo.
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
-| PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Johanna |
+| PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Jonny |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | fatto | — | Jonny |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
@@ -226,7 +226,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 in `develop` con `5e53524` (ramo `docs/scalabilita`, commit `0c3a83e`).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
-- **Stato:** in corso · **Priorità:** media · **Chi:** Johanna
+- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
 - **Perché:** eseguire un'analisi di sicurezza dell'app (frontend, crittografia, sync, notifiche, backend e deploy) e applicare gli eventuali fix necessari.
 - **Fatto quando:** analisi di sicurezza completata e documentata; eventuali fix applicati e verificati (o tracciati in attività dedicate se richiedono interventi ampi).
 - **Storia:**
@@ -238,6 +238,10 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     notifica solo verso pagine dell'app, `vue-i18n` aggiornato, impronta della CA nella guida. Restano da decidere la
     CA locale senza vincoli (punto 1) e il minimo della password di sincronizzazione (punto 4); i dati in chiaro sul
     dispositivo (punto 3) li copre `PKT-25` fase A.
+  - 2026-11-25 decisioni (Jonny, Johanna): punto 1 con una CA nuova limitata all'IP del container e chiave fuori dal
+    container, da reinstallare sui dispositivi dopo un backup; punto 4 spostato in `PKT-25` fase B1 (sincronizzazione
+    solo con account registrato). `develop` unito nel ramo (`e9bced2`); PKT-14 passa a Jonny, che fa il punto 1 e
+    unisce il ramo in `develop`.
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
 - **Stato:** fatto · **Chi:** Jonny
@@ -431,6 +435,9 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
 - **Storia:**
   - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
+  - 2026-11-25 la fase B1 copre anche il punto 4 di `PKT-14` (password della sincronizzazione corta): la sincronizzazione
+    si attiva solo con un account registrato, e lì si decidono lunghezza minima e robustezza della password
+    ([sicurezza.md](architettura/sicurezza.md)).
 
 ### PKT-26 — Blocco scroll e viewport delle modali su iPhone
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny
