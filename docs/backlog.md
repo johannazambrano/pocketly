@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-23
+verified: 2026-11-24
 ---
 
 # Backlog di Pocketly
@@ -27,7 +27,7 @@ collegamento, senza ripeterne il testo.
 | PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
 | PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Johanna |
-| PKT-15 | Analisi per migliorare la struttura attuale dell'app | da fare | media | libero |
+| PKT-15 | Analisi per migliorare la struttura attuale dell'app | fatto | — | Jonny |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
 | PKT-18 | Implementazione piano di scalabilità (da PKT-13) | da fare | media | libero |
@@ -38,6 +38,8 @@ collegamento, senza ripeterne il testo.
 | PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
 | PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
 | PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
+| PKT-26 | Blocco scroll e viewport delle modali su iPhone | fatto | — | Jonny |
+| PKT-27 | Implementazione piano di miglioramento strutturale e manutenibilità (da PKT-15) | da fare | media | libero |
 
 Stati possibili: `da fare`, `in corso`, `in attesa di …`, `idea da decidere`, `fatto nel ramo, da unire`, `fatto`, `annullato`.
 
@@ -238,11 +240,14 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     dispositivo (punto 3) li copre `PKT-25` fase A.
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Stato:** fatto · **Chi:** Jonny
 - **Perché:** analizzare la struttura attuale dell'app per individuare possibili miglioramenti architetturali, organizzativi e di manutenibilità.
+- **Risultato:** analisi empirica completa e strategia implementativa incrementale a 3 fasi documentate in [Analisi e Piano di Miglioramento Strutturale](architettura/struttura-e-manutenibilita.md) (deduplicazione `OneTimeView`/`IncomeView` e servizi condivisi, guardia idempotente `finance.init()`, scomposizione modulare di `DashboardView`, `BudgetView`, `notifications.ts`, `finance.ts`, `calculations.ts` e `style.css`, estensione `docs-check.mjs`, split del package backend `server/` e test su composables/store/servizi scoperti; coordinata con `PKT-14`, `PKT-18`, `PKT-22`, `PKT-24` e `PKT-25`). Aperta l'attività operativa `PKT-27`.
 - **Fatto quando:** analisi completata e documentata con proposte concrete di miglioramento e relativi task operativi aperti nel backlog.
 - **Storia:**
   - 2026-11-16 aperta.
+  - 2026-11-24 presa in carico (`d4e51bb`, Jonny).
+  - 2026-11-24 analisi e strategia implementativa completate (Jonny): redatta [struttura-e-manutenibilita.md](architettura/struttura-e-manutenibilita.md), aggiornato [README.md](README.md) e aperta `PKT-27` con link diretto al piano implementativo.
 
 ### PKT-16 — Impostazioni divise per argomento
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
@@ -338,6 +343,11 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     salvadanai; per un mese futuro solo la quota.
   - 2026-11-23 in `develop` con `511cdc9` (commit `34f3e03`). Da provare sui telefoni nella versione di prova di
     `develop`.
+  - 2026-11-23 corretto nel ramo `fix/pkt-19-verdetto-mese` (Johanna): per un mese passato la frase «meglio/peggio
+    della media» confrontava il risultato senza togliere i salvadanai del mese con una media che li toglieva; ora
+    `balanceVsAverage` li toglie da tutte e due le parti. Nello stesso ramo, fuori da `PKT-19`: sulla Dashboard il
+    messaggio «nessun addebito in arrivo» compariva anche sotto un elenco corto di prossimi addebiti.
+  - 2026-11-23 in `develop` con `b9e1a09`; `develop` portato in `main` con `a3a072e` (Johanna).
 
 ### PKT-20 — Barra in basso per iPhone, Android e PC con «+» che segue la pagina
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny, Johanna
@@ -380,6 +390,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     In `develop` con `040c0b7` (`29b3649` `suggestTags` con i test, `f0e55d5` nuovo `TagInput`): a campo vuoto i 6
     tag più usati, scrivendo quelli che corrispondono senza badare a maiuscole e accenti, «Crea #nome» se il nome
     non esiste; tag scelti come pillole sotto il campo. Da provare sui telefoni nella versione di prova di `develop`.
+  - 2026-11-23 `develop` portato in `main` con `a3a072e` (Johanna).
 
 ### PKT-22 — Sezione Patrimonio: monitoraggio e analisi del patrimonio
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero
@@ -420,3 +431,22 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 - **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
 - **Storia:**
   - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
+
+### PKT-26 — Blocco scroll e viewport delle modali su iPhone
+- **Stato:** fatto · **Priorità:** — · **Chi:** Jonny
+- **Perché:** su iPhone, aprendo la modale per inserire una spesa (`TransactionForm` dentro `BaseModal`), trascinando il dito in orizzontale, verticale o con movimenti combinati 2D il contenuto del foglio si spostava liberamente come una pagina web senza vincoli (`body.style.overflow = 'hidden'` ignorato da iOS WebKit, mancanza di `overflow-x-hidden` e `touch-pan-y`, intestazione dentro l'area scorrevole e `fixed inset-0` / `90dvh` non adattati a `window.visualViewport` con tastiera virtuale aperta).
+- **Come:** utility testata [`modalViewport.ts`](../src/utils/modalViewport.ts) (`createBackgroundScrollLock`, `readVisualViewportBox`, `shouldPreventModalTouchMove`, `findModalScrollables`, `refreshHorizontalScrollers`, `createHorizontalDragFallback`) integrata in `BaseModal.vue`: blocco scroll di sfondo compatibile con iOS e modali sovrapposte, overlay ancorato a `visualViewport` (con azzeramento derive `offsetTop`), sfondo separato `touch-none`, testata fissa (`shrink-0 touch-none`) e corpo scorrevole solo in verticale (`overflow-x-hidden overflow-y-auto overscroll-contain touch-manipulation`), preservando fin dalla prima apertura con tastiera lo scorrimento orizzontale interno (chip «Frequenti» in `TransactionForm.vue` con `overflow-y-hidden touch-pan-x will-change-scroll`, reflow post-tastiera e fallback `scrollLeft` quando WebKit congela lo scroller nativo). Aggiunto `overflow-x: clip` su `html`/`body` e `max-w-full` su `.field` in `src/style.css`.
+- **Fatto quando:** test unitari verdi, `typecheck`, `test:server`, `build` e `docs:check` verdi, documentazione aggiornata; verificato su iPhone (Safari e PWA) che la modale resti ferma su scorrimenti orizzontali/2D e scorra solo in verticale quando serve.
+- **Storia:**
+  - 2026-11-23 aperta e implementata nel ramo `fix/modale-scroll-ios` (Jonny, `ecc4017`): introdotta `modalViewport.ts` con test unitari, aggiornati `BaseModal.vue`, `TransactionForm.vue`, `style.css` e documentazione (`mappa-codice.md`, `componenti-e-viste.md`, `frontend.md`).
+  - 2026-11-23 seconda iterazione dopo prova su iPhone (`1b514c6`): `touch-manipulation` sul corpo e `overflow-y-hidden touch-pan-x will-change-scroll` sui chip «Frequenti».
+  - 2026-11-23 terza iterazione dopo prova su iPhone: azzeramento derive `visualViewport.offsetTop`, reflow reale post-tastiera (`refreshHorizontalScrollers` a 350 ms) e fallback `createHorizontalDragFallback` su `scrollLeft` (con soppressione click accidentali) se `WKChildScrollView` resta bloccato alla prima apertura con tastiera. Da riprovare su iPhone e unire in `develop`.
+  - 2026-11-23 in `develop` con `1d663dd`; `develop` portato in `main` con `a3a072e` (Johanna).
+
+### PKT-27 — Implementazione piano di miglioramento strutturale e manutenibilità (da PKT-15)
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Perché:** implementare i miglioramenti strutturali, di deduplicazione, modularità, quality gates e copertura test individuati nell'analisi `PKT-15` (inclusi i filtri dei tag copiati tra Entrate e Spese segnalati in `PKT-06`), documentati in [Analisi e Piano di Miglioramento Strutturale](architettura/struttura-e-manutenibilita.md).
+- **Come partire:** seguire il piano incrementale a 3 fasi e le specifiche tecniche della [Sezione 4 di struttura-e-manutenibilita.md](architettura/struttura-e-manutenibilita.md#4-specifiche-tecniche-operative-guida-operativa-per-pkt-27) (chi prende in carico il lavoro può suddividerlo in PR/sotto-task per Fase 1, Fase 2 e Fase 3: Fase 1 deduplicazione `OneTimeView`/`IncomeView` e servizi/utility condivise + guardia `finance.init()` + `docs-check.mjs`; Fase 2 scomposizione `DashboardView`, `BudgetView`, `notifications.ts`, `finance.ts`, `calculations.ts`, `style.css` e `components/`; Fase 3 modularizzazione `server/main.py` e copertura test su composables, store e servizi scoperti). Coordinato con `PKT-18`, `PKT-22`, `PKT-24` e `PKT-25`.
+- **Fatto quando:** gli interventi prioritari (o i rispettivi sotto-task) sono implementati con zero breaking changes, `mappa-codice.md` e documentazione aggiornati, verifica visiva sulle 6 combinazioni piattaforma × tema per i refactor UI/CSS, e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
+- **Storia:**
+  - 2026-11-24 aperta da analisi PKT-15 (Jonny), collegata a [architettura/struttura-e-manutenibilita.md](architettura/struttura-e-manutenibilita.md).

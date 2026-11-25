@@ -69,8 +69,14 @@ Spese variabili (una tantum) del mese di oggi: `total` (tutto il mese), `toDate`
 ### `compareToAverage(value, average, tolerance = 0.1): Verdict`
 Confronta un valore con la sua media e restituisce un `Verdict` (`'above'` | `'inline'` | `'below'`): è `'inline'` se lo scarto resta entro il 10% di `|average|`.
 
+### `monthBalanceAfterSavings(data, year, month, today): Cents`
+Il risultato di un mese come lo mostra la cifra grande della Dashboard: `monthSummary(...).balance` meno quanto è andato nei salvadanai nel mese (`savedBetween`, `PKT-19`).
+
 ### `averageBalanceBefore(data, year, month, today): Cents | null`
-Media del risultato (entrate meno uscite, da `monthSummary`, meno quanto è andato nei salvadanai nel mese con `savedBetween`, come la cifra grande della Dashboard) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+Media del risultato (`monthBalanceAfterSavings`: entrate meno uscite, meno quanto è andato nei salvadanai nel mese, come la cifra grande della Dashboard) dei mesi dell'anno precedenti a `month`, a partire dal mese di inizio del periodo attivo. `null` se non ci sono mesi precedenti da confrontare.
+
+### `balanceVsAverage(data, year, month, today): { verdict, average } | null`
+Il giudizio sotto la cifra grande per un mese passato: `compareToAverage` tra `monthBalanceAfterSavings` del mese e `averageBalanceBefore`. Le due parti tolgono i salvadanai allo stesso modo, così la frase parla della cifra che si vede. `null` senza mesi precedenti.
 
 ### `tagTrends(data, year, month, field, totals, today): Map<Id, TagTrendInfo>`
 Calcola per ciascun tag (categoria o metodo di pagamento) il confronto tra l'importo consuntivato nel mese e la media mensile dei mesi precedenti dello stesso anno:
