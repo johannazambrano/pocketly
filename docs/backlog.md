@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-25
+verified: 2026-11-26
 ---
 
 # Backlog di Pocketly
@@ -37,7 +37,16 @@ collegamento, senza ripeterne il testo.
 | PKT-22 | Sezione Patrimonio: monitoraggio e analisi del patrimonio | da fare | media | libero |
 | PKT-23 | Nascondere gli importi con un tocco | idea da decidere | bassa | libero |
 | PKT-24 | Scegliere cosa mostrare nella Dashboard | idea da decidere | bassa | libero |
-| PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | da fare | media | libero |
+| PKT-25 | Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12) | in corso | media | Jonny |
+| PKT-25.1 | [Fase A] Primitive crittografiche client e cifratura IndexedDB at-rest | da fare | media | libero |
+| PKT-25.2 | [Fase A] Store blocco locale, auto-lock, `LockScreen` e privacy screen | da fare | media | libero |
+| PKT-25.3 | [Fase A] Impostazioni Sicurezza (`/impostazioni/sicurezza`) e notifiche discrete | da fare | media | libero |
+| PKT-25.4 | [Fase B1] Storage server SQLite WAL multi-tenant e migrazione JSON legacy | da fare | media | libero |
+| PKT-25.5 | [Fase B1] Motore auth server, sessioni `HttpOnly` revocabili, API v2 e CLI admin | da fare | media | libero |
+| PKT-25.6 | [Fase B1] Envelope Encryption client (`vaultDEK`, Recovery Key), policy password e client API | da fare | media | libero |
+| PKT-25.7 | [Fase B1] UI Account, registrazione 2-step, gestione dispositivi/admin e deploy Proxmox | da fare | media | libero |
+| PKT-25.8 | [Fase B2] Crittografia condivisione ECDH P-256, Safety Fingerprint e API membri/inviti | da fare | media | libero |
+| PKT-25.9 | [Fase B2] Storage IndexedDB multi-vault, selettore archivio e UI condivisione famiglia | da fare | media | libero |
 | PKT-26 | Blocco scroll e viewport delle modali su iPhone | fatto | — | Jonny |
 | PKT-27 | Implementazione piano di miglioramento strutturale e manutenibilità (da PKT-15) | da fare | media | libero |
 | PKT-28 | Interazione nativa PWA, long press e animazioni OS-adattive | da fare | media | libero |
@@ -52,7 +61,9 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
 1. **Le attività non si spostano.** Restano in ordine di numero; cambia solo la riga `Stato` (e la stessa riga
    del riepilogo). Spostare blocchi tra sezioni fa andare in conflitto i rami che toccano il file insieme.
 2. **Nuova attività:** il numero successivo (`PKT-12`, `PKT-13`…), una riga nel riepilogo e un blocco qui sotto
-   con `Stato`, `Perché`, `Fatto quando` e `Storia`. Per un difetto già descritto in
+   con `Stato`, `Perché`, `Fatto quando` e `Storia`. Se un'attività ampia viene scomposta in sotto-attività, i figli
+   usano la forma `PKT-XX.1`, `PKT-XX.2`… e stanno subito sotto il padre (nel riepilogo e come sotto-intestazioni
+   `####` nel corpo), così non occupano nuovi numeri del contatore globale. Per un difetto già descritto in
    [known-issues.md](known-issues.md) basta il collegamento.
 3. **Prendere un'attività:** si mette `in corso` e il proprio nome con un piccolo commit **direttamente su
    `develop`**, così gli altri lo vedono subito e non la prendono in due.
@@ -420,12 +431,127 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-20 aperta dall'idea di Jonny (Johanna).
 
 ### PKT-25 — Implementazione autenticazione Zero-Knowledge e blocco locale (da PKT-12)
-- **Stato:** da fare · **Priorità:** media · **Chi:** libero
-- **Perché:** implementare l'autenticazione progettata in `PKT-12` (blocco locale opzionale con cifratura IndexedDB at-rest, Master Password unica Zero-Knowledge con compatibilità password manager, account su invito/admin con sessioni revocabili su SQLite WAL e archivi condivisi coppia/famiglia). Tutte le specifiche crittografiche, le API, lo schema SQLite e i contratti HTML per password manager sono documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md).
-- **Come partire:** seguire il piano operativo in 3 fasi indipendenti della [Sezione 7 di autenticazione.md](architettura/autenticazione.md#7-piano-implementativo-a-3-fasi-guida-operativa-per-pkt-25) (chi prende in carico il lavoro può dividerle in sotto-task): **Fase A** blocco locale + cifratura IndexedDB at-rest (`'finance-data'` e `SyncState.base`, solo frontend, offline-first); **Fase B1** account Zero-Knowledge, sessioni `HttpOnly` revocabili e backend SQLite WAL (coordinata con `PKT-18` Fase 3); **Fase B2** archivi condivisi coppia/famiglia via ECDH P-256.
-- **Fatto quando:** le fasi implementate (o i rispettivi sotto-task aperti) sono coperte da test client e server, verificate con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
+- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
+- **Perché:** implementare l'autenticazione progettata in `PKT-12` (blocco locale opzionale con cifratura IndexedDB at-rest, Master Password unica Zero-Knowledge con compatibilità password manager, account su invito/admin con sessioni revocabili su SQLite WAL e archivi condivisi coppia/famiglia). Tutte le specifiche crittografiche, le API, lo schema SQLite e i contratti HTML per password manager sono documentati in [Progetto e Piano Implementativo: Autenticazione](architettura/autenticazione.md). Copre inoltre i punti rimandati dall'analisi di sicurezza `PKT-14` (punto 3: dati locali in chiaro in Fase A; punto 4: sincronizzazione solo con account registrato e policy robustezza Master Password in Fase B1) e realizza la Fase 3 di `PKT-18` (storage SQLite WAL multi-tenant).
+- **Sotto-task operativi:** attività ombrello scomposta in 9 sotto-task sequenziali e rilasciabili (dettaglio nella [Sezione 7 di autenticazione.md](architettura/autenticazione.md#7-piano-implementativo-a-3-fasi-guida-operativa-per-pkt-25)):
+  - **Fase A (solo frontend, offline-first, rilasciabile subito):** `PKT-25.1` (crypto + `localVault` + cifratura IndexedDB at-rest + `finance.init()` idempotente), `PKT-25.2` (`useAuthStore` + boot + auto-lock + `LockScreen` + privacy screen), `PKT-25.3` (`/impostazioni/sicurezza` + notifiche discrete).
+  - **Fase B1 (account Zero-Knowledge, sessioni revocabili, SQLite WAL):** `PKT-25.4` (storage SQLite WAL + migrazione JSON legacy, realizza `PKT-18` Fase 3), `PKT-25.5` (`server/auth.py`, sessioni `HttpOnly` revocabili, API v2 e CLI admin), `PKT-25.6` (Envelope Encryption `vaultDEK`, Recovery Key, policy Master Password e client API auth/sync/push), `PKT-25.7` (UI Account, registrazione 2-step, gestione dispositivi/admin, migrazione guidata legacy e deploy Proxmox).
+  - **Fase B2 (archivi condivisi coppia/famiglia ECDH P-256):** `PKT-25.8` (crittografia ECDH P-256, Safety Fingerprint e API inviti/rotazione membri), `PKT-25.9` (IndexedDB namespaced per vault, switch archivio e UI condivisione famiglia).
+- **Fatto quando:** tutti i sotto-task `PKT-25.1`–`PKT-25.9` sono completati, coperti da test client e server, verificati con password manager e sulle 6 combinazioni piattaforma × tema, con `mappa-codice.md` e documentazione aggiornati e `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
 - **Storia:**
   - 2026-11-20 aperta da progetto PKT-12 (Jonny), collegata a [architettura/autenticazione.md](architettura/autenticazione.md).
+  - 2026-11-25 presa in carico nel ramo `feature/pkt-25-autenticazione` (Jonny) e scomposta in 9 sotto-task operativi (`PKT-25.1`–`PKT-25.9`) allineati con le 3 fasi di [autenticazione.md](architettura/autenticazione.md), i punti 3–4 di `PKT-14` e la Fase 3 di `PKT-18`.
+
+#### PKT-25.1 — [Fase A] Primitive crittografiche client e cifratura IndexedDB at-rest
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** nessuna (parte di `PKT-25`; copre il punto 3 di `PKT-14`; si coordina con `PKT-27` §4.2–4.3 per Base64 condiviso e `finance.init()` idempotente).
+- **Perché:** oggi `deviceDataStore` (`src/services/storage.ts`) salva `'finance-data'` e `useSyncStore` (`src/stores/sync.ts`) salva `SyncState.base` in chiaro in IndexedDB; inoltre `useFinanceStore.init()` registra watcher e listener ad ogni chiamata senza guardia di idempotenza né reset pulito. Serve lo strato puro crittografico e di persistenza cifrata at-rest prima di collegare il flusso di blocco/sblocco UI.
+- **Come partire:** seguire [autenticazione.md §4.1](architettura/autenticazione.md#41-cifratura-at-rest-di-indexeddb-srcserviceslocalvaultts-srcservicesstoragets):
+  - Creare `src/services/authCrypto.ts`: helper Web Crypto (`PBKDF2-SHA-256` 600.000 iter con normalizzazione NFC, `HKDF-SHA-256` con separazione domini, generazione e wrap/unwrap AES-256-GCM 256 bit di `localDataKey`, wrapper PIN 6+ cifre, helper rilevamento/valutazione WebAuthn PRF con verifica `getClientExtensionResults()?.prf?.enabled`).
+  - Creare `src/services/localVault.ts`: envelope `EncryptedLocalRecord { format: 'pocketly-local-encrypted', version: 1, iv, data }`, cifratura/decifratura con AAD dedicati (`"pocketly-local-v1:finance-data"`, `"pocketly-local-v1:sync-base"`) e migrazione atomica chiaro ↔ cifrato.
+  - Integrare in modo trasparente `localVault` in `src/services/storage.ts` (a blocco spento resta tutto identico; `readStoredDataRaw()` resta intatto per `LoadErrorScreen`) e in `src/stores/sync.ts` (cifratura `SyncState.base`, pausa/ripresa trigger).
+  - Rendere `useFinanceStore.init()` idempotente e aggiungere `resetForLock()` in `src/stores/finance.ts` (azzera `data`, imposta `ready = false`, ferma timer/watcher/listener senza duplicarli al successivo sblocco).
+- **Fatto quando:** test unitari verdi per `authCrypto.test.ts`, `localVault.test.ts`, `storage.ts` (chiaro, cifrato, record corrotto con `readStoredDataRaw` e `NewerFormatError`) e idempotenza/reset di `finance.ts`; `mappa-codice.md` e `dati-e-sincronizzazione.md` aggiornati; `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build` e `npm run docs:check` tutti verdi.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.2 — [Fase A] Store blocco locale, auto-lock, `LockScreen` e privacy screen
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.1`.
+- **Perché:** orchestrare il ciclo di vita di avvio/blocco/sblocco senza mai caricare `FinanceData` in RAM finché l'app è bloccata, offrendo una schermata di sblocco compatibile con i password manager, con biometria WebAuthn PRF e con PIN locale isolato, più la protezione delle miniature nello switcher app di iOS/Android.
+- **Come partire:** seguire [autenticazione.md §4.2–4.3](architettura/autenticazione.md#42-ciclo-di-vita-avvio-auto-lock-e-notifiche-discrete):
+  - Creare `src/stores/auth.ts`: stato reattivo (`localLockEnabled`, `locked`, metodi abilitati, timeout auto-lock), persistenza di `'auth-local-config'` in IndexedDB, azioni `init()`, `unlock()` (passphrase / WebAuthn PRF / PIN con contatore errori max 5 e distruzione automatica del wrapper PIN), `lock()` (azzeramento `localDataKey` in RAM, `finance.resetForLock()`, pausa `sync`, chiusura modali/Omnisearch) e timer auto-lock (`Immediato`, `1 min`, `5 min`, `15 min`, `Solo manuale`) + `visibilitychange`.
+  - Aggiornare `src/main.ts` e `src/App.vue`: boot condizionato a `useAuthStore().init()` (nessuna vista, `SearchModal` o `BackupReminder` montati finché `locked === true`) e **Privacy Screen** opaco su `document.visibilityState === 'hidden'` quando il blocco è attivo.
+  - Creare `src/components/LockScreen.vue`: solo gettoni semantici di `src/style.css` sulle 6 combinazioni piattaforma × tema; contratto HTML password manager per passphrase (`autocomplete="username"` `sr-only` + `autocomplete="current-password"`) e isolamento PIN (`type="text" inputmode="numeric" autocomplete="off"`, `-webkit-text-security: disc`, `data-1p-ignore`, `data-bwignore="true"`, `data-lpignore="true"`).
+  - Aggiungere le chiavi tradotte in `src/i18n/it.ts` e `src/i18n/en.ts`.
+- **Fatto quando:** `src/stores/auth.test.ts` copre avvio sbloccato/bloccato, unlock con passphrase/PIN/PRF, blocco e distruzione PIN dopo 5 errori, auto-lock e azzeramento RAM; verifica visiva di `LockScreen` e privacy screen sulle 6 combinazioni piattaforma × tema; `mappa-codice.md`, `frontend.md` e `componenti-e-viste.md` aggiornati; tutta la checklist di controllo (`test`, `typecheck`, `test:server`, `build`, `docs:check`) verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.3 — [Fase A] Impostazioni Sicurezza (`/impostazioni/sicurezza`) e notifiche discrete
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.2`.
+- **Perché:** consentire a chi usa Pocketly di attivare, configurare e disattivare il blocco locale da una sezione dedicata delle Impostazioni e proteggere la privacy anche nelle notifiche di sistema nascondendo importi e descrizioni. Completa e rende rilasciabile l'intera **Fase A** (100% offline-first, inclusa la build su Vercel).
+- **Come partire:** seguire [autenticazione.md §4.2 e §7 Fase A](architettura/autenticazione.md#fase-a--blocco-locale-dellapp-e-cifratura-indexeddb-at-rest-solo-frontend):
+  - Registrare la sezione `'sicurezza'` in `src/utils/settingsSections.ts`, `src/router/index.ts`, `src/views/SettingsView.vue` e `src/components/settings/SettingsIndex.vue` (aggiornando `src/utils/settingsSections.test.ts` e riga di stato live).
+  - Creare `src/components/settings/SettingsSecuritySection.vue`: attivazione/disattivazione blocco locale (migrazione cifrata/in chiaro di `'finance-data'` e `SyncState.base`), cambio passphrase, gestione biometria WebAuthn PRF (con rilevamento supporto e nota sull'hostname Proxmox) e PIN locale (con avviso chiaro sul modello di sicurezza), scelta timeout auto-lock e pulsante «Blocca ora».
+  - Aggiungere l'opzione booleana `discreet` in `NotificationConfig` (`src/stores/notifications.ts`, `src/domain/notifications.ts`, `src/components/NotificationSettings.vue`) per emettere testi generici senza importi né descrizioni sia nelle notifiche locali sia nei payload Web Push cifrati.
+  - Allineare `src/i18n/it.ts` e `src/i18n/en.ts`, aggiornare documentazione (`mappa-codice.md`, `frontend.md`, `componenti-e-viste.md`, `NOTIFICHE.md`, `guide/test-utente.md`).
+- **Fatto quando:** flusso completo attiva → blocca → sblocca → cambia metodo → disattiva e notifiche discrete testati (unitari + 6 combinazioni piattaforma × tema); tutta la checklist (`test`, `typecheck`, `test:server`, `build`, `docs:check`) verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.4 — [Fase B1] Storage server SQLite WAL multi-tenant e migrazione JSON legacy
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** nessuna bloccante sul frontend (realizza anche la **Fase 3 di `PKT-18`** definita in [scalabilita.md §4.5](architettura/scalabilita.md#45-schema-sqlite-multi-tenant-fase-3-coordinata-con-pkt-12--pkt-25); coordinata con la modularizzazione di `server/` in `PKT-27` §4.7).
+- **Perché:** l'attuale backend (`server/main.py`) usa file JSON single-tenant (`current.json`, `history/v*.json`, `push.json`), incompatibili con account multi-utente, sessioni revocabili, isolamento per archivio (`vault_id`) e query indicizzate sui promemoria push.
+- **Come partire:** seguire [autenticazione.md §5.2 e §6.1](architettura/autenticazione.md#52-schema-sqlite-wal-unificato-con-scalabilitamd-45):
+  - Creare `server/db.py` (solo libreria standard Python 3.9+ `sqlite3`, `PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;`) su `POCKETLY_DATA_DIR/pocketly.db` con lo schema completo: `users`, `invites`, `password_resets`, `sessions`, `vaults`, `vault_members`, `vault_invites`, `sync_state`, `sync_history` (retention `HISTORY_KEEP = 30` per vault), `push_meta`, `push_devices`, `push_schedule` (con indice su `fire_at`) e `push_sent`.
+  - Implementare la migrazione automatica zero-data-loss da `current.json`, `history/v*.json` e `push.json`, archiviando i file legacy in `.migrated` / `history-legacy/` senza mai cancellarli.
+  - Adattare gli store sync e push di `server/main.py` al backend SQLite mantenendo invariato il comportamento degli endpoint esistenti fino all'introduzione delle API v2 (`PKT-25.5`).
+- **Fatto quando:** tutti i test esistenti in `server/test_main.py` restano verdi e nuovi test Python coprono schema, vincoli FK, concorrenza WAL, isolamento per `vault_id`, retention storico/push e migrazione idempotente da JSON legacy; `mappa-codice.md`, `backend.md` e `scalabilita.md` aggiornati; tutta la checklist di controllo verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.5 — [Fase B1] Motore auth server, sessioni `HttpOnly` revocabili, API v2 e CLI admin
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.4`.
+- **Perché:** sostituire l'unica chiave statica `POCKETLY_SYNC_KEY` con account su invito, verifica Zero-Knowledge (`scrypt`), sessioni per dispositivo revocabili immediatamente (cookie `HttpOnly` con rotazione + Access Token breve) e API `/api/vaults/{vaultId}/*`.
+- **Come partire:** seguire [autenticazione.md §5.1, §5.3, §6.1–6.2](architettura/autenticazione.md#51-sessioni-revocabili-cookie-httponly-con-rotazione--access-token-in-ram):
+  - Creare `server/auth.py`: normalizzazione/validazione `username`, `hashlib.scrypt` (`n=16384, r=8, p=1, dklen=32`) + `hmac.compare_digest`, salt sintetico anti-enumerazione `HMAC-SHA256(server_pepper, username)[:16]`, Access Token breve (15 min) firmato `HMAC-SHA256` (`POCKETLY_TOKEN_SECRET`) con cache in memoria delle sessioni revocate, Refresh Token 256 bit in cookie `HttpOnly; Secure; SameSite=Strict; Path=/api/auth` (30 gg sliding) con rotazione e revoca dell'intera `token_family` su reuse, protezione CSRF (`X-Pocketly-Client: 1` + verifica `Origin`/`Host`), rate limiting a doppio asse (IP su loopback + `username`) con pruning automatico (`scalabilita.md` §4.1).
+  - Aggiungere in `server/main.py` gli endpoint API v2: `GET /api/health` (`api: 2`, `authMode: "accounts" | "legacy"`), `POST /api/auth/{params,register,login,refresh,logout,change-password,recover}`, `GET/DELETE /api/sessions`, `GET/POST /api/admin/invites`, `POST /api/admin/password-resets`, `GET/POST /api/vaults`, `GET/PUT /api/vaults/{vaultId}/sync` (accettando `EncryptedBackup` v1 e v2 con `compression: 'gzip'` opzionale), `/api/vaults/{vaultId}/push/*`, modalità transitoria `legacy` → `accounts` (`410 Gone` sui vecchi endpoint dopo la migrazione) e log sanitizzati (`Handler.log_message` privo di username, token, cookie o codici invito).
+  - Aggiungere `server/cli.py` (o subcommand CLI in `server/main.py`) per bootstrap admin e operazioni self-hosted (`--create-invite --admin`, `--create-reset <username>`).
+- **Fatto quando:** test Python completi (registrazione con invito, login, salt anti-enumerazione, refresh rotation + reuse family revocation, CSRF, revoca immediata sessione + rimozione push del dispositivo, rate limiting IP+username, isolamento tra vault, dual-mode `legacy`/`accounts` e `410 Gone`); `mappa-codice.md` e `backend.md` aggiornati; tutta la checklist di controllo verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.6 — [Fase B1] Envelope Encryption client (`vaultDEK`, Recovery Key), policy password e client API
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.1`, `PKT-25.5` (si coordina con `PKT-27` §4.2 per il client condiviso `src/services/http.ts` e con il punto 4 di `PKT-14` per lunghezza minima e robustezza della Master Password).
+- **Perché:** introdurre sul frontend la crittografia Zero-Knowledge ad envelope (`Master Password` → `authKey` ⊥ `masterEncKey` → `vaultDEK` + Recovery Key) e collegare gli store `auth`, `sync` e `notifications` alle API v2 con Access Token solo in RAM e refresh trasparente offline-first.
+- **Come partire:** seguire [autenticazione.md §3.1–3.2 e §7 Fase B1](architettura/autenticazione.md#3-modello-crittografico-zero-knowledge-envelope-encryption):
+  - Estendere `src/services/authCrypto.ts` e `src/services/backupCrypto.ts`: derivazione `PBKDF2` → `HKDF` (`authKey` + `masterEncKey` non estraibile), coppia ECDH P-256 utente (`encrypted_private_key` con `AAD = "pocketly-privkey-v1:<userId>"`), `vaultDEK` (AES-256-GCM 256 bit), formato `EncryptedBackup` v2 con `AAD = "pocketly-vault:<vaultId>:v2"` (retrocompatibile in lettura con backup v1 e predisposto a `compression: 'gzip'` di `PKT-18` §4.4), generazione/decifratura **Recovery Key** Base32 (`PKLY-...`) con bundle `{ privateKey, personalVaultDEK }`, e validazione lunghezza minima / robustezza Master Password (punto 4 di `PKT-14`).
+  - Creare `src/services/auth/api.ts` (con `credentials: 'same-origin'` e header `X-Pocketly-Client: 1`) per `/api/auth/*`, `/api/sessions/*`, `/api/admin/*`, `/api/vaults/*`.
+  - Aggiornare `src/stores/auth.ts`, `src/services/sync/api.ts`, `src/services/sync/engine.ts`, `src/stores/sync.ts`, `src/services/notifications/api.ts` e `src/stores/notifications.ts`: Access Token solo in RAM, refresh trasparente su `401` senza errori in modalità offline, sync e push su `/api/vaults/{vaultId}/*` cifrati con `vaultDEK`, mantenendo la sola transizione guidata dal vecchio sync legacy verso il primo account.
+- **Fatto quando:** test unitari coprono separazione `authKey` ⊥ `masterEncKey`, envelope `vaultDEK` v2 + lettura v1, Recovery Key round-trip, cambio Master Password senza ricifratura storico, policy robustezza password, refresh trasparente su `401` e comportamento offline-first; `mappa-codice.md` e `dati-e-sincronizzazione.md` aggiornati; tutta la checklist di controllo verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.7 — [Fase B1] UI Account, registrazione 2-step, gestione dispositivi/admin e deploy Proxmox
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.3`, `PKT-25.6`.
+- **Perché:** esporre i flussi account Zero-Knowledge con piena compatibilità nativa per i password manager, dismettere la vecchia configurazione a doppia chiave in `SyncSettings.vue` (la sincronizzazione si attiva solo con account registrato, punto 4 di `PKT-14`) e aggiornare gli script/configurazioni di deploy Proxmox. Completa la **Fase B1**.
+- **Come partire:** seguire [autenticazione.md §4.3, §6 e §7 Fase B1](architettura/autenticazione.md#43-compatibilità-nativa-con-password-manager-e-autofill):
+  - Integrare in `/impostazioni/sicurezza` e `src/components/SyncSettings.vue` i flussi UI con contratti HTML password manager: **Login**, **Registrazione con invito in 2 step** (Step 1 codice invito `type="text" autocomplete="one-time-code"`; Step 2 `username` + `new-password` + `passwordrules` + indicatore robustezza) con visualizzazione one-shot **Recovery Key** (copia/stampa/conferma), **Cambio Master Password** (con revoca opzionale altri dispositivi), **Recupero account** (token reset admin + Recovery Key), **Dispositivi collegati** (lista + revoca immediata), **Pannello Admin** (inviti monouso e token reset) e **migrazione guidata** del primo account admin da dati legacy.
+  - Aggiornare il deploy Proxmox: `deploy/proxmox/nginx/pocketly.conf` (preservazione `Set-Cookie`, `Host`, `Origin` su `location /api/`, coordinata con gli header di sicurezza di `PKT-14`), `deploy/proxmox/pocketly-sync.service` e `deploy/proxmox/install-sync.sh` (`POCKETLY_TOKEN_SECRET`, permessi SQLite).
+  - Allineare `src/i18n/it.ts`, `src/i18n/en.ts` e aggiornare documentazione (`mappa-codice.md`, `frontend.md`, `componenti-e-viste.md`, `backend.md`, `deploy.md`, `dati-e-sincronizzazione.md`, `guide/sync-e-notifiche.md`, `guide/test-utente.md`).
+- **Fatto quando:** tutti i flussi account sono verificati sulle 6 combinazioni piattaforma × tema e con password manager (Apple Passwords, Google Password Manager e un gestore esterno, confermando che il PIN non sovrascriva la Master Password); deploy Proxmox aggiornato e documentato; tutta la checklist (`test`, `typecheck`, `test:server`, `build`, `docs:check`) verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.8 — [Fase B2] Crittografia condivisione ECDH P-256, Safety Fingerprint e API membri/inviti
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.7`.
+- **Perché:** abilitare la condivisione Zero-Knowledge di un archivio finanziario tra account coppia/famiglia senza che il server possa mai accedere alla `vaultDEK`, garantendo *forward secrecy* alla rimozione di un membro.
+- **Come partire:** seguire [autenticazione.md §3.3 e §5.3](architettura/autenticazione.md#33-archivi-condivisi-coppiafamiglia-ecdh-p-256):
+  - Estendere `src/services/authCrypto.ts`: wrapping/unwrapping di `vaultDEK` tramite coppia ECDH P-256 effimera + `HKDF-SHA-256` (`info="pocketly-vault-share-v1:<vaultId>"`) + AES-256-GCM, e calcolo del **Safety Fingerprint** da `SHA-256(publicKey)`.
+  - Implementare sul server (`server/main.py`, `server/db.py`, `server/auth.py`) gli endpoint: `GET /api/users/{username}/public-key`, creazione vault condiviso su `POST /api/vaults`, `POST /api/vaults/{vaultId}/invites`, elenco inviti ricevuti, `POST /api/vaults/{vaultId}/invites/{id}/accept` e `DELETE /api/vaults/{vaultId}/members/{userId}` con rotazione atomica `key_version + 1` e aggiornamento dei `wrapped_dek` per i soli membri rimanenti.
+  - Estendere `src/services/auth/api.ts` con i nuovi endpoint di condivisione.
+- **Fatto quando:** test client e server coprono wrap/unwrap ECDH P-256, Safety Fingerprint, invito/accettazione, rimozione membro con rotazione `key_version + 1` e verifica che il membro rimosso non possa decifrare né accedere alle versioni successive; `mappa-codice.md` e `backend.md` aggiornati; tutta la checklist di controllo verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
+
+#### PKT-25.9 — [Fase B2] Storage IndexedDB multi-vault, selettore archivio e UI condivisione famiglia
+- **Stato:** da fare · **Priorità:** media · **Chi:** libero
+- **Dipendenze:** `PKT-25.8`.
+- **Perché:** permettere a chi partecipa a più archivi (es. *Personale* + *Casa/Famiglia*) di passare da un archivio all'altro senza incrociare dati locali, sync o notifiche, mantenendo zero complessità visiva per chi usa un solo archivio. Completa la **Fase B2** e chiude `PKT-25`.
+- **Come partire:** seguire [autenticazione.md §5.4 e §7 Fase B2](architettura/autenticazione.md#54-multi-vault-sul-frontend):
+  - Estendere `src/services/storage.ts`, `src/stores/finance.ts`, `src/stores/sync.ts`, `src/stores/notifications.ts` e `src/stores/backup.ts` con chiavi IndexedDB namespaced per archivio (`finance-data:<vaultId>`, `sync-config:<vaultId>`), mantenendo la migrazione/compatibilità trasparente da `'finance-data'` e isolamento completo di sync e promemoria Web Push per `vaultId`.
+  - Aggiungere la UI per creare un archivio condiviso, invitare un membro verificando il **Safety Fingerprint**, accettare/rifiutare inviti pendenti, rimuovere membri (con rotazione chiave) e un selettore compatto dell'archivio attivo visibile **solo quando l'utente ha ≥ 2 vault**.
+  - Allineare `src/i18n/it.ts`, `src/i18n/en.ts`, verificare tutte le 6 combinazioni piattaforma × tema e aggiornare la documentazione completa (`mappa-codice.md`, `frontend.md`, `componenti-e-viste.md`, `dati-e-sincronizzazione.md`, `NOTIFICHE.md`, `guide/test-utente.md`) chiudendo anche `PKT-25`.
+- **Fatto quando:** test unitari verificano l'isolamento multi-vault (storage, cifratura locale, sync, push) e il cambio archivio senza perdite; verifica visiva sulle 6 combinazioni piattaforma × tema (e selettore nascosto con un solo vault); tutta la checklist (`test`, `typecheck`, `test:server`, `build`, `docs:check`) verde.
+- **Storia:**
+  - 2026-11-25 aperta dalla scomposizione di `PKT-25` (Jonny).
 
 ### PKT-26 — Blocco scroll e viewport delle modali su iPhone
 - **Stato:** fatto · **Priorità:** — · **Chi:** Jonny

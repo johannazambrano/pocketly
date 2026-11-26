@@ -20,7 +20,7 @@ source-files:
   - server/webpush.py
   - deploy/proxmox/nginx/pocketly.conf
   - deploy/proxmox/pocketly-sync.service
-verified: 2026-11-20
+verified: 2026-11-26
 ---
 
 # Progetto e Piano Implementativo: Autenticazione (PKT-12)
@@ -253,37 +253,56 @@ Un singolo database `POCKETLY_DATA_DIR/pocketly.db` gestito con `sqlite3` della 
 
 ## 7. Piano Implementativo a 3 Fasi (Guida Operativa per PKT-25)
 
-L'implementazione è tracciata nel backlog in **PKT-25** e può essere svolta incrementalmente (o suddivisa in sotto-task) seguendo tre fasi indipendenti:
+L'implementazione è tracciata nel backlog in **PKT-25** (attività ombrello) ed è scomposta in **9 sotto-task operativi sequenziali** (`PKT-25.1`–`PKT-25.9`) raggruppati nelle tre fasi indipendenti:
+
+| Sotto-task | Fase | Ambito | Dipendenze | Coordinamento |
+|---|---|---|---|---|
+| **PKT-25.1** | A | `authCrypto.ts`, `localVault.ts`, cifratura IndexedDB at-rest (`'finance-data'` e `SyncState.base`), `finance.init()` idempotente / `resetForLock()` | — | `PKT-14` punto 3; `PKT-27` §4.2–4.3 |
+| **PKT-25.2** | A | `useAuthStore`, boot condizionato (`main.ts`, `App.vue`), auto-lock, `LockScreen.vue` e privacy screen | `PKT-25.1` | Contratti password manager (§4.3) |
+| **PKT-25.3** | A | `/impostazioni/sicurezza` (`SettingsSecuritySection.vue`) e notifiche discrete | `PKT-25.2` | Chiude e rende rilasciabile la **Fase A** |
+| **PKT-25.4** | B1 | Storage backend SQLite WAL multi-tenant (`server/db.py`) e migrazione zero-data-loss da JSON legacy | — | Realizza `PKT-18` Fase 3; `PKT-27` §4.7 |
+| **PKT-25.5** | B1 | `server/auth.py`, sessioni `HttpOnly` revocabili, API REST v2, rate limiting IP+username e CLI admin | `PKT-25.4` | `PKT-18` §4.1; dual-mode `legacy` → `accounts` |
+| **PKT-25.6** | B1 | Envelope Encryption client (`vaultDEK`, Recovery Key), policy robustezza Master Password e client API auth/sync/push | `PKT-25.1`, `PKT-25.5` | `PKT-14` punto 4; `PKT-18` §4.4; `PKT-27` §4.2 |
+| **PKT-25.7** | B1 | UI Account (login, registrazione 2-step, Recovery Key, cambio password, dispositivi, admin), migrazione guidata legacy e deploy Proxmox | `PKT-25.3`, `PKT-25.6` | `PKT-14` punto 4 + header Nginx; chiude la **Fase B1** |
+| **PKT-25.8** | B2 | Crittografia condivisione ECDH P-256, Safety Fingerprint e API membri/inviti con rotazione `key_version + 1` | `PKT-25.7` | *Forward secrecy* su rimozione membro |
+| **PKT-25.9** | B2 | Storage IndexedDB namespaced per `vaultId`, selettore archivio (solo con ≥ 2 vault) e UI condivisione famiglia | `PKT-25.8` | Chiude la **Fase B2** e `PKT-25` |
 
 ### Fase A — Blocco Locale dell'App e Cifratura IndexedDB At-Rest (Solo Frontend)
-*Zero impatti sul server; rilasciabile subito, funziona offline e su Vercel.*
-- **Nuovi moduli:**
+*Zero impatti sul server; rilasciabile subito, funziona offline e su Vercel. Risolve il punto 3 di `PKT-14` (`PKT-25.1` → `PKT-25.3`).*
+- **`PKT-25.1` (Crypto & IndexedDB at-rest):**
   - `src/services/authCrypto.ts`: helper Web Crypto (`PBKDF2`, `HKDF` separazione domini, wrap/unwrap AES-256-GCM, WebAuthn PRF).
   - `src/services/localVault.ts`: cifratura/decifratura at-rest di `EncryptedLocalRecord` (`'finance-data'` e `SyncState.base`).
+  - Aggiornamento `src/services/storage.ts` (integrazione opzionale `localVault` dentro `deviceDataStore`, preservando `readStoredDataRaw`), `src/stores/sync.ts` (cifratura `SyncState.base`) e `src/stores/finance.ts` (`init()` idempotente + `resetForLock()`).
+  - Test: `authCrypto.test.ts`, `localVault.test.ts`, test storage/corruzione e idempotenza `finance.ts`.
+- **`PKT-25.2` (Store auth, boot, auto-lock e `LockScreen`):**
   - `src/stores/auth.ts`: stato `locked`, `localLockEnabled`, `unlock()`, `lock()`, auto-lock timer e gestione wrapper (passphrase / WebAuthn PRF / PIN con limite 5 tentativi).
-  - `src/components/LockScreen.vue`: schermata di sblocco accessibile (rispettando le 6 combinazioni piattaforma × tema, contratti HTML password manager, campo PIN isolato) + privacy overlay.
-  - `src/components/settings/SettingsSecuritySection.vue`: pannello Impostazioni → Sicurezza (`/impostazioni/sicurezza`).
-- **File esistenti da aggiornare:** `src/services/storage.ts` (integrazione opzionale `localVault` dentro `deviceDataStore`), `src/stores/sync.ts` (cifratura `SyncState.base`), `src/stores/finance.ts` (reset RAM in `lock()`), `src/stores/notifications.ts` (opzione notifiche discrete), `src/main.ts` e `src/App.vue` (boot condizionato a `auth.locked` + privacy screen), `src/utils/settingsSections.ts`, `src/views/SettingsView.vue`, `src/i18n/it.ts` e `src/i18n/en.ts`.
-- **Test:** `authCrypto.test.ts`, `localVault.test.ts`, `stores/auth.test.ts` (inclusi lock/unlock, limite tentativi PIN, corruzione record e `readStoredDataRaw`).
+  - `src/components/LockScreen.vue`: schermata di sblocco accessibile (6 combinazioni piattaforma × tema, contratti HTML password manager, campo PIN isolato) + privacy overlay.
+  - Aggiornamento `src/main.ts` e `src/App.vue` (boot condizionato a `auth.locked` + privacy screen), `src/i18n/it.ts` e `src/i18n/en.ts`.
+  - Test: `stores/auth.test.ts` (lock/unlock, limite tentativi PIN, auto-lock, azzeramento RAM).
+- **`PKT-25.3` (Impostazioni Sicurezza e notifiche discrete):**
+  - `src/components/settings/SettingsSecuritySection.vue`: pannello Impostazioni → Sicurezza (`/impostazioni/sicurezza`) registrato in `src/utils/settingsSections.ts`, `src/router/index.ts`, `src/views/SettingsView.vue` e `src/components/settings/SettingsIndex.vue`.
+  - Aggiornamento `src/stores/notifications.ts`, `src/domain/notifications.ts` e `src/components/NotificationSettings.vue` per l'opzione notifiche discrete (`discreet`).
 
 ### Fase B1 — Account Zero-Knowledge, Sessioni Revocabili e Backend SQLite Multi-Utente
-*Coordina e realizza anche la Fase 3 di `PKT-18` ([scalabilita.md](./scalabilita.md) §4.5).*
-- **Backend (`server/`):**
-  - `server/db.py` (o modulo in `server/`): schema SQLite WAL (`users`, `invites`, `password_resets`, `sessions`, `vaults`, `vault_members`, `sync_state`, `sync_history`, `push_*`), migrazione da JSON legacy.
+*Coordina e realizza anche la Fase 3 di `PKT-18` ([scalabilita.md](./scalabilita.md) §4.5) e assorbe il punto 4 di `PKT-14` (sincronizzazione solo con account registrato + policy robustezza Master Password; `PKT-25.4` → `PKT-25.7`).*
+- **`PKT-25.4` (Backend SQLite WAL e migrazione legacy):**
+  - `server/db.py`: schema SQLite WAL (`users`, `invites`, `password_resets`, `sessions`, `vaults`, `vault_members`, `vault_invites`, `sync_state`, `sync_history`, `push_*`), migrazione zero-data-loss da JSON legacy.
+- **`PKT-25.5` (Motore auth backend, API v2 e CLI admin):**
   - `server/auth.py`: `scrypt`, salt sintetico anti-enumerazione, HMAC access token + cache revoca immediata, cookie `HttpOnly` refresh rotation + detection reuse, rate limiting per IP + username.
-  - `server/main.py` e `server/cli.py`: nuovi endpoint `/api/auth/*`, `/api/sessions/*`, `/api/admin/*`, `/api/vaults/{vaultId}/sync`, `/api/vaults/{vaultId}/push/*`, modalità dual-mode `legacy`/`accounts` e CLI bootstrap admin/inviti.
+  - `server/main.py` e `server/cli.py`: nuovi endpoint `/api/auth/*`, `/api/sessions/*`, `/api/admin/*`, `/api/vaults/{vaultId}/sync`, `/api/vaults/{vaultId}/push/*`, modalità dual-mode `legacy`/`accounts` (`410 Gone` a migrazione completata) e CLI bootstrap admin/inviti.
   - `server/test_main.py` (e test dedicati auth/db): copertura completa di login, anti-enumerazione, refresh rotation + reuse revocation, revoca immediata sessione, isolamento tra vault, migrazione legacy.
-- **Frontend (`src/`):**
+- **`PKT-25.6` (Envelope Encryption client e API layer):**
+  - Estensione `src/services/authCrypto.ts` e `src/services/backupCrypto.ts` (`authKey` ⊥ `masterEncKey`, `vaultDEK` v2, Recovery Key, policy lunghezza minima e robustezza Master Password).
   - `src/services/auth/api.ts`: client REST per `/api/auth/*`, `/api/sessions/*`, `/api/admin/*`, `/api/vaults/*` (con `credentials: 'same-origin'` e header `X-Pocketly-Client: 1`).
-  - `src/services/sync/api.ts` e `src/services/notifications/api.ts`: supporto `/api/vaults/{vaultId}/*` e refresh automatico su `401` con Access Token in RAM.
-  - UI Account/Login/Registrazione 2-step (piena compatibilità password manager), Recovery Key, Cambio Master Password, Gestione Dispositivi collegati e pannello Inviti Admin dentro `/impostazioni/sicurezza`.
-- **Deploy (`deploy/proxmox/`):** aggiornamento `install-sync.sh`, `pocketly-sync.service`, `nginx/pocketly.conf` e documentazione `deploy.md`.
+  - `src/services/sync/api.ts`, `src/services/sync/engine.ts`, `src/services/notifications/api.ts`, `src/stores/auth.ts`, `src/stores/sync.ts`, `src/stores/notifications.ts`: supporto `/api/vaults/{vaultId}/*` e refresh automatico su `401` con Access Token in RAM.
+- **`PKT-25.7` (UI Account e Deploy Proxmox):**
+  - UI Account/Login/Registrazione 2-step (piena compatibilità password manager), Recovery Key, Cambio Master Password, Gestione Dispositivi collegati, migrazione guidata legacy e pannello Inviti Admin dentro `/impostazioni/sicurezza` e `SyncSettings.vue`.
+  - Deploy (`deploy/proxmox/`): aggiornamento `install-sync.sh`, `pocketly-sync.service`, `nginx/pocketly.conf` e documentazione `deploy.md`.
 
 ### Fase B2 — Archivi Condivisi Coppia/Famiglia (Zero-Knowledge ECDH P-256)
-*Dipende dalla Fase B1.*
-- **Crittografia & Backend:** key-wrapping ECDH P-256 della `vaultDEK`, endpoint `/api/users/{username}/public-key`, `/api/vaults/{vaultId}/invites/*`, `DELETE /api/vaults/{vaultId}/members/{userId}` con rotazione `key_version + 1`.
-- **Frontend:** creazione archivio condiviso, flusso invito con verifica **Safety Fingerprint**, accettazione invito, selettore archivio attivo (visibile solo con ≥ 2 vault), chiavi IndexedDB namespaced per `vaultId`, rimozione membro con rotazione chiave.
-- **Test:** test crittografici end-to-end ECDH wrap/unwrap + rotazione `vaultDEK` su rimozione membro, test isolamento sync/push multi-vault.
+*Dipende dalla Fase B1 (`PKT-25.8` → `PKT-25.9`).*
+- **`PKT-25.8` (Crittografia ECDH P-256 & API backend):** key-wrapping ECDH P-256 della `vaultDEK`, calcolo **Safety Fingerprint**, endpoint `/api/users/{username}/public-key`, `/api/vaults/{vaultId}/invites/*`, `DELETE /api/vaults/{vaultId}/members/{userId}` con rotazione `key_version + 1` e test end-to-end ECDH + *forward secrecy*.
+- **`PKT-25.9` (Storage Multi-Vault & UI famiglia):** chiavi IndexedDB namespaced per `vaultId`, isolamento sync/push multi-vault, creazione archivio condiviso, flusso invito con verifica Safety Fingerprint, accettazione invito, rimozione membro e selettore archivio attivo (visibile solo con ≥ 2 vault).
 
 ### Checklist di Verifica Finale per l'Implementazione (PKT-25)
 - `npm run test`, `npm run typecheck`, `npm run test:server`, `npm run build`, `npm run docs:check` tutti verdi.
