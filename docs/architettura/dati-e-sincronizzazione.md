@@ -6,13 +6,15 @@ source-files:
   - src/services/storage.ts
   - src/services/backupCrypto.ts
   - src/services/sync/api.ts
+  - src/services/http.ts
+  - src/utils/clone.ts
   - src/services/sync/engine.ts
   - src/services/exportData.ts
   - src/services/xlsx/writer.ts
   - src/services/xlsx/zipWriter.ts
   - src/stores/finance.ts
   - src/stores/sync.ts
-verified: 2026-11-20
+verified: 2026-11-26
 ---
 
 # Architettura Dati e Sincronizzazione
@@ -44,6 +46,7 @@ La persistenza avviene tramite il modulo [`src/services/storage.ts`](../../src/s
 - L'interfaccia `DataStore` espone `load()` e `save(data: FinanceData)`.
 - L'implementazione predefinita `deviceDataStore` salva l'intero oggetto JSON in IndexedDB sotto la chiave `'finance-data'` (costante `DATA_KEY`) tramite la libreria `idb-keyval`. Se la chiave è vuota, `load()` prova a recuperare i dati del vecchio prototipo da `localStorage` (`LEGACY_LOCALSTORAGE_KEYS`). Se i dati ci sono ma `parseBackup` non li legge, `load()` lancia l'errore e lo store non scrive niente sopra (`finance.loadError`, vedi [frontend.md](./frontend.md)); `readStoredDataRaw()` li restituisce così come sono per scaricarli.
 - Gli store per preferenze locali del dispositivo utilizzano chiavi separate su `idb-keyval`: `'sync-config'` (`stores/sync.ts`), `'notification-config'` e `'notifications-shown'` (`stores/notifications.ts`), `'backup-meta'` (`stores/backup.ts`). In questo modo la configurazione del dispositivo non si confonde con i dati finanziari condivisi.
+- Prima di ogni scrittura in IndexedDB i dati passano da `clonePlain` ([`src/utils/clone.ts`](../../src/utils/clone.ts)), che toglie i proxy reattivi di Vue.
 
 ---
 
@@ -75,6 +78,8 @@ La sincronizzazione di Pocketly è **Zero-Knowledge**: il server non ha modo di 
 Il client comunica con il backend tramite due endpoint REST sotto `/api/sync`:
 - `GET /api/sync`: restituisce il payload cifrato attuale e l'header HTTP `ETag` contenente la versione (`version: number`). Supporta `If-None-Match` restituendo `304 Not Modified` se il server non è cambiato.
 - `PUT /api/sync`: invia il nuovo payload cifrato inviando nel corpo JSON `{"baseVersion": n, "payload": {...}}`. Se nel frattempo un altro client ha scritto sul server (versione remota > baseVersion), il server rifiuta la richiesta con `409 Conflict`.
+
+Le chiamate passano dal trasporto comune [`src/services/http.ts`](../../src/services/http.ts) (`createHttpClient`), condiviso con le notifiche: 15 secondi al massimo, niente cache del browser, `401` → `HttpAuthError`, `429` → `HttpBlockedError`, rete assente o risposta inattesa → `HttpUnreachableError`. `stores/sync.ts` traduce questi errori nei messaggi della pagina.
 
 ### Fasi della Sincronizzazione (`src/services/sync/engine.ts`)
 

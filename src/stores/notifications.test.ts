@@ -5,7 +5,7 @@ import { useFinanceStore } from './finance'
 import { useSyncStore } from './sync'
 import type { NotificationRule } from '@/types/models'
 import * as apiModule from '@/services/notifications/api'
-import { bytesToBase64Url } from '@/services/notifications/webpushCrypto'
+import { bytesToBase64Url } from '@/utils/base64'
 
 const inMemoryIdb = new Map<string, unknown>()
 
@@ -64,6 +64,30 @@ describe('useNotificationsStore', () => {
     expect(store.enabled).toBe(false)
     expect(store.deviceId).toMatch(/^[0-9a-f-]{36}$/)
     expect(store.defaultRules).toEqual([{ daysBefore: 1, time: '09:00' }])
+  })
+
+  it('init si esegue una volta sola e cleanup toglie listener e controllo periodico', async () => {
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval')
+    const clearSpy = vi.spyOn(globalThis, 'clearInterval')
+    const store = useNotificationsStore()
+    await Promise.all([store.init(), store.init()])
+    await store.init()
+    expect(document.addEventListener).toHaveBeenCalledTimes(1)
+    expect(intervalSpy).toHaveBeenCalledTimes(1)
+
+    store.cleanup()
+    const handler = vi.mocked(document.addEventListener).mock.calls[0]![1]
+    expect(document.removeEventListener).toHaveBeenCalledWith('visibilitychange', handler)
+    expect(clearSpy).toHaveBeenCalledWith(intervalSpy.mock.results[0]!.value)
+    expect(store.ready).toBe(false)
+  })
+
+  it('riconosce iPhone e anche iPad che si presenta come Mac', () => {
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 5 })
+    expect(useNotificationsStore().isIos).toBe(true)
+    setActivePinia(createPinia())
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 0 })
+    expect(useNotificationsStore().isIos).toBe(false)
   })
 
   it('carica la configurazione salvata in IndexedDB', async () => {

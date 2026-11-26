@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newId } from './id'
 import { amountProblem, centsToInput, toCents, formatCents } from './money'
-import { isValidIsoDate, parseIsoDate } from './dates'
+import { daysInMonth, isValidIsoDate, lastDayOfMonth, parseIsoDate } from './dates'
+import { base64ToBytes, base64UrlToBytes, bytesToBase64, bytesToBase64Url } from './base64'
+import { clonePlain } from './clone'
 import { OTHER_COLOR, PALETTE, badgeColors, contrast, harmonizedColors, hexToOklch, pickUniqueColor, randomUniqueColor, readableTextColor } from './colors'
 
 describe('amountProblem', () => {
@@ -45,6 +47,46 @@ describe('date', () => {
     expect(isValidIsoDate('2026-02-28')).toBe(true)
     expect(isValidIsoDate('2026-02-30')).toBe(false)
     expect(isValidIsoDate('01/02/2026')).toBe(false)
+  })
+  it('conta i giorni del mese, anni bisestili compresi', () => {
+    expect(daysInMonth(2026, 1)).toBe(28)
+    expect(daysInMonth(2028, 1)).toBe(29)
+    expect(daysInMonth(2026, 11)).toBe(31)
+    expect(lastDayOfMonth(2026, 3)).toBe('2026-04-30')
+  })
+})
+
+describe('base64', () => {
+  const bytes = new Uint8Array([0, 1, 2, 250, 251, 252, 253, 254, 255])
+  it('va e torna in base64 standard e base64url', () => {
+    expect(bytesToBase64(bytes)).toBe('AAEC+vv8/f7/')
+    expect(base64ToBytes('AAEC+vv8/f7/')).toEqual(bytes)
+    expect(bytesToBase64Url(bytes)).toBe('AAEC-vv8_f7_')
+    expect(base64UrlToBytes('AAEC-vv8_f7_')).toEqual(bytes)
+  })
+  it('base64url toglie e rimette il riempimento e legge anche il base64 standard', () => {
+    const two = new Uint8Array([255, 254])
+    expect(bytesToBase64(two)).toBe('//4=')
+    expect(bytesToBase64Url(two)).toBe('__4')
+    expect(base64UrlToBytes('__4')).toEqual(two)
+    expect(base64UrlToBytes('//4=')).toEqual(two)
+  })
+  it('regge array più grandi di un blocco', () => {
+    const big = new Uint8Array(0x8000 * 2 + 7).map((_, i) => i % 256)
+    expect(base64ToBytes(bytesToBase64(big))).toEqual(big)
+  })
+  it('il base64 standard rifiuta un testo non valido', () => {
+    expect(() => base64ToBytes('non è base64!')).toThrow()
+  })
+})
+
+describe('clonePlain', () => {
+  it('copia in profondità senza condividere riferimenti', () => {
+    const original = { a: [1, { b: 'x' }], c: null }
+    const copy = clonePlain(original)
+    expect(copy).toEqual(original)
+    expect(copy).not.toBe(original)
+    expect(copy.a).not.toBe(original.a)
   })
 })
 

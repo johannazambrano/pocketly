@@ -11,6 +11,7 @@ import { CryptoUnavailableError, isCryptoAvailable, MIN_PASSWORD_LENGTH } from '
 import { NotExpenseTrackerError, readExcelFile, type ExcelImportResult, type ExcelImportStats, type ImportWarning } from '@/services/excelImport'
 import { parseBackup } from '@/services/migration'
 import { XlsxUnsupportedError } from '@/services/xlsx/zip'
+import { clonePlain } from '@/utils/clone'
 import { formatDate } from '@/utils/dates'
 import BaseModal from '@/components/BaseModal.vue'
 
@@ -196,7 +197,7 @@ async function confirmExcelImport() {
   busy.value = true
   try {
     // Stesso controllo dei backup: i dati arrivano allo store già normalizzati.
-    finance.replaceAll(parseBackup(JSON.parse(JSON.stringify(preview.data))))
+    finance.replaceAll(parseBackup(clonePlain(preview.data)))
     await finance.flush()
     excelPreview.value = null
     ui.toast(t('excelImport.success'))

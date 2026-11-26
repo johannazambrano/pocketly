@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  base64UrlToBytes,
-  bytesToBase64Url,
-  decryptWebPushPayload,
-  encryptWebPushPayload,
-} from './webpushCrypto'
+import { base64UrlToBytes, bytesToBase64Url } from '@/utils/base64'
+import { decryptWebPushPayload, encryptWebPushPayload } from './webpushCrypto'
 
 describe('webpushCrypto (RFC 8291 aes128gcm)', () => {
   it('cifra e decifra correttamente un payload UTF-8 con caratteri accentati e simboli €', async () => {

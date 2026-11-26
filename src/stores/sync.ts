@@ -2,7 +2,8 @@ import { del, get, set } from 'idb-keyval'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { CryptoUnavailableError, isCryptoAvailable, WrongPasswordError, type DerivedKey } from '@/services/backupCrypto'
-import { createSyncApi, isSyncServerAvailable, SyncAuthError, SyncBlockedError, SyncUnreachableError } from '@/services/sync/api'
+import { HttpAuthError, HttpBlockedError, HttpUnreachableError } from '@/services/http'
+import { createSyncApi, isSyncServerAvailable } from '@/services/sync/api'
 import {
   prepareConnection,
   SyncBusyError,
@@ -16,6 +17,7 @@ import {
 import { useFinanceStore } from '@/stores/finance'
 import { NewerFormatError } from '@/services/migration'
 import type { FinanceData } from '@/types/models'
+import { clonePlain } from '@/utils/clone'
 
 const CONFIG_KEY = 'sync-config'
 /** Attesa dopo una modifica prima di inviarla, per raggruppare più modifiche di fila. */
@@ -49,10 +51,10 @@ export type SyncProblem =
   | 'unknown'
 
 function problemOf(e: unknown): SyncProblem {
-  if (e instanceof SyncAuthError) return 'serverKey'
+  if (e instanceof HttpAuthError) return 'serverKey'
   if (e instanceof WrongPasswordError) return 'password'
-  if (e instanceof SyncBlockedError) return 'blocked'
-  if (e instanceof SyncUnreachableError || e instanceof SyncBusyError) return 'offline'
+  if (e instanceof HttpBlockedError) return 'blocked'
+  if (e instanceof HttpUnreachableError || e instanceof SyncBusyError) return 'offline'
   if (e instanceof CryptoUnavailableError) return 'crypto'
   if (e instanceof SyncConflictError) return 'conflict'
   // I dati sul server vengono da una versione più nuova: questa app non li tocca finché non viene aggiornata.
@@ -78,7 +80,7 @@ export const useSyncStore = defineStore('sync', () => {
   async function saveConfig(next: SyncConfig | null) {
     config.value = next
     try {
-      if (next) await set(CONFIG_KEY, { ...next, state: JSON.parse(JSON.stringify(next.state)) })
+      if (next) await set(CONFIG_KEY, { ...next, state: clonePlain(next.state) })
       else await del(CONFIG_KEY)
     } catch (e) {
       console.error('Salvataggio della configurazione di sincronizzazione non riuscito', e)

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type WatchStopHandle } from 'vue'
 import type {
   Cents,
   FinanceData,
@@ -92,7 +92,22 @@ export const useFinanceStore = defineStore('finance', () => {
     saveTimer = setTimeout(flush, 300)
   }
 
-  async function init(locale: string) {
+  /** `init()` si esegue una volta sola: chiamate ripetute (anche in contemporanea) aspettano la stessa. */
+  let initPromise: Promise<void> | null = null
+  let stopSaveWatch: WatchStopHandle | null = null
+
+  // Salva subito se l'app va in background (es. l'utente chiude la scheda).
+  function onVisibilityChange() {
+    if (document.visibilityState === 'visible') today.value = todayIso()
+    if (document.visibilityState === 'hidden' && saveTimer) void flush()
+  }
+
+  function init(locale: string): Promise<void> {
+    initPromise ??= load(locale)
+    return initPromise
+  }
+
+  async function load(locale: string) {
     let loaded: FinanceData | null = null
     try {
       loaded = await dataStore.load()
@@ -105,13 +120,22 @@ export const useFinanceStore = defineStore('finance', () => {
     }
     data.value = loaded ?? createDefaultData(locale)
     if (!loaded) await flush()
-    watch(data, scheduleSave, { deep: true })
-    // Salva subito se l'app va in background (es. l'utente chiude la scheda).
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') today.value = todayIso()
-      if (document.visibilityState === 'hidden' && saveTimer) void flush()
-    })
+    stopSaveWatch = watch(data, scheduleSave, { deep: true })
+    document.addEventListener('visibilitychange', onVisibilityChange)
     ready.value = true
+  }
+
+  /**
+   * Il contrario di `init()`: salva le modifiche in attesa, poi toglie salvataggio automatico e listener. Dopo,
+   * `init()` ricarica da capo. Servirà al blocco dell'app (PKT-25) e nei test.
+   */
+  async function dispose() {
+    if (saveTimer) await flush()
+    stopSaveWatch?.()
+    stopSaveWatch = null
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibilityChange)
+    initPromise = null
+    ready.value = false
   }
 
   function replaceAll(next: FinanceData) {
@@ -550,6 +574,7 @@ export const useFinanceStore = defineStore('finance', () => {
     oneTimeFiltered,
     incomesFiltered,
     init,
+    dispose,
     flush,
     replaceAll,
     applySynced,

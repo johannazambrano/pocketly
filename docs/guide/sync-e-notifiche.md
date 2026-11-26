@@ -6,7 +6,8 @@ source-files:
   - src/stores/notifications.ts
   - src/services/notifications/api.ts
   - src/services/sync/api.ts
-verified: 2026-11-11
+  - src/services/http.ts
+verified: 2026-11-26
 ---
 
 # Guida: Configurazione e Collaudo di Sync e Notifiche
@@ -78,8 +79,8 @@ Pocketly supporta due modalità di notifica:
 
 | Sintomo | Causa Probabile | Soluzione |
 |---|---|---|
-| `SyncAuthError (401)` | La chiave inserita non corrisponde a quella del server | Verifica il valore di `POCKETLY_SYNC_KEY` con cui è partito il server (in produzione è in `/etc/pocketly/sync.env`) |
-| `SyncBlockedError (429)` | 10 tentativi falliti con chiave errata negli ultimi 15 minuti | Attendi che i tentativi falliti escano dalla finestra di 15 minuti (`FAILURE_WINDOW_SECONDS`) |
+| `HttpAuthError (401)` | La chiave inserita non corrisponde a quella del server | Verifica il valore di `POCKETLY_SYNC_KEY` con cui è partito il server (in produzione è in `/etc/pocketly/sync.env`) |
+| `HttpBlockedError (429)` | 10 tentativi falliti con chiave errata negli ultimi 15 minuti | Attendi che i tentativi falliti escano dalla finestra di 15 minuti (`FAILURE_WINDOW_SECONDS`) |
 | Errore registrazione Web Push | Il browser richiede HTTPS per il PushManager | Su localhost HTTP è consentito; se accedi da IP locale Wi-Fi (es. `192.168.1.X`), è obbligatorio usare HTTPS con certificato valido (usa `deploy/proxmox/make-cert.sh`) |
 | Gateway Push risponde `410 Gone` | La sottoscrizione del browser è scaduta o revocata | Disabilita e riabilita le notifiche dalle impostazioni dell'app per generare un nuovo token |
 | Nessun addebito programmato | Data di scadenza oltre i 60 giorni | L'orizzonte di pianificazione push è di 60 giorni (`calculateUpcomingReminders`); le scadenze successive vengono pianificate man mano che si avvicinano |

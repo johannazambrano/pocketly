@@ -6,7 +6,7 @@ source-files:
   - server/test_main.py
   - scripts/python.mjs
   - scripts/docs-check.mjs
-verified: 2026-11-17
+verified: 2026-11-26
 ---
 
 # Guida: Test, Build e Release
@@ -54,6 +54,8 @@ Esegue lo script di controllo `scripts/docs-check.mjs` che verifica:
 - Assenza di link relativi markdown rotti in tutti i file di documentazione.
 - Presenza di ogni file sorgente di `src/`, `server/` e `scripts/` nella [Mappa del Codice](../riferimento/mappa-codice.md).
 - Perfetta simmetria delle chiavi di traduzione tra `src/i18n/it.ts` e `src/i18n/en.ts`.
+- Esistenza di ogni file elencato in `source-files:` nel front-matter dei documenti di `docs/` (escluso `archivio/`), così un file spostato o rinominato non lascia riferimenti stantii.
+- Assenza di colori fissi della palette Tailwind (`text-slate-700`, `hover:bg-emerald-50`, `border-t-rose-600`…) nei file `.vue` e `.ts` di `src/`, test esclusi: si usano i gettoni semantici di `src/style.css` (Invariante #8 di [AGENTS.md](../../AGENTS.md)). Restano ammessi `bg-black/…` e `bg-white`, i veli dietro modali e menu.
 
 ---
 
@@ -84,7 +86,7 @@ Prima di effettuare un commit, aprire una Pull Request o distribuire in produzio
 - [ ] `npm run test` passa con 100% di successo.
 - [ ] `npm run typecheck` non segnala errori.
 - [ ] `npm run test:server` passa con 100% di successo.
-- [ ] `npm run docs:check` non rileva link interrotti né file orfani.
+- [ ] `npm run docs:check` non rileva link interrotti, file orfani, `source-files` inesistenti né colori fissi.
 - [ ] `npm run build` genera la directory `dist/` senza avvisi critici.
 - [ ] Eseguito il collaudo manuale secondo la [Guida: Test Utente (UAT)](test-utente.md) (almeno lo Smoke Test pre-rilascio e la checklist deploy/sync).
 - [ ] Eventuali modifiche alle transazioni o al modello dati contengono il test di migrazione in `src/services/migration.test.ts`.

@@ -2,10 +2,9 @@
  * Chiamate agli endpoint `/api/push/*` del server (`server/main.py`).
  * Tutti i payload delle notifiche viaggiano già cifrati secondo RFC 8291 (`aes128gcm`).
  */
-import { SyncAuthError, SyncBlockedError, SyncUnreachableError } from '@/services/sync/api'
+import { createHttpClient, HttpUnreachableError } from '@/services/http'
 
-const BASE = '/api/push'
-const TIMEOUT_MS = 15_000
+const call = createHttpClient({ baseUrl: '/api/push' })
 
 export interface PushDevicePublicInfo {
   deviceId: string
@@ -43,22 +42,6 @@ export interface PushApi {
   sendTest(deviceId: string, payload: string): Promise<{ status: number; reason?: string; service?: string }>
 }
 
-async function call(path: string, init: RequestInit): Promise<Response> {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
-  try {
-    const res = await fetch(BASE + path, { ...init, signal: ctrl.signal, cache: 'no-store' })
-    if (res.status === 401) throw new SyncAuthError()
-    if (res.status === 429) throw new SyncBlockedError()
-    return res
-  } catch (e) {
-    if (e instanceof SyncAuthError || e instanceof SyncBlockedError) throw e
-    throw new SyncUnreachableError(e instanceof Error ? e.message : String(e))
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 export function createPushApi(serverKey: string): PushApi {
   const authHeader = { Authorization: `Bearer ${serverKey}` }
   const jsonHeaders = { ...authHeader, 'Content-Type': 'application/json' }
@@ -66,7 +49,7 @@ export function createPushApi(serverKey: string): PushApi {
   return {
     async getConfig() {
       const res = await call('/config', { method: 'GET', headers: authHeader })
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
       return (await res.json()) as PushServerConfig
     },
 
@@ -76,7 +59,7 @@ export function createPushApi(serverKey: string): PushApi {
         headers: jsonHeaders,
         body: JSON.stringify(sub),
       })
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
     },
 
     async deleteSubscription(deviceId) {
@@ -85,7 +68,7 @@ export function createPushApi(serverKey: string): PushApi {
         headers: jsonHeaders,
         body: JSON.stringify({ deviceId }),
       })
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
     },
 
     async putSchedule(items) {
@@ -94,7 +77,7 @@ export function createPushApi(serverKey: string): PushApi {
         headers: jsonHeaders,
         body: JSON.stringify({ items }),
       })
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
       return (await res.json()) as { scheduled: number }
     },
 
@@ -104,7 +87,7 @@ export function createPushApi(serverKey: string): PushApi {
         headers: jsonHeaders,
         body: JSON.stringify({ deviceId, payload }),
       })
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
       return (await res.json()) as { status: number; reason?: string; service?: string }
     },
   }

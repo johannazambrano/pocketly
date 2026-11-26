@@ -2,13 +2,14 @@
 source-files:
   - src/domain/notifications.ts
   - src/stores/notifications.ts
+  - src/utils/platform.ts
   - src/services/notifications/api.ts
   - src/services/notifications/webpushCrypto.ts
   - src/components/NotificationSettings.vue
   - src/components/NotificationRulesEditor.vue
   - server/webpush.py
   - server/main.py
-verified: 2026-11-11
+verified: 2026-11-26
 ---
 
 # Sistema di Notifiche e Promemoria per le Spese Ricorrenti
@@ -64,7 +65,7 @@ Attiva quando l'app non è collegata a un server di sincronizzazione.
 
 - **Come funziona**: Il motore di dominio ([`src/domain/notifications.ts`](../src/domain/notifications.ts)) calcola le scadenze e i promemoria dovuti.
 - **Quando si attiva**:
-  1. All'avvio dell'applicazione (`init()`).
+  1. All'avvio dell'applicazione (`init()`, eseguito una volta sola; `cleanup()` toglie listener e controllo periodico).
   2. Al ritorno in primo piano della pagina (`visibilitychange`, es. sblocco del telefono o passaggio da un'altra app).
   3. Periodicamente ogni 60 secondi mentre l'app è aperta a schermo attivo.
 - **Deduplicazione**: Lo storico dei promemoria già mostrati è salvato in IndexedDB sotto la chiave `notifications-shown` con una finestra di validità di 30 giorni.
@@ -131,6 +132,8 @@ Apple supporta le Web Push su iOS a partire da **iOS 16.4**, con due requisiti t
    - Apri Pocketly in Safari.
    - Tocca l'icona di condivisione e seleziona **"Aggiungi alla schermata Home"**.
    - **Chiudi Safari e apri Pocketly toccando l'icona appena creata sulla Home**. Solo dall'icona installata iOS rende disponibile l'API `Notification.requestPermission()`.
+
+L'app riconosce iPhone e iPad con `detectPlatform` ([`src/utils/platform.ts`](../src/utils/platform.ts)), la stessa funzione dell'aspetto: anche un iPad che in Safari si presenta come Mac riceve l'indicazione di installare l'app (`iosInstallRequired`).
 
 ---
 

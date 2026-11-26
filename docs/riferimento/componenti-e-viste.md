@@ -14,6 +14,7 @@ source-files:
   - src/composables/useQuickExpenseTrigger.ts
   - src/composables/useFormErrors.ts
   - src/composables/useHighlight.ts
+  - src/composables/useTagFilteredEntries.ts
   - src/composables/useTrendText.ts
   - src/composables/usePageAction.ts
   - src/utils/navStatus.ts
@@ -44,6 +45,7 @@ source-files:
   - src/components/MonthSelector.vue
   - src/components/TagManager.vue
   - src/components/TagBadge.vue
+  - src/components/TagFilterPanel.vue
   - src/components/TagInput.vue
   - src/components/TagSelect.vue
   - src/components/BreakdownList.vue
@@ -59,12 +61,12 @@ source-files:
   - src/components/SubmitButton.vue
   - src/components/UpdatePrompt.vue
   - src/components/WelcomePanel.vue
-verified: 2026-11-23
+verified: 2026-11-26
 ---
 
 # Riferimento: Componenti e Viste
 
-Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 30 componenti UI di Pocketly.
+Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 40 componenti UI di Pocketly (36 in `src/components/` e 4 in `src/components/settings/`).
 
 ---
 
@@ -73,7 +75,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ### `DashboardView.vue` (`/`)
 - **Ruolo:** Hub visivo principale dell'applicazione. All'avvio si posiziona automaticamente sul mese corrente (`finance.selectedMonth`).
 - **Testata:** il titolo è il periodo (`periodTitle`, sempre con l'anno: "Novembre" su iPhone, "Novembre 2026" sul PC accanto al selettore, "Tutto il 2026"; sulla dashboard la barra in alto non mostra l'anno). Su iPhone il titolo grande lo disegna `MonthSelector` (prop `heading`) ed è anche il menu del periodo; su Android resta per i lettori di schermo e il periodo si legge nella barra in alto (`AppHeader`). Le righe dei prossimi addebiti hanno l'iniziale in un cerchio su Android e la freccia › su iPhone (la matita altrove). Riquadri e card prendono la forma della piattaforma dagli stili (`card`, `panel`).
-- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Le cifre e le ripartizioni contano ciò che è già avvenuto (fino a oggi nel periodo in corso, tutto per un periodo passato, il programmato per un mese futuro); la cifra grande dice dove si arriverà. Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue) riceve `finance.categoryTrends` e `finance.paymentMethodTrends` per mostrare indicatori discreti di trend rispetto alla media dei mesi precedenti (o ritmo medio a oggi). Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue).
+- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Le cifre e le ripartizioni contano ciò che è già avvenuto (fino a oggi nel periodo in corso, tutto per un periodo passato, il programmato per un mese futuro); la cifra grande dice dove si arriverà. [`BreakdownList`](../../src/components/BreakdownList.vue) riceve `finance.categoryTrends` e `finance.paymentMethodTrends` per mostrare indicatori discreti di trend rispetto alla media dei mesi precedenti (o ritmo medio a oggi). Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue).
 - **Riquadro principale (`mainFigure`, passato a [`BalancePanel`](../../src/components/BalancePanel.vue)):**
   - Cifra grande: "Risultato previsto per {mese}" / "Risultato previsto per il {anno}" per il periodo in corso e i mesi futuri; "Risultato di {mese}" / "Risultato dell'anno" per i periodi passati (o "… a oggi" quando previsto e risultato coincidono).
   - Quando il previsto conta su entrate stimate lo si dice sempre sotto la cifra. Se c'è il risultato di oggi (mese o anno in corso) sta nella stessa frase: "Risultato da inizio novembre a oggi: 120,00 €; mancano ancora 1.800,00 € di entrate stimate." (`dashboard.estimateStillToCome`); l'importo di oggi ha lo stesso peso del testo, non il grassetto, perché un negativo in evidenza si leggeva prima della spiegazione. Per un mese futuro resta "Contando X di entrate stimate, non ancora registrate" (`dashboard.countingEstimate`).
@@ -101,7 +103,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `OneTimeView.vue` (`/una-tantum`)
 - **Ruolo:** Gestione transazioni puntuali.
-- **Funzionalità:** Filtro per mese tramite [`MonthSelector`](../../src/components/MonthSelector.vue). Se presenti, mostra gli inserimenti rapidi configurati tramite [`QuickExpenseBar`](../../src/components/QuickExpenseBar.vue). Filtro per singolo tag e pulsante per visualizzare il riquadro a comparsa dello spaccato per tag ([`BreakdownList`](../../src/components/BreakdownList.vue)). Creazione e modifica con [`TransactionForm`](../../src/components/TransactionForm.vue).
+- **Funzionalità:** Filtro per mese tramite [`MonthSelector`](../../src/components/MonthSelector.vue). Se presenti, mostra gli inserimenti rapidi configurati tramite [`QuickExpenseBar`](../../src/components/QuickExpenseBar.vue). Filtro per tag con [`TagFilterPanel`](../../src/components/TagFilterPanel.vue) e [`useTagFilteredEntries`](../../src/composables/useTagFilteredEntries.ts), condivisi con `IncomeView`. Creazione e modifica con [`TransactionForm`](../../src/components/TransactionForm.vue).
 
 ### `RecurringView.vue` (`/ricorrenti`)
 - **Ruolo:** Gestione delle spese periodiche.
@@ -109,7 +111,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 
 ### `IncomeView.vue` (`/entrate`)
 - **Ruolo:** Gestione delle entrate dell'anno.
-- **Funzionalità:** Elenco entrate filtrate per mese (`finance.incomesFiltered`) o dell'intero anno, con supporto a [`MonthSelector`](../../src/components/MonthSelector.vue), barra dei filtri per tag, riepilogo raggruppato comprimibile (`tagBreakdown`), banner informativo tag, visualizzazione di note e badge dei tag su ogni riga, e form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
+- **Funzionalità:** Elenco entrate filtrate per mese (`finance.incomesFiltered`) o dell'intero anno, con supporto a [`MonthSelector`](../../src/components/MonthSelector.vue), filtro per tag con [`TagFilterPanel`](../../src/components/TagFilterPanel.vue) e [`useTagFilteredEntries`](../../src/composables/useTagFilteredEntries.ts) come in `OneTimeView` (cifre del riepilogo in verde, `amount-class="text-accent"`), visualizzazione di note e badge dei tag su ogni riga, e form modale per aggiunta/modifica tramite [`TransactionForm`](../../src/components/TransactionForm.vue) con `kind="income"`.
 
 ### `BudgetView.vue` (`/budget`)
 - **Ruolo:** Monitoraggio dei limiti di spesa per categoria e pianificazione attiva tramite salvadanai / obiettivi di risparmio.
@@ -175,6 +177,7 @@ Gli errori stanno sotto il campo sbagliato, non in fondo al modulo: i moduli han
 - **`SubmitButton.vue`**: Pulsante di conferma dei moduli; con `cancelLabel` mostra accanto un pulsante "Annulla" che emette `cancel`; con `deleteLabel` un pulsante "Elimina" che emette `delete` (iPhone: riga rossa a tutta larghezza; Android: testo rosso a sinistra; PC: sotto i due pulsanti). Segue la piattaforma: sul PC i due pulsanti a tutta larghezza, su Android "Annulla" di testo e "Salva" pieno a pillola allineati a destra, su iPhone niente (Annulla e Fine sono nella barra del foglio).
 
 ### Tag, Categorie e Metodi
+- **`TagFilterPanel.vue`**: Filtro per tag di Spese ed Entrate (`section="onetime" | "income"` sceglie i testi): barra dei tag dell'anno con il numero di voci nel periodo, riepilogo per tag comprimibile con barre percentuali, riquadro del tag scelto con il totale dell'anno, «Mostra tutto l'anno» e «Rimuovi filtro». I dati arrivano da `useTagFilteredEntries` (tag scelto, voci mostrate e totale, `revealEntry` per `useHighlight`: toglie il filtro se nasconderebbe la voce cercata).
 - **`TagBadge.vue`**: Pillola colorata che visualizza il nome di una categoria, metodo o tag recuperando dinamicamente il colore associato. Fondo e testo vengono da `badgeColors`, quindi restano leggibili anche con un colore scelto a mano. Con `clickable` è un vero `<button>` (raggiungibile da tastiera e toccabile dentro le righe che si aprono al tocco).
 - **`TagSelect.vue`**: Menu a tendina uniforme per la selezione rapida di categorie o metodi di pagamento, in ordine alfabetico (`finance.sortedTags`).
 - **`TagInput.vue`**: Campo dei tag di `TransactionForm` e `QuickExpenseForm` (`PKT-21`): un solo campo che cerca e crea. Toccandolo si apre sotto, dentro il modulo (non sopra, così sul telefono non finisce sotto la tastiera), l'elenco dei tag proposti da `suggestTags`: a campo vuoto i 6 più usati, scrivendo quelli che corrispondono senza badare a maiuscole e accenti, ognuno con quante volte è usato, e in fondo «Crea #nome» se il nome non esiste (un «#» scritto all'inizio si ignora). Si sceglie con il tocco o con frecce e Invio; dopo la scelta il campo si svuota e resta attivo. Esc chiude l'elenco senza chiudere il foglio. Se il nome scritto è già tra i scelti lo dice invece di proporre un doppione. I tag scelti sono pillole con la ✕ («Togli #nome») sotto il campo. Accessibilità: `role="combobox"` con `listbox`, `aria-activedescendant` e `aria-expanded`.

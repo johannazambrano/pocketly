@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FinanceData } from '@/types/models'
 import { createEmptyData } from './defaults'
-import { availableYears, averageBalanceBefore, balanceVsAverage, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, oneTimeTagBreakdown, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
+import { availableYears, averageBalanceBefore, balanceVsAverage, breakdownItems, compareToAverage, estimateCategoryIds, estimateMonthlyIncome, forecast, frequentTemplates, monthBreakdown, monthSummary, tagBreakdown, tagTrends, upcomingCharges, variableSpending, yearSummary } from './calculations'
 
 function sample(): FinanceData {
   const d = createEmptyData()
@@ -467,7 +467,7 @@ describe('monthSummary', () => {
   })
 })
 
-describe('tagBreakdown / oneTimeTagBreakdown', () => {
+describe('tagBreakdown', () => {
   it('restituisce un array vuoto se non ci sono elementi o nessuno ha tag', () => {
     expect(tagBreakdown([])).toEqual([])
     expect(
@@ -492,8 +492,6 @@ describe('tagBreakdown / oneTimeTagBreakdown', () => {
       { id: 'alloggio', total: 65000, count: 1 },
       { id: 'regali', total: 5000, count: 1 },
     ])
-    // Verifica retrocompatibilità
-    expect(oneTimeTagBreakdown(expenses)).toEqual(breakdown)
   })
 
   it('funziona anche con entrate dotate di tag', () => {

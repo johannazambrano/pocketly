@@ -1,5 +1,6 @@
 import { get, set } from 'idb-keyval'
 import type { FinanceData } from '@/types/models'
+import { clonePlain } from '@/utils/clone'
 import { parseBackup } from './migration'
 
 /**
@@ -41,7 +42,7 @@ export const deviceDataStore: DataStore = {
   },
   async save(data) {
     // JSON round-trip: IndexedDB non può clonare i proxy reattivi di Vue.
-    await set(DATA_KEY, JSON.parse(JSON.stringify(data)))
+    await set(DATA_KEY, clonePlain(data))
   },
 }
 
