@@ -26,6 +26,10 @@ import { formatCents } from '@/utils/money'
 import { formatDate } from '@/utils/dates'
 import { fingerprint, stableStringify } from '@/utils/hash'
 import { newId } from '@/utils/id'
+import { detectPlatform } from '@/utils/platform'
+
+/** `navigator.standalone` esiste solo in Safari per iOS/iPadOS. */
+type NavigatorStandalone = Navigator & { standalone?: boolean }
 
 const CONFIG_KEY = 'notification-config'
 const SHOWN_KEY = 'notifications-shown'
@@ -81,18 +85,18 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   const isPermissionGranted = computed(() => permission.value === 'granted')
 
+  /** Anche un iPad che si presenta come Mac (`detectPlatform`). */
   const isIos = computed(() => {
     if (typeof navigator === 'undefined') return false
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !Boolean((window as any).MSStream)
+    return detectPlatform({ userAgent: navigator.userAgent, maxTouchPoints: navigator.maxTouchPoints }) === 'ios'
   })
 
   const isStandalone = computed(() => {
     if (typeof window === 'undefined') return false
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      Boolean((navigator as any).standalone)
+      // Safari su iPhone/iPad: `navigator.standalone` c'è solo lì e non è nei tipi standard.
+      Boolean((navigator as NavigatorStandalone).standalone)
     )
   })
 
@@ -615,8 +619,34 @@ export const useNotificationsStore = defineStore('notifications', () => {
     },
   )
 
-  async function init(): Promise<void> {
-    if (ready.value) return
+  let initPromise: Promise<void> | null = null
+  let reminderTimer: ReturnType<typeof setInterval> | undefined
+
+  function onVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      updatePermission()
+      void checkLocalReminders()
+      // Il calendario non parte da qui: tornando in primo piano la sincronizzazione scarica prima i dati nuovi,
+      // e il watch su sync.status lo invia quando diventa 'synced'. Così non si mandano promemoria di dati vecchi.
+    }
+  }
+
+  /** Si esegue una volta sola: chiamate ripetute (anche in contemporanea) aspettano la stessa. */
+  function init(): Promise<void> {
+    initPromise ??= load()
+    return initPromise
+  }
+
+  /** Toglie listener e controllo periodico dei promemoria; dopo, `init()` riparte da capo. */
+  function cleanup(): void {
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibilityChange)
+    clearInterval(reminderTimer)
+    reminderTimer = undefined
+    initPromise = null
+    ready.value = false
+  }
+
+  async function load(): Promise<void> {
     updatePermission()
 
     try {
@@ -657,18 +687,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
 
     if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          updatePermission()
-          void checkLocalReminders()
-          // Il calendario non parte da qui: tornando in primo piano la sincronizzazione scarica prima i dati nuovi,
-          // e il watch su sync.status lo invia quando diventa 'synced'. Così non si mandano promemoria di dati vecchi.
-        }
-      })
+      document.addEventListener('visibilitychange', onVisibilityChange)
     }
 
     if (typeof window !== 'undefined') {
-      setInterval(() => {
+      reminderTimer = setInterval(() => {
         if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
           void checkLocalReminders()
         }
@@ -740,6 +763,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     iosInstallRequired,
     mode,
     init,
+    cleanup,
     enable,
     disable,
     subscribePush,

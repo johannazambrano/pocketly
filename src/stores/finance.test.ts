@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { set } from 'idb-keyval'
 import { useFinanceStore } from './finance'
 
 /** Un archivio finto al posto di IndexedDB: si vede cosa l'app legge e cosa scrive. */
@@ -112,5 +113,57 @@ describe('inserimenti rapidi', () => {
 
     finance.deleteQuickExpense(caffe.id)
     expect(finance.quickExpenses.map((q) => q.id)).toEqual([pranzo.id])
+  })
+})
+
+describe('ciclo di vita: init una volta sola e dispose', () => {
+  let doc: { addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn>; visibilityState: string }
+  beforeEach(() => {
+    vi.mocked(set).mockClear()
+    doc = { addEventListener: vi.fn(), removeEventListener: vi.fn(), visibilityState: 'visible' }
+    vi.stubGlobal('document', doc)
+    setActivePinia(createPinia())
+    stored.clear()
+    writes.length = 0
+  })
+
+  it('chiamate ripetute, anche in contemporanea, caricano una volta e registrano un solo listener', async () => {
+    const finance = useFinanceStore()
+    await Promise.all([finance.init('it'), finance.init('it')])
+    await finance.init('it')
+    expect(doc.addEventListener).toHaveBeenCalledTimes(1)
+    expect(writes).toEqual(['finance-data'])
+  })
+
+  it('dispose salva le modifiche in attesa, poi non salva più e toglie il listener', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+    writes.length = 0
+    finance.addTag('tags', 'Prima')
+    await new Promise((r) => setTimeout(r, 0))
+    await finance.dispose()
+    expect(writes).toEqual(['finance-data'])
+    expect(finance.ready).toBe(false)
+    expect(doc.removeEventListener).toHaveBeenCalledWith('visibilitychange', doc.addEventListener.mock.calls[0]![1])
+
+    finance.addTag('tags', 'Dopo')
+    await new Promise((r) => setTimeout(r, 400))
+    // Si guarda cosa è stato scritto: un timer lasciato da un test precedente può scrivere i dati del suo store.
+    const savedTags = vi.mocked(set).mock.calls.map(([, value]) => ((value as { tags?: { name: string }[] }).tags ?? []).map((t) => t.name))
+    expect(savedTags.some((names) => names.includes('Prima'))).toBe(true)
+    expect(savedTags.some((names) => names.includes('Dopo'))).toBe(false)
+  })
+
+  it('dopo dispose, init ricarica da capo e il salvataggio automatico riparte', async () => {
+    const finance = useFinanceStore()
+    await finance.init('it')
+    await finance.dispose()
+    await finance.init('it')
+    expect(finance.ready).toBe(true)
+    finance.addTag('tags', 'Nuovo')
+    await new Promise((r) => setTimeout(r, 400))
+    expect(doc.addEventListener).toHaveBeenCalledTimes(2)
+    const savedTags = vi.mocked(set).mock.calls.map(([, value]) => ((value as { tags?: { name: string }[] }).tags ?? []).map((t) => t.name))
+    expect(savedTags.some((names) => names.includes('Nuovo'))).toBe(true)
   })
 })
