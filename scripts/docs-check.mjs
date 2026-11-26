@@ -176,11 +176,111 @@ async function checkI18n() {
   }
 }
 
+// --------------------------------------------------------------------------
+// 4. Verifica che i file elencati in `source-files:` nei front-matter di docs/ esistano
+// --------------------------------------------------------------------------
+function findDocsMarkdown(dir) {
+  let results = []
+  for (const file of fs.readdirSync(dir)) {
+    if (file === 'archivio' || file.startsWith('.')) continue
+    const full = path.join(dir, file)
+    if (fs.statSync(full).isDirectory()) {
+      results = results.concat(findDocsMarkdown(full))
+    } else if (file.endsWith('.md')) {
+      results.push(full)
+    }
+  }
+  return results
+}
+
+/** Percorsi elencati in `source-files:` nel front-matter iniziale (`---` … `---`); [] se non c'è. */
+function parseSourceFiles(content) {
+  const lines = content.split(/\r?\n/)
+  if (lines[0] !== '---') return []
+  const paths = []
+  let inList = false
+  for (let i = 1; i < lines.length && lines[i] !== '---'; i++) {
+    const line = lines[i]
+    if (/^source-files:/.test(line)) {
+      inList = true
+      continue
+    }
+    if (!inList) continue
+    const item = line.match(/^\s+-\s+(.+?)\s*$/)
+    if (item) paths.push(item[1].replace(/^['"]|['"]$/g, ''))
+    else inList = false
+  }
+  return paths
+}
+
+function checkFrontMatterSourceFiles() {
+  const mdFiles = findDocsMarkdown(path.join(ROOT, 'docs'))
+  let checkedCount = 0
+  for (const mdPath of mdFiles) {
+    for (const p of parseSourceFiles(fs.readFileSync(mdPath, 'utf-8'))) {
+      checkedCount++
+      if (!fs.existsSync(path.join(ROOT, p))) {
+        logError(`In ${path.relative(ROOT, mdPath).replace(/\\/g, '/')} il front-matter cita un file che non esiste: source-files → ${p}`)
+      }
+    }
+  }
+  logSuccess(`Verificati ${checkedCount} percorsi source-files in ${mdFiles.length} documenti di docs/.`)
+}
+
+// --------------------------------------------------------------------------
+// 5. Invariante #8: niente colori fissi della palette Tailwind in src/ (solo gettoni semantici)
+// --------------------------------------------------------------------------
+const TAILWIND_PALETTE = [
+  'slate', 'gray', 'zinc', 'neutral', 'stone', 'red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald',
+  'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose',
+]
+const COLOR_UTILITIES = [
+  'text', 'bg', 'border', 'border-[trblxyse]', 'ring', 'ring-offset', 'outline', 'divide', 'fill', 'stroke',
+  'from', 'via', 'to', 'shadow', 'accent', 'caret', 'decoration', 'placeholder',
+]
+/**
+ * Una classe come `text-slate-700`, `hover:bg-emerald-50/80` o `border-t-rose-600`. `bg-black/60` e `bg-white`
+ * restano ammessi: sono i veli dietro modali e menu, uguali in ogni tema.
+ */
+const FIXED_COLOR_CLASS = new RegExp(
+  `(?<![\\w-])(?:${COLOR_UTILITIES.join('|')})-(?:${TAILWIND_PALETTE.join('|')})-(?:50|[1-9]00|950)(?![\\w-])`,
+  'g',
+)
+
+function checkSemanticColorTokens() {
+  function getFiles(dir) {
+    let results = []
+    for (const file of fs.readdirSync(dir)) {
+      const full = path.join(dir, file)
+      if (fs.statSync(full).isDirectory()) results = results.concat(getFiles(full))
+      else if (/\.(vue|ts)$/.test(file) && !/\.test\.ts$/.test(file)) results.push(full)
+    }
+    return results
+  }
+
+  const files = getFiles(path.join(ROOT, 'src'))
+  let found = 0
+  for (const file of files) {
+    const lines = fs.readFileSync(file, 'utf-8').split(/\r?\n/)
+    lines.forEach((line, i) => {
+      for (const m of line.matchAll(FIXED_COLOR_CLASS)) {
+        found++
+        logError(`Colore fisso "${m[0]}" in ${path.relative(ROOT, file).replace(/\\/g, '/')}:${i + 1}: usa un gettone semantico di src/style.css (Invariante #8).`)
+      }
+    })
+  }
+  if (found === 0) {
+    logSuccess(`Nessun colore fisso della palette Tailwind nei ${files.length} file .vue e .ts di src/ (Invariante #8).`)
+  }
+}
+
 async function run() {
   console.log('🔍 Avvio verifica documentazione e coerenza Pocketly...\n')
   checkCodeMap()
   checkMarkdownLinks()
   await checkI18n()
+  checkFrontMatterSourceFiles()
+  checkSemanticColorTokens()
 
   if (errors > 0) {
     console.error(`\n❌ Verifica fallita con ${errors} errore/i.`)

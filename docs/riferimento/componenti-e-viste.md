@@ -66,7 +66,7 @@ verified: 2026-11-26
 
 # Riferimento: Componenti e Viste
 
-Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 30 componenti UI di Pocketly.
+Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventario dei 40 componenti UI di Pocketly (36 in `src/components/` e 4 in `src/components/settings/`).
 
 ---
 
@@ -75,7 +75,7 @@ Questo documento descrive le 9 viste (8 principali e 1 di dettaglio) e l'inventa
 ### `DashboardView.vue` (`/`)
 - **Ruolo:** Hub visivo principale dell'applicazione. All'avvio si posiziona automaticamente sul mese corrente (`finance.selectedMonth`).
 - **Testata:** il titolo è il periodo (`periodTitle`, sempre con l'anno: "Novembre" su iPhone, "Novembre 2026" sul PC accanto al selettore, "Tutto il 2026"; sulla dashboard la barra in alto non mostra l'anno). Su iPhone il titolo grande lo disegna `MonthSelector` (prop `heading`) ed è anche il menu del periodo; su Android resta per i lettori di schermo e il periodo si legge nella barra in alto (`AppHeader`). Le righe dei prossimi addebiti hanno l'iniziale in un cerchio su Android e la freccia › su iPhone (la matita altrove). Riquadri e card prendono la forma della piattaforma dagli stili (`card`, `panel`).
-- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Le cifre e le ripartizioni contano ciò che è già avvenuto (fino a oggi nel periodo in corso, tutto per un periodo passato, il programmato per un mese futuro); la cifra grande dice dove si arriverà. Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue) riceve `finance.categoryTrends` e `finance.paymentMethodTrends` per mostrare indicatori discreti di trend rispetto alla media dei mesi precedenti (o ritmo medio a oggi). Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue).
+- **Dati:** Visualizza il riepilogo annuale o mensile (`finance.summary` o `finance.monthSummaryData`). Le cifre e le ripartizioni contano ciò che è già avvenuto (fino a oggi nel periodo in corso, tutto per un periodo passato, il programmato per un mese futuro); la cifra grande dice dove si arriverà. [`BreakdownList`](../../src/components/BreakdownList.vue) riceve `finance.categoryTrends` e `finance.paymentMethodTrends` per mostrare indicatori discreti di trend rispetto alla media dei mesi precedenti (o ritmo medio a oggi). Con l'app vuota mostra solo [`WelcomePanel`](../../src/components/WelcomePanel.vue).
 - **Riquadro principale (`mainFigure`, passato a [`BalancePanel`](../../src/components/BalancePanel.vue)):**
   - Cifra grande: "Risultato previsto per {mese}" / "Risultato previsto per il {anno}" per il periodo in corso e i mesi futuri; "Risultato di {mese}" / "Risultato dell'anno" per i periodi passati (o "… a oggi" quando previsto e risultato coincidono).
   - Quando il previsto conta su entrate stimate lo si dice sempre sotto la cifra. Se c'è il risultato di oggi (mese o anno in corso) sta nella stessa frase: "Risultato da inizio novembre a oggi: 120,00 €; mancano ancora 1.800,00 € di entrate stimate." (`dashboard.estimateStillToCome`); l'importo di oggi ha lo stesso peso del testo, non il grassetto, perché un negativo in evidenza si leggeva prima della spiegazione. Per un mese futuro resta "Contando X di entrate stimate, non ancora registrate" (`dashboard.countingEstimate`).

@@ -87,7 +87,7 @@ Ogni agente DEVE rispettare i seguenti invarianti architetturali, verificati sul
    Pocketly supporta sia l'italiano (`src/i18n/it.ts`) che l'inglese (`src/i18n/en.ts`). Ogni nuova etichetta, messaggio di errore o testo UI aggiunto in `it.ts` DEVE avere la corrispettiva chiave in `en.ts`. Lo script `npm run docs:check` verifica questo allineamento.
 
 8. **Solo gettoni di colore, sei combinazioni da verificare:**
-   Nei componenti non si scrivono colori fissi di Tailwind (`text-slate-700`) né esadecimali: si usano i gettoni semantici (`text-ink-2`, `bg-surface`, `text-accent`…) definiti in `src/style.css` e valorizzati per `data-platform` (`ios` / `android` / `desktop`) e `data-theme` (`light` / `dark`). Un gettone nuovo va valorizzato in ogni blocco (le regole Android vengono dopo lo scuro: Android scuro va ridetto). Il testo grigio non scende sotto `ink-4`; le cifre verdi usano `accent` (`accent-icon` solo per le icone). I colori di categorie, metodi e tag passano da `src/utils/colors.ts` (`pickUniqueColor`, `badgeColors`). Dettagli in [docs/architettura/frontend.md](docs/architettura/frontend.md).
+   Nei componenti non si scrivono colori fissi di Tailwind (`text-slate-700`) né esadecimali: si usano i gettoni semantici (`text-ink-2`, `bg-surface`, `text-accent`…) definiti in `src/style.css` e valorizzati per `data-platform` (`ios` / `android` / `desktop`) e `data-theme` (`light` / `dark`). Un gettone nuovo va valorizzato in ogni blocco (le regole Android vengono dopo lo scuro: Android scuro va ridetto). Il testo grigio non scende sotto `ink-4`; le cifre verdi usano `accent` (`accent-icon` solo per le icone). I colori di categorie, metodi e tag passano da `src/utils/colors.ts` (`pickUniqueColor`, `badgeColors`). `npm run docs:check` fa fallire la verifica se in `src/` compare una classe della palette Tailwind (`text-slate-700`, `bg-emerald-50`…). Dettagli in [docs/architettura/frontend.md](docs/architettura/frontend.md).
 
 ---
 
@@ -112,4 +112,4 @@ Quando esegui una modifica nel repository, attieniti scrupolosamente a questo ci
    - `npm run typecheck` (zero errori TypeScript)
    - `npm run test:server` (test Python server verdi)
    - `npm run build` (build di produzione riuscita)
-   - `npm run docs:check` (obbligatorio: nessun link rotto, mappa codice aggiornata, i18n allineato)
+   - `npm run docs:check` (obbligatorio: nessun link rotto, mappa codice aggiornata, i18n allineato, `source-files` esistenti, niente colori fissi)

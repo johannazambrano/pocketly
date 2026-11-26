@@ -447,6 +447,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-24 aperta da analisi PKT-15 (Jonny), collegata a [architettura/struttura-e-manutenibilita.md](architettura/struttura-e-manutenibilita.md).
   - 2026-11-26 presa in carico (Johanna): si parte dalla Fase 1 sul ramo `feature/pkt-27-fase-1`.
   - 2026-11-26 Fase 1, prima parte sul ramo `feature/pkt-27-fase-1` (Johanna): `4f1c47a` trasporto HTTP, Base64 e clone condivisi, date di `excelImport.ts` da `dates.ts` (§4.2); `c5604ca` `finance.init()` una volta sola con `dispose()`, `cleanup()` e `detectPlatform` in `notifications.ts` (§4.3); `09bafeb` filtro per tag condiviso tra Spese ed Entrate con `useTagFilteredEntries` e `TagFilterPanel` (§4.1, chiude la duplicazione segnalata in `PKT-06`). Test, tipi, build e `docs:check` verdi. Restano per la Fase 1 le estensioni di `docs-check.mjs` e i 3 disallineamenti documentali (§4.6).
+  - 2026-11-26 Fase 1 completata sul ramo `feature/pkt-27-fase-1` (Johanna): `docs-check.mjs` controlla che i file in `source-files:` dei front-matter esistano e che in `src/` non ci siano colori fissi della palette Tailwind (Invariante #8); corretti i 3 disallineamenti del §2.5 (gettoni in `frontend.md`, 40 componenti in `README.md` e `componenti-e-viste.md`, frase rovinata e ripetuta su `DashboardView`). Restano la Fase 2 e la Fase 3.
 
 ### PKT-28 — Interazione nativa PWA, long press e animazioni OS-adattive
 - **Stato:** da fare · **Priorità:** media · **Chi:** libero

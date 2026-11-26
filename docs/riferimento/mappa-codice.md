@@ -199,7 +199,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|---|
 | [`scripts/xlsx_to_pocketly.py`](../../scripts/xlsx_to_pocketly.py) | Script CLI per la migrazione e conversione di fogli Excel complessi in JSON compatibile | — | [IMPORTA_DA_EXCEL.md](../IMPORTA_DA_EXCEL.md) |
 | [`scripts/python.mjs`](../../scripts/python.mjs) | Avvia Python in modo portabile (`python3`, `python` o `py -3`) per `test:server` | — | [AGENTS.md](../../AGENTS.md) |
-| [`scripts/docs-check.mjs`](../../scripts/docs-check.mjs) | Script di validazione continua: link markdown, censimento file in mappa codice, simmetria i18n | — | [AGENTS.md](../../AGENTS.md) |
+| [`scripts/docs-check.mjs`](../../scripts/docs-check.mjs) | Script di validazione continua: link markdown, censimento file in mappa codice, simmetria i18n, `source-files` dei front-matter esistenti, niente colori fissi Tailwind in `src/` (Invariante #8) | — | [AGENTS.md](../../AGENTS.md) |
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-25
+verified: 2026-11-26
 ---
 
 # Indice della Documentazione di Pocketly
@@ -61,7 +61,7 @@ docs/
 │   ├── mappa-codice.md                <-- Tabella file -> responsabilità -> test
 │   ├── modello-dati.md                <-- Tipi TS, centesimi, migrazione schemi
 │   ├── domain.md                      <-- Funzioni pure di calcolo contabile
-│   └── componenti-e-viste.md          <-- Dettaglio delle 9 viste e 27 componenti
+│   └── componenti-e-viste.md          <-- Dettaglio delle 9 viste e 40 componenti
 ├── guide/
 │   ├── aggiungere-una-vista.md        <-- Step-by-step per nuove viste
 │   ├── aggiungere-un-campo-ai-dati.md <-- Step-by-step modello + migrazione + merge
