@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-23
+verified: 2026-11-26
 ---
 
 # Mappa del Codice
@@ -133,9 +133,10 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 
 | File | Responsabilità | Test | Documentazione |
 |---|---|---|---|
+| [`src/services/http.ts`](../../src/services/http.ts) | Trasporto HTTP comune verso il server personale (`createHttpClient`: tempo massimo, niente cache, 401 → `HttpAuthError`, 429 → `HttpBlockedError`, errori di rete → `HttpUnreachableError`), usato da `sync/api.ts` e `notifications/api.ts` | [`src/services/http.test.ts`](../../src/services/http.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/storage.ts`](../../src/services/storage.ts) | Interfaccia `DataStore` e implementazione `deviceDataStore` per salvataggio su IndexedDB | — | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/backup.ts`](../../src/services/backup.ts) | Esportazione/importazione file di backup (JSON in chiaro o cifrato con password) | [`src/services/backup.test.ts`](../../src/services/backup.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
-| [`src/services/backupCrypto.ts`](../../src/services/backupCrypto.ts) | Crittografia client-side: PBKDF2 + AES-GCM 256 via Web Crypto API nativa | [`src/services/backup.test.ts`](../../src/services/backup.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
+| [`src/services/backupCrypto.ts`](../../src/services/backupCrypto.ts) | Crittografia client-side: PBKDF2 + AES-GCM 256 via Web Crypto API nativa (Base64 da `utils/base64.ts`) | [`src/services/backup.test.ts`](../../src/services/backup.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/migration.ts`](../../src/services/migration.ts) | Migrazione dei formati (prototipi -> corrente, 2 -> 3) e parsing difensivo `parseBackup` contro dati malformati; `NewerFormatError` per i formati più nuovi | [`src/services/migration.test.ts`](../../src/services/migration.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/services/excelImport.ts`](../../src/services/excelImport.ts) | Parsing client-side di file Excel `.xlsx` e conversione diretta in voci Pocketly | [`src/services/excelImport.test.ts`](../../src/services/excelImport.test.ts) | [IMPORTA_DA_EXCEL.md](../IMPORTA_DA_EXCEL.md) |
 | [`src/services/exportData.ts`](../../src/services/exportData.ts) | Esportazione tabellare strutturata per sezioni in Excel (.xlsx a più fogli) e CSV (`escapeCsvField`: apostrofo davanti ai testi che Excel leggerebbe come formula); testi (promemoria, addebiti saltati o cambiati) dalle traduzioni dell'app nella lingua scelta; le parti di una ricorrente divisa restano in fila | [`src/services/exportData.test.ts`](../../src/services/exportData.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
@@ -143,10 +144,10 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/services/xlsx/writer.ts`](../../src/services/xlsx/writer.ts) | Scrittore di fogli di calcolo Excel `.xlsx` multi-foglio conforme ad OpenXML; `escapeXml` toglie i caratteri di controllo che renderebbero il file illeggibile | [`src/services/xlsx/writer.test.ts`](../../src/services/xlsx/writer.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/xlsx/zip.ts`](../../src/services/xlsx/zip.ts) | Decompressione ZIP in memoria per l'estrazione dei file XML interni ad XLSX | `services/excelImport.test.ts` | [IMPORTA_DA_EXCEL.md](../IMPORTA_DA_EXCEL.md) |
 | [`src/services/xlsx/zipWriter.ts`](../../src/services/xlsx/zipWriter.ts) | Creazione archivi ZIP in puro TypeScript per cartelle Excel e archivi CSV; se la compressione non riesce il file resta non compresso (metodo 0) | [`src/services/xlsx/writer.test.ts`](../../src/services/xlsx/writer.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
-| [`src/services/sync/api.ts`](../../src/services/sync/api.ts) | Chiamate HTTP verso `/api/sync` (`GET` e `PUT`) con gestione errori e timeout | `services/sync/engine.test.ts` | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
+| [`src/services/sync/api.ts`](../../src/services/sync/api.ts) | Chiamate HTTP verso `/api/sync` (`GET` e `PUT`) attraverso `services/http.ts` | `services/sync/engine.test.ts` | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
 | [`src/services/sync/engine.ts`](../../src/services/sync/engine.ts) | Orchestratore sincronizzazione: pull, merge a 3 vie su base comune, cifratura e push | [`src/services/sync/engine.test.ts`](../../src/services/sync/engine.test.ts) | [dati-e-sincronizzazione.md](../architettura/dati-e-sincronizzazione.md) |
-| [`src/services/notifications/api.ts`](../../src/services/notifications/api.ts) | Chiamate HTTP verso `/api/push/*` (`config`, `subscription`, `schedule`, `test`) | `stores/notifications.test.ts` | [NOTIFICHE.md](../NOTIFICHE.md) |
-| [`src/services/notifications/webpushCrypto.ts`](../../src/services/notifications/webpushCrypto.ts) | Crittografia Web Push RFC 8291 (`aes128gcm`) sul browser via Web Crypto API nativa | [`src/services/notifications/webpushCrypto.test.ts`](../../src/services/notifications/webpushCrypto.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
+| [`src/services/notifications/api.ts`](../../src/services/notifications/api.ts) | Chiamate HTTP verso `/api/push/*` (`config`, `subscription`, `schedule`, `test`) attraverso `services/http.ts` | `stores/notifications.test.ts` | [NOTIFICHE.md](../NOTIFICHE.md) |
+| [`src/services/notifications/webpushCrypto.ts`](../../src/services/notifications/webpushCrypto.ts) | Crittografia Web Push RFC 8291 (`aes128gcm`) sul browser via Web Crypto API nativa (Base64 da `utils/base64.ts`) | [`src/services/notifications/webpushCrypto.test.ts`](../../src/services/notifications/webpushCrypto.test.ts) | [NOTIFICHE.md](../NOTIFICHE.md) |
 
 ---
 
@@ -166,8 +167,10 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 | [`src/i18n/index.ts`](../../src/i18n/index.ts) | Configurazione i18n, selettore lingua (`setLocale`) e composable helper `useFormat` (`money`, `moneyWhole`, `amountInput`, `date`, `month`, `percent`) | — | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/it.ts`](../../src/i18n/it.ts) | Traduzioni in lingua italiana | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
 | [`src/i18n/en.ts`](../../src/i18n/en.ts) | Traduzioni in lingua inglese | `scripts/docs-check.mjs` | [frontend.md](../architettura/frontend.md) |
+| [`src/utils/base64.ts`](../../src/utils/base64.ts) | Base64 e base64url condivisi dai moduli di cifratura (`bytesToBase64`, `base64ToBytes`, `bytesToBase64Url`, `base64UrlToBytes`) | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
+| [`src/utils/clone.ts`](../../src/utils/clone.ts) | Copia profonda di dati JSON (`clonePlain`), usata prima di salvare in IndexedDB e per le istantanee della sincronizzazione | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
 | [`src/utils/colors.ts`](../../src/utils/colors.ts) | Tavolozza OKLCH in equilibrio (`PALETTE`, `OTHER_COLOR`), tinta più lontana per le voci nuove (`pickUniqueColor`), riarmonizzazione (`harmonizedColors`), etichette leggibili (`badgeColors`) | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
-| [`src/utils/dates.ts`](../../src/utils/dates.ts) | Utility per date IsoDate: parsing `YYYY-MM-DD`, formattazione, calcolo indici mese, `addDays`, `lastDayOfMonth` | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
+| [`src/utils/dates.ts`](../../src/utils/dates.ts) | Utility per date IsoDate: parsing `YYYY-MM-DD`, formattazione, calcolo indici mese, `addDays`, `daysInMonth`, `lastDayOfMonth` (usate anche da `excelImport.ts`) | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/hash.ts`](../../src/utils/hash.ts) | Calcolo fingerprint e digest SHA-256 su stringhe | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | — |
 | [`src/utils/id.ts`](../../src/utils/id.ts) | Generatore di ID unici casuali (`newId`) per entità e transazioni | [`src/utils/utils.test.ts`](../../src/utils/utils.test.ts) | [modello-dati.md](./modello-dati.md) |
 | [`src/utils/platform.ts`](../../src/utils/platform.ts) | Riconoscimento della piattaforma dal browser (`detectPlatform`: iOS, anche iPad che si presenta come Mac; Android; altrimenti PC) | [`src/utils/platform.test.ts`](../../src/utils/platform.test.ts) | [frontend.md](../architettura/frontend.md) |

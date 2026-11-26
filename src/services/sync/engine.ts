@@ -17,6 +17,7 @@ import {
 } from '@/services/backupCrypto'
 import { parseBackup } from '@/services/migration'
 import type { FinanceData } from '@/types/models'
+import { clonePlain } from '@/utils/clone'
 import type { SyncApi } from './api'
 
 export interface SyncState {
@@ -45,7 +46,7 @@ export class SyncBusyError extends Error {
 
 const MAX_ATTEMPTS = 3
 
-const snapshot = (data: FinanceData): FinanceData => JSON.parse(JSON.stringify(data)) as FinanceData
+const snapshot = (data: FinanceData): FinanceData => clonePlain(data)
 
 async function decode(payload: EncryptedBackup, key: DerivedKey): Promise<FinanceData> {
   return parseBackup(JSON.parse(await decryptWithKey(payload, key)))
@@ -70,7 +71,7 @@ export type ConnectResult =
   | { kind: 'choose'; version: number; key: DerivedKey; remote: FinanceData }
 
 /**
- * Controlla chiave del server e password e dice cosa fare. Lancia SyncAuthError con la chiave sbagliata
+ * Controlla chiave del server e password e dice cosa fare. Lancia HttpAuthError con la chiave sbagliata
  * e WrongPasswordError se la password non apre i dati del server.
  */
 export async function prepareConnection(api: SyncApi, password: string, local: FinanceData): Promise<ConnectResult> {

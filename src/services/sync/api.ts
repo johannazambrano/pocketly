@@ -1,32 +1,8 @@
-/** Chiamate al server di sincronizzazione (`server/main.py`), servito da nginx sotto /api/ sullo stesso indirizzo dell'app. */
+/** Chiamate al server di sincronizzazione (`server/main.py`) attraverso il trasporto comune `services/http.ts`. */
 import type { EncryptedBackup } from '@/services/backupCrypto'
+import { createHttpClient, HttpUnreachableError } from '@/services/http'
 
-const BASE = '/api'
-const TIMEOUT_MS = 15_000
-
-/** Chiave di accesso al server sbagliata. */
-export class SyncAuthError extends Error {
-  constructor() {
-    super('invalid sync key')
-    this.name = 'SyncAuthError'
-  }
-}
-
-/** Troppi tentativi con la chiave sbagliata: il server si è bloccato per un po'. */
-export class SyncBlockedError extends Error {
-  constructor() {
-    super('too many attempts')
-    this.name = 'SyncBlockedError'
-  }
-}
-
-/** Server non raggiungibile o risposta inattesa. */
-export class SyncUnreachableError extends Error {
-  constructor(reason: string) {
-    super(`sync server unreachable: ${reason}`)
-    this.name = 'SyncUnreachableError'
-  }
-}
+const call = createHttpClient({ baseUrl: '/api' })
 
 export type PullResult = { changed: false } | { changed: true; version: number; payload: EncryptedBackup | null }
 export type PushResult = { saved: true; version: number } | { saved: false; version: number }
@@ -34,22 +10,6 @@ export type PushResult = { saved: true; version: number } | { saved: false; vers
 export interface SyncApi {
   pull(knownVersion: number | null): Promise<PullResult>
   push(baseVersion: number, payload: EncryptedBackup): Promise<PushResult>
-}
-
-async function call(path: string, init: RequestInit): Promise<Response> {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
-  try {
-    const res = await fetch(BASE + path, { ...init, signal: ctrl.signal, cache: 'no-store' })
-    if (res.status === 401) throw new SyncAuthError()
-    if (res.status === 429) throw new SyncBlockedError()
-    return res
-  } catch (e) {
-    if (e instanceof SyncAuthError || e instanceof SyncBlockedError) throw e
-    throw new SyncUnreachableError(e instanceof Error ? e.message : String(e))
-  } finally {
-    clearTimeout(timer)
-  }
 }
 
 /**
@@ -75,7 +35,7 @@ export function createSyncApi(serverKey: string): SyncApi {
       if (knownVersion !== null) headers['If-None-Match'] = `"${knownVersion}"`
       const res = await call('/sync', { method: 'GET', headers })
       if (res.status === 304) return { changed: false }
-      if (!res.ok) throw new SyncUnreachableError(`status ${res.status}`)
+      if (!res.ok) throw new HttpUnreachableError(`status ${res.status}`)
       const body = (await res.json()) as { version: number; payload: EncryptedBackup | null }
       return { changed: true, version: body.version, payload: body.payload }
     },
@@ -85,7 +45,7 @@ export function createSyncApi(serverKey: string): SyncApi {
         headers: { ...auth, 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseVersion, payload }),
       })
-      if (res.status !== 200 && res.status !== 409) throw new SyncUnreachableError(`status ${res.status}`)
+      if (res.status !== 200 && res.status !== 409) throw new HttpUnreachableError(`status ${res.status}`)
       const body = (await res.json()) as { version: number }
       return { saved: res.status === 200, version: body.version }
     },

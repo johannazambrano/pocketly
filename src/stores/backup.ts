@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { addDays, hasUserData, isReminderDue, SNOOZE_DAYS, daysSince, type BackupMeta } from '@/domain/backupReminder'
 import { useFinanceStore } from '@/stores/finance'
+import { clonePlain } from '@/utils/clone'
 import { fingerprint, stableStringify } from '@/utils/hash'
 
 const META_KEY = 'backup-meta'
@@ -21,7 +22,7 @@ export const useBackupStore = defineStore('backup', () => {
 
   async function persist() {
     try {
-      await set(META_KEY, JSON.parse(JSON.stringify(meta.value)))
+      await set(META_KEY, clonePlain(meta.value))
     } catch (e) {
       // Il promemoria è un di più: se non si riesce a salvare, l'app funziona lo stesso.
       console.error('Salvataggio dello stato dei backup non riuscito', e)

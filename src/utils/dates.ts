@@ -37,9 +37,14 @@ export function addDays(date: IsoDate, days: number): IsoDate {
   return toIsoDate(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 }
 
+/** Numero di giorni del mese (0–11). */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+}
+
 /** Ultimo giorno del mese (0–11). */
 export function lastDayOfMonth(year: number, month: number): IsoDate {
-  return toIsoDate(year, month, new Date(Date.UTC(year, month + 1, 0)).getUTCDate())
+  return toIsoDate(year, month, daysInMonth(year, month))
 }
 
 /** Indice assoluto del mese (anno * 12 + mese), comodo per confronti e differenze. */

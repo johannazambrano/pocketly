@@ -4,6 +4,7 @@
  * Nulla lascia il dispositivo e la password non viene mai salvata.
  * Servono le API Web Crypto, disponibili solo in un contesto sicuro (HTTPS o localhost).
  */
+import { base64ToBytes, bytesToBase64 } from '@/utils/base64'
 
 export const ENCRYPTED_FORMAT = 'pocketly-encrypted-backup'
 export const MIN_PASSWORD_LENGTH = 8
@@ -57,20 +58,6 @@ export function isEncryptedBackup(raw: unknown): raw is EncryptedBackup {
   return typeof raw === 'object' && raw !== null && (raw as { format?: unknown }).format === ENCRYPTED_FORMAT
 }
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = ''
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  return btoa(binary)
-}
-
-function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-  const binary = atob(text)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes
-}
-
 async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<CryptoKey> {
   // NFC: la stessa password digitata su tastiere diverse (accenti composti o scomposti) dà la stessa chiave.
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFC')), 'PBKDF2', false, [
@@ -99,7 +86,7 @@ export async function deriveBackupKey(password: string, salt?: string, iteration
   if (!isCryptoAvailable()) throw new CryptoUnavailableError()
   checkIterations(iterations)
   const saltBytes = salt ? decodeSized(salt, SALT_BYTES) : crypto.getRandomValues(new Uint8Array(SALT_BYTES))
-  return { key: await deriveKey(password, saltBytes, iterations), salt: toBase64(saltBytes), iterations }
+  return { key: await deriveKey(password, saltBytes, iterations), salt: bytesToBase64(saltBytes), iterations }
 }
 
 /** Cifra con una chiave già calcolata. Il risultato è un normale backup protetto, apribile con la password. */
@@ -117,8 +104,8 @@ export async function encryptWithKey(plaintext: string, derived: DerivedKey): Pr
     kdf: 'PBKDF2-SHA256',
     iterations: derived.iterations,
     salt: derived.salt,
-    iv: toBase64(iv),
-    data: toBase64(new Uint8Array(cipher)),
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(cipher)),
   }
 }
 
@@ -135,7 +122,7 @@ function checkIterations(iterations: number): void {
 function decodeSized(text: string, size: number): Uint8Array<ArrayBuffer> {
   let bytes: Uint8Array<ArrayBuffer>
   try {
-    bytes = fromBase64(text)
+    bytes = base64ToBytes(text)
   } catch {
     throw new EncryptedBackupFormatError('bad encoding')
   }
@@ -156,7 +143,7 @@ export async function decryptWithKey(file: EncryptedBackup, derived: DerivedKey)
   const iv = decodeSized(file.iv, IV_BYTES)
   let data: Uint8Array<ArrayBuffer>
   try {
-    data = fromBase64(file.data)
+    data = base64ToBytes(file.data)
   } catch {
     throw new EncryptedBackupFormatError('bad encoding')
   }

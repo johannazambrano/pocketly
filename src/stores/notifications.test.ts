@@ -5,7 +5,7 @@ import { useFinanceStore } from './finance'
 import { useSyncStore } from './sync'
 import type { NotificationRule } from '@/types/models'
 import * as apiModule from '@/services/notifications/api'
-import { bytesToBase64Url } from '@/services/notifications/webpushCrypto'
+import { bytesToBase64Url } from '@/utils/base64'
 
 const inMemoryIdb = new Map<string, unknown>()
 

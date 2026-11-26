@@ -19,11 +19,9 @@ import {
   createPushApi,
   type EncryptedScheduledPushItem,
 } from '@/services/notifications/api'
-import {
-  base64UrlToBytes,
-  bytesToBase64Url,
-  encryptWebPushPayload,
-} from '@/services/notifications/webpushCrypto'
+import { encryptWebPushPayload } from '@/services/notifications/webpushCrypto'
+import { base64UrlToBytes, bytesToBase64Url } from '@/utils/base64'
+import { clonePlain } from '@/utils/clone'
 import { formatCents } from '@/utils/money'
 import { formatDate } from '@/utils/dates'
 import { fingerprint, stableStringify } from '@/utils/hash'
@@ -184,7 +182,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         defaultRules: defaultRules.value,
         lastScheduleHash: lastScheduleHash.value,
       }
-      await set(CONFIG_KEY, JSON.parse(JSON.stringify(config)))
+      await set(CONFIG_KEY, clonePlain(config))
     } catch (e) {
       console.error('Salvataggio configurazione notifiche non riuscito', e)
     }
@@ -472,7 +470,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       for (const [id, ts] of Object.entries(shownMap)) {
         if (ts < cutoff) delete shownMap[id]
       }
-      await set(SHOWN_KEY, JSON.parse(JSON.stringify(shownMap)))
+      await set(SHOWN_KEY, clonePlain(shownMap))
     } catch (e) {
       console.warn('Verifica promemoria locali non riuscita', e)
     }

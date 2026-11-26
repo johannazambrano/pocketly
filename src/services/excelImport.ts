@@ -14,6 +14,7 @@
 import { CURRENT_SCHEMA_VERSION, type FinanceData, type Frequency, type Income, type OneTimeExpense, type RecurringExpense, type Tag } from '@/types/models'
 import { defaultForecastSettings } from '@/domain/defaults'
 import { harmonizedColors } from '@/utils/colors'
+import { daysInMonth, isValidIsoDate, lastDayOfMonth, toIsoDate } from '@/utils/dates'
 import { uuidv5 } from '@/utils/uuidv5'
 import { isCellDate, readWorkbook, type CellValue, type Sheet, type Workbook } from './xlsx/workbook'
 
@@ -91,23 +92,12 @@ function parseTagNames(value: CellValue | undefined): string[] {
     .filter(Boolean)
 }
 
-const pad = (n: number, w = 2) => String(n).padStart(w, '0')
-const iso = (y: number, m: number, d: number) => `${pad(y, 4)}-${pad(m + 1)}-${pad(d)}`
-const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-
-function isValidIso(s: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
-  if (!m) return false
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
-  return mo >= 1 && mo <= 12 && d >= 1 && d <= daysInMonth(y, mo - 1)
-}
-
 function toIso(v: CellValue | undefined): string | null {
   if (v === null || v === undefined) return null
   if (isCellDate(v)) return v.date
   if (typeof v === 'string') {
     const s = v.trim()
-    return isValidIso(s) ? s : null
+    return isValidIsoDate(s) ? s : null
   }
   return null
 }
@@ -241,7 +231,7 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       return null
     }
     const [y, m] = months[0]!
-    const date = iso(y, m, dayOf(y, m))
+    const date = toIsoDate(y, m, dayOf(y, m))
     warn('dateFromMonth', { sheet, row: n, name: clean(r.Nome), date })
     return date
   }
@@ -328,9 +318,9 @@ export function convertWorkbook(wb: Workbook, defaultDay = 1): ExcelImportResult
       } else if (months.length) {
         const [y0, m0] = months[0]!
         const [y1, m1] = months[months.length - 1]!
-        start = iso(y0, m0, dayOf(y0, m0))
+        start = toIsoDate(y0, m0, dayOf(y0, m0))
         // Mesi elencati fino a dicembre = ricorrenza ancora aperta; altrimenti finisce a fine mese.
-        end = m1 === 11 || frequency === 'annual' ? null : iso(y1, m1, daysInMonth(y1, m1))
+        end = m1 === 11 || frequency === 'annual' ? null : lastDayOfMonth(y1, m1)
       } else {
         warn('recurringNoStart', { row: n, name })
         continue

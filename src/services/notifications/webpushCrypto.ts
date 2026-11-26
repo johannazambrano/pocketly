@@ -7,6 +7,7 @@
  * Sul server finiscono solo i byte già cifrati: il server non conosce la chiave privata
  * del browser e non vede mai i nomi o gli importi delle spese in chiaro.
  */
+import { base64UrlToBytes, bytesToBase64 } from '@/utils/base64'
 
 const WEB_PUSH_INFO_PREFIX = new TextEncoder().encode('WebPush: info\x00')
 const CEK_INFO = new TextEncoder().encode('Content-Encoding: aes128gcm\x00')
@@ -20,31 +21,6 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
   for (const a of arrays) {
     out.set(a, offset)
     offset += a.byteLength
-  }
-  return out
-}
-
-export function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  }
-  return btoa(binary)
-}
-
-export function bytesToBase64Url(bytes: Uint8Array): string {
-  return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-/** Decodifica una stringa base64 o base64url in `Uint8Array`. */
-export function base64UrlToBytes(input: string): Uint8Array<ArrayBuffer> {
-  const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
-  const pad = '='.repeat((4 - (normalized.length % 4)) % 4)
-  const binary = atob(normalized + pad)
-  const out = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    out[i] = binary.charCodeAt(i)
   }
   return out
 }
