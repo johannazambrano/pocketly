@@ -714,9 +714,6 @@ export function tagBreakdown(items: HasTagsAndAmount[]): TagSummaryItem[] {
     .sort((a, b) => b.total - a.total)
 }
 
-/** Per retrocompatibilità */
-export const oneTimeTagBreakdown = tagBreakdown
-
 export interface FrequentTemplateItem {
   name: string
   amount: Cents
