@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-23
+verified: 2026-11-26
 ---
 
 # Mappa del Codice
@@ -204,7 +204,7 @@ Questa mappa censisce l'intero repository Pocketly (`src/`, `server/`, `scripts/
 |---|---|---|
 | [`deploy/proxmox/README.md`](../../deploy/proxmox/README.md) | Guida passo passo per deploy su Proxmox LXC Debian | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/install-sync.sh`](../../deploy/proxmox/install-sync.sh) | Script di installazione automatica (Nginx, utente `pocketly`, cartelle `/var/lib/pocketly`) | [deploy.md](../architettura/deploy.md) |
-| [`deploy/proxmox/make-cert.sh`](../../deploy/proxmox/make-cert.sh) | Generatore di CA e certificati TLS per server locale in rete domestica | [deploy.md](../architettura/deploy.md) |
+| [`deploy/proxmox/make-cert.sh`](../../deploy/proxmox/make-cert.sh) | Generatore di CA locale ECDSA P-384 vincolata al singolo IP (`nameConstraints`, `ca.key` cifrata fuori dal container) e certificato TLS ECDSA P-256 con supporto `CA_KEY` e `--new-ca` | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/pocketly-sync.service`](../../deploy/proxmox/pocketly-sync.service) | Definizione della systemd unit con parametri di sicurezza sandboxing | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/publish.sh`](../../deploy/proxmox/publish.sh) | Script per la compilazione frontend e rilascio locale su directory web | [deploy.md](../architettura/deploy.md) |
 | [`deploy/proxmox/update.sh`](../../deploy/proxmox/update.sh) | Script di aggiornamento Git, build, allineamento Nginx (copia in `.bak`, ripristino se `nginx -t` fallisce) e riavvio servizi | [deploy.md](../architettura/deploy.md) |

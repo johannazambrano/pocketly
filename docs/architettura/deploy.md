@@ -8,7 +8,7 @@ source-files:
   - deploy/proxmox/pocketly-sync.service
   - deploy/proxmox/nginx/pocketly.conf
   - vite.config.ts
-verified: 2026-11-23
+verified: 2026-11-26
 ---
 
 # Architettura di Deploy e Infrastruttura
@@ -36,7 +36,7 @@ flowchart LR
 - Blocco `/api/`: inoltro a `http://127.0.0.1:8787` con header `Host` e `X-Real-IP` (è l'indirizzo che il server usa per il rate limiting, `client_ip`) e `Cache-Control: no-store`.
 - Limite dimensione body HTTP su `/api/`: `client_max_body_size 6m` (il server rifiuta comunque corpi oltre 5 MB, `MAX_BODY_BYTES`).
 - Intestazioni di sicurezza (`PKT-14`): `Content-Security-Policy` (solo file del sito), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, e `server_tokens off`. Le stesse intestazioni le manda Vercel (`vercel.json`). nginx non eredita gli `add_header` in un blocco che ne ha uno suo: `/index.html` le ripete tutte, gli altri blocchi almeno `nosniff`. Dettagli e motivi in [Analisi di Sicurezza](sicurezza.md).
-- La CA locale non ha vincoli sui nomi e `ca.key` sta in `/etc/nginx/ssl`: vedi il punto 1 di [Analisi di Sicurezza](sicurezza.md). `make-cert.sh` stampa l'impronta SHA-256 della CA, da confrontare sul dispositivo prima di installarla.
+- La CA locale creata da `make-cert.sh` (`PKT-14`) usa ECDSA P-384 con `nameConstraints` critico ristretto al solo IP del container (ed esclusione totale dei nomi DNS, `excluded;DNS:""`), chiave `ca.key` cifrata con passphrase da tenere **fuori dal container** (sul server servono solo `ca.crt`, `pocketly.crt` e `pocketly.key`) e stampa l'impronta SHA-256 da confrontare sul dispositivo prima di installarla: vedi il punto 1 di [Analisi di Sicurezza](sicurezza.md). In caso di distribuzione pubblica o deploy su dominio proprio, al posto della CA locale si usano certificati pubblici automatici (ACME / Let's Encrypt).
 
 ---
 
@@ -98,6 +98,6 @@ Nella cartella [`deploy/proxmox/`](../../deploy/proxmox/) sono presenti script p
 - `install-sync.sh` (da root, nel container): installa `python3` se manca, crea l'utente di sistema `pocketly`, genera la chiave `POCKETLY_SYNC_KEY` in `/etc/pocketly/sync.env` solo la prima volta e la mostra, vi scrive il contatto VAPID se è impostata `POCKETLY_VAPID_SUBJECT=mailto:...`, installa e avvia la systemd unit e aggiorna la configurazione di Nginx (la precedente resta come `.bak`). La cartella dati `/var/lib/pocketly` (permessi `0700`) la crea systemd con `StateDirectory`.
 - `publish.sh` (dal PC): compila il frontend (`npm run build`) e carica `dist/` via SSH nella cartella del sito (default `/var/www/pocketly`) con uno scambio di cartelle; ricarica Nginx su SSH se installato.
 - `update.sh` (nel container, dentro la copia del repository): `git pull --ff-only`, `npm ci`, `npm run build`, sostituzione del sito, allineamento di `/etc/nginx/sites-available/pocketly` quando la configurazione del repository è cambiata (la precedente resta in `.bak`; se `nginx -t` fallisce viene rimessa e nginx non si tocca) con reload di Nginx e, se installato, riavvio di `pocketly-sync`.
-- `make-cert.sh`: crea una piccola CA locale (riusata se esiste già) e un certificato per l'IP del container, per reti domestiche senza dominio pubblico.
+- `make-cert.sh`: crea una CA locale ECDSA P-384 vincolata al singolo IP del container (`nameConstraints` + `excluded;DNS:""`, `ca.key` cifrata da passphrase da conservare fuori dal container) e un certificato TLS ECDSA P-256 per reti domestiche senza dominio pubblico; supporta il rinnovo con `CA_KEY` esterna, `--new-ca` per sostituire la CA e verifica la catena con `openssl verify -x509_strict` prima di sostituire i file.
 
 La guida passo passo completa per Proxmox LXC è disponibile in [deploy/proxmox/README.md](../../deploy/proxmox/README.md).

@@ -17,7 +17,7 @@ funzionano solo in un contesto sicuro.
 | File | A cosa serve |
 |---|---|
 | `nginx/pocketly.conf` | Configurazione del sito (HTTPS, redirect da HTTP, fallback per le rotte, cache, download di `ca.crt`). |
-| `make-cert.sh` | Crea la CA locale e il certificato per l'IP del container. |
+| `make-cert.sh` | Crea la CA locale vincolata al solo IP del container (`ca.key` cifrata, tenuta fuori dal container) e il certificato TLS per nginx. |
 | `update.sh` | Scarica gli aggiornamenti, fa la build e pubblica il sito. |
 | `publish.sh` | Alternativa: dal PC di sviluppo, fa la build e carica `dist/` sul container via SSH. |
 | `install-sync.sh` | Facoltativo: installa il server di sincronizzazione tra dispositivi (punto 8). |
@@ -86,17 +86,52 @@ vecchia del progetto: rilancia `git -C /opt/pocketly pull`.
 
 ## 4. Certificato e configurazione di nginx
 
-Sostituisci `192.168.1.50` con l'IP trovato al punto 1:
+> **Nota (deploy pubblico con dominio):** la CA locale serve solo quando si usa Pocketly su un indirizzo IP di casa senza dominio. In caso di distribuzione pubblica o deploy su un proprio dominio (anche puntato a un IP locale tramite DNS), la soluzione ottimale è usare certificati pubblici automatici (es. Let's Encrypt via ACME / challenge DNS-01), che evitano di installare qualsiasi CA sui dispositivi.
+
+Per la rete locale su IP, la chiave privata della CA (`ca.key`) viene protetta con **passphrase** e **non deve restare sul container**: nginx usa solo `ca.crt`, `pocketly.crt` e `pocketly.key`. La CA emessa da `make-cert.sh` è inoltre vincolata al solo IP indicato (`nameConstraints` su IP + blocco di tutti i domini DNS).
+
+### Modalità consigliata: generazione dal tuo PC di fiducia (`ca.key` non tocca mai il container)
+
+Sostituisci `192.168.1.50` con l'IP trovato al punto 1. Sul tuo PC (con `openssl` installato, es. Linux, macOS o Git Bash su Windows):
+
+```bash
+cd /percorso/di/pocketly/deploy/proxmox
+./make-cert.sh 192.168.1.50 ./pocketly-certs
+```
+
+Scegli una passphrase robusta per `ca.key` e annota l'**impronta SHA-256** stampata alla fine. Poi carica sul container **solo i 3 file necessari a nginx** (mai `ca.key`):
+
+```bash
+ssh root@192.168.1.50 'mkdir -p /etc/nginx/ssl'
+scp ./pocketly-certs/ca.crt ./pocketly-certs/pocketly.crt ./pocketly-certs/pocketly.key root@192.168.1.50:/etc/nginx/ssl/
+ssh root@192.168.1.50 'chmod 600 /etc/nginx/ssl/pocketly.key && chmod 644 /etc/nginx/ssl/ca.crt /etc/nginx/ssl/pocketly.crt'
+```
+
+Sul PC: **cancella `pocketly.key`** e sposta `ca.key` (+ la sua passphrase) e `ca.crt` in un **password manager** o archivio cifrato offline (ti serviranno solo per un eventuale rinnovo dopo 825 giorni). Se preferisci non custodire `ca.key`, puoi anche eliminarla del tutto (tra 825 giorni basterà creare una nuova CA).
+
+### Modalità alternativa: generazione nel container (con rimozione immediata di `ca.key`)
+
+Se non hai `openssl` sul PC, puoi lanciare lo script nel container e poi spostare subito `ca.key` fuori dal container:
 
 ```bash
 cd /opt/pocketly/deploy/proxmox
 ./make-cert.sh 192.168.1.50
+```
+
+Se `./make-cert.sh` risponde "permesso negato", usa `bash make-cert.sh 192.168.1.50`. Subito dopo, **copia `ca.key` fuori dal container** (es. dal tuo PC: `scp root@192.168.1.50:/etc/nginx/ssl/ca.key .`, poi mettila in un password manager) e **rimuovila dal container**:
+
+```bash
+rm -f /etc/nginx/ssl/ca.key
+```
+
+### Attivazione del sito nginx (nel container)
+
+```bash
+cd /opt/pocketly/deploy/proxmox
 cp nginx/pocketly.conf /etc/nginx/sites-available/pocketly
 ln -sf /etc/nginx/sites-available/pocketly /etc/nginx/sites-enabled/pocketly
 rm -f /etc/nginx/sites-enabled/default
 ```
-
-Se `./make-cert.sh` risponde "permesso negato", usa `bash make-cert.sh 192.168.1.50`.
 
 ## 5. Prima pubblicazione
 
@@ -133,6 +168,19 @@ Installalo come certificato attendibile:
   Attendibilità certificati*.
 
 Poi apri **`https://IP-DEL-CONTAINER/`**: dal browser potrai anche installare l'app.
+
+### Sostituire una vecchia CA (migrazione da `Pocketly locale CA` senza vincoli)
+
+Se avevi installato una CA creata con una versione precedente di `make-cert.sh` (nome `Pocketly locale CA`, senza `nameConstraints` e con `ca.key` nel container), procedi in questo ordine:
+
+1. **Fai prima un backup JSON** dei dati da *Impostazioni → Dati e backup* (sullo stesso IP i dati nel browser restano, ma il backup protegge da qualsiasi imprevisto).
+2. Genera la nuova CA con `./make-cert.sh --new-ca IP-DEL-CONTAINER` (dal PC oppure nel container rimuovendo poi `/etc/nginx/ssl/ca.key`), aggiorna i 3 file in `/etc/nginx/ssl/` e ricarica nginx (`nginx -t && systemctl reload nginx`).
+3. Su **ogni dispositivo**, rimuovi la vecchia CA (`Pocketly locale CA`):
+   - **iPhone/iPad:** *Impostazioni → Generali → VPN e gestione dispositivi* → rimuovi il profilo `Pocketly locale CA`.
+   - **Android:** *Impostazioni → Sicurezza → Crittografia e credenziali → Credenziali utente* → rimuovi `Pocketly locale CA`.
+   - **Windows:** esegui `certmgr.msc` → *Autorità di certificazione radice attendibili → Certificati* → elimina `Pocketly locale CA` (in Firefox anche *Impostazioni → Certificati*).
+4. Installa la nuova CA (`Pocketly CA (IP-DEL-CONTAINER)`) seguendo il punto 6 sopra e **confrontando l'impronta SHA-256** prima di confermare.
+5. Verifica l'apertura di `https://IP-DEL-CONTAINER/` su iPhone, Android e PC.
 
 ## 7. Importare i dati
 
@@ -209,11 +257,9 @@ Non serve riavviare nginx: se `nginx/pocketly.conf` è cambiato, `update.sh` agg
 
 - **I dati sono legati all'indirizzo.** Cambiando IP il browser riparte da zero: usa il backup JSON dalle
   Impostazioni per spostarli (oppure la sincronizzazione, punto 8, dopo aver aperto il nuovo indirizzo).
-- **Il certificato del sito dura 825 giorni.** Per rinnovarlo rilancia `./make-cert.sh IP` e
-  `systemctl reload nginx`: la CA viene riusata, quindi i dispositivi non vanno toccati.
-- **Se cambia l'IP** rigenera il certificato con quello nuovo (la CA resta valida).
-- **Proteggi `ca.key`** (in `/etc/nginx/ssl`, permessi `600`): chi la possiede può emettere certificati
-  accettati dai tuoi dispositivi. Non va copiata fuori dal container.
+- **Il certificato del sito dura 825 giorni** (massimo ammesso da Apple per CA locali; personalizzabile con `CERT_DAYS=398`). Per rinnovarlo senza toccare i dispositivi, rilancia `./make-cert.sh IP ./pocketly-certs` dal PC dove conservi `ca.crt` e `ca.key` (poi ricopia `pocketly.crt` e `pocketly.key` sul container e lancia `systemctl reload nginx`), oppure nel container passando temporaneamente `CA_KEY=/percorso/ca.key ./make-cert.sh IP` e rimuovendo subito la copia temporanea di `ca.key`. Se avevi scelto di eliminare `ca.key`, crea una nuova CA con `./make-cert.sh --new-ca IP` e reinstalla `ca.crt` sui dispositivi.
+- **Se cambia l'IP:** la CA è vincolata al singolo IP tramite `nameConstraints`, quindi serve una **nuova CA** (`./make-cert.sh --new-ca NUOVO-IP`) da installare sui dispositivi (e i dati vanno portati sul nuovo indirizzo con backup o sincronizzazione).
+- **Non lasciare mai `ca.key` sul container:** `ca.key` è cifrata con passphrase e non serve a nginx. Custodiscila solo offline (password manager o archivio cifrato) oppure eliminala dopo aver emesso `pocketly.crt`. Se `ca.key` manca in `/etc/nginx/ssl`, `make-cert.sh` si ferma per evitare di sovrascrivere accidentalmente `ca.crt`.
 
 ## Alternativa: pubblicare dal PC di sviluppo
 

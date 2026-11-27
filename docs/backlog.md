@@ -1,6 +1,6 @@
 ---
 source-files: []
-verified: 2026-11-25
+verified: 2026-11-26
 ---
 
 # Backlog di Pocketly
@@ -26,7 +26,7 @@ collegamento, senza ripeterne il testo.
 | PKT-11 | Import dei tag da Excel | fatto | — | Jonny, Johanna |
 | PKT-12 | Progettare l'autenticazione nell'app | fatto | — | Jonny |
 | PKT-13 | Analisi di scalabilità e progettazione dell'eventuale evoluzione | fatto | — | Jonny |
-| PKT-14 | Analisi di sicurezza ed eventuali fix | in corso | media | Jonny |
+| PKT-14 | Analisi di sicurezza ed eventuali fix | fatto nel ramo, da unire | media | Jonny |
 | PKT-15 | Analisi per migliorare la struttura attuale dell'app | fatto | — | Jonny |
 | PKT-16 | Impostazioni divise per argomento | fatto | — | Jonny, Johanna |
 | PKT-17 | Categorie, metodi e tag in ordine alfabetico | fatto | — | Johanna |
@@ -226,7 +226,7 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
   - 2026-11-17 in `develop` con `5e53524` (ramo `docs/scalabilita`, commit `0c3a83e`).
 
 ### PKT-14 — Analisi di sicurezza ed eventuali fix
-- **Stato:** in corso · **Priorità:** media · **Chi:** Jonny
+- **Stato:** fatto nel ramo, da unire · **Priorità:** media · **Chi:** Jonny
 - **Perché:** eseguire un'analisi di sicurezza dell'app (frontend, crittografia, sync, notifiche, backend e deploy) e applicare gli eventuali fix necessari.
 - **Fatto quando:** analisi di sicurezza completata e documentata; eventuali fix applicati e verificati (o tracciati in attività dedicate se richiedono interventi ampi).
 - **Storia:**
@@ -242,6 +242,15 @@ I rami di lavoro si uniscono in **`develop`**; `main` riceve `develop` quando si
     container, da reinstallare sui dispositivi dopo un backup; punto 4 spostato in `PKT-25` fase B1 (sincronizzazione
     solo con account registrato). `develop` unito nel ramo (`e9bced2`); PKT-14 passa a Jonny, che fa il punto 1 e
     unisce il ramo in `develop`.
+  - 2026-11-26 punto 1 completato nel ramo `fix/pkt-14-sicurezza` (Jonny): aggiornato `deploy/proxmox/make-cert.sh` con
+    CA ECDSA P-384 e `ca.key` cifrata da passphrase da tenere fuori dal container, `nameConstraints` critico conforme a
+    RFC 5280 / CA/B Forum §7.1.5 (`permitted;IP` sul singolo IP, esclusione altra famiglia IP ed `excluded;DNS:""`),
+    certificato server ECDSA P-256 con seriale casuale (`-rand_serial`) e senza `CN` ambiguo, verifica automatica
+    `openssl verify -x509_strict` prima della sostituzione atomica e guardie per `CA_KEY` esterna e `--new-ca`;
+    aggiornate [guida Proxmox](../deploy/proxmox/README.md), [sicurezza.md](architettura/sicurezza.md),
+    [deploy.md](architettura/deploy.md) e [mappa-codice.md](riferimento/mappa-codice.md). Resta il passaggio operativo
+    sul container Proxmox e sui dispositivi (backup, rigenerazione CA con verifica compatibilità iOS/Android, rimozione
+    `ca.key` dal container) e il successivo riallineamento/merge con `develop`.
 
 ### PKT-15 — Analisi per migliorare la struttura attuale dell'app
 - **Stato:** fatto · **Chi:** Jonny

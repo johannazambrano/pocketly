@@ -12,7 +12,7 @@ source-files:
   - src/stores/sync.ts
   - src/services/exportData.ts
   - src/services/xlsx/zip.ts
-verified: 2026-11-25
+verified: 2026-11-26
 ---
 
 # Analisi di Sicurezza (PKT-14)
@@ -59,7 +59,7 @@ come versione di prova. Nell'analisi si considerano:
 
 | # | Punto | Peso | Stato |
 |---|---|---|---|
-| 1 | La CA locale installata sui dispositivi vale per qualsiasi sito, e la sua chiave sta sul container | alto | deciso (CA nuova limitata all'IP), da fare |
+| 1 | La CA locale installata sui dispositivi vale per qualsiasi sito, e la sua chiave sta sul container | alto | risolto |
 | 2 | Il sito non mandava intestazioni di sicurezza (CSP, protezione dall'inserimento in altre pagine…) | medio | risolto |
 | 3 | Sul dispositivo dati, chiave del server e chiave di cifratura sono salvati in chiaro | medio | rimandato a `PKT-25` fase A |
 | 4 | La password della sincronizzazione può avere solo 8 caratteri | medio-basso | spostato in `PKT-25` fase B1 |
@@ -69,23 +69,35 @@ come versione di prova. Nell'analisi si considerano:
 | 8 | Il tocco su una notifica poteva aprire un sito esterno | basso | risolto |
 | 9 | `ca.crt` si scarica in HTTP senza un modo di verificarlo | basso | risolto (guida) |
 
-### 1. CA locale senza limiti (alto, deciso, da fare)
-[`make-cert.sh`](../../deploy/proxmox/make-cert.sh) crea una CA radice che i dispositivi installano come attendibile. La CA
-non ha `nameConstraints`: un certificato firmato con la sua chiave vale per **qualsiasi** sito, non solo per l'IP del
-container. La chiave (`ca.key`) sta in `/etc/nginx/ssl` sul container. Chi entra nel container può quindi fingersi
-qualsiasi sito (banca, posta…) sui dispositivi che hanno installato la CA, senza che il browser avvisi.
+### 1. CA locale senza limiti (alto, risolto)
+[`make-cert.sh`](../../deploy/proxmox/make-cert.sh) creava una CA radice senza `nameConstraints` (un certificato firmato
+con la sua chiave valeva per **qualsiasi** sito, non solo per l'IP del container) e lasciava la chiave (`ca.key`, non
+cifrata) in `/etc/nginx/ssl` sul container. Chi fosse entrato nel container avrebbe potuto fingersi qualsiasi sito
+(banca, posta…) sui dispositivi che avevano installato la CA, senza che il browser avvisasse.
 
-**Rimedi possibili:**
-- **CA nuova con il vincolo** `nameConstraints=critical,permitted;IP:<ip-del-container>/255.255.255.255` e chiave tenuta
-  fuori dal container (serve solo per rinnovare il certificato, verso gennaio 2029). Chiude il problema, ma la CA va
-  reinstallata su ogni dispositivo (e tolta la vecchia).
-- **Solo togliere `ca.key` dal container**, conservandola altrove. Niente da reinstallare; riduce il rischio (chi entra
-  nel container non trova la chiave), ma la CA resta valida per tutti i siti.
-
-**Deciso il 2026-11-25:** CA nuova con il vincolo sull'IP del container e chiave fuori dal container. Ogni dispositivo
-va aggiornato: prima un backup dei dati, poi si toglie la CA vecchia e si installa la nuova (controllando l'impronta,
-punto 9). Da fare in [`make-cert.sh`](../../deploy/proxmox/make-cert.sh) e nella
-[guida](../../deploy/proxmox/README.md).
+**Risolto** in [`make-cert.sh`](../../deploy/proxmox/make-cert.sh) e nella [guida Proxmox](../../deploy/proxmox/README.md)
+secondo le linee guida RFC 5280 e CA/B Forum (§7.1.5):
+- **Crittografia moderna e chiave CA cifrata:** la CA usa **ECDSA P-384** (SHA-384, `pathlen:0`) con `ca.key` cifrata da
+  passphrase (mai `-nodes`); il certificato server usa **ECDSA P-256** (SHA-256, `digitalSignature`, numero seriale
+  casuale `-rand_serial`, validità massima 825 giorni, Subject `/O=Pocketly` senza `CN` ambiguo e identità espressa solo
+  nel SAN `IP:<IP>`). Le chiavi private nascono con `umask 077` (`0600`).
+- **Vincolo stretto `nameConstraints` (`critical`):** la CA permette **solo** l'IP del container
+  (`permitted;IP:<IP>/255.255.255.255` per IPv4, o `/ffff:…:ffff` per IPv6), esclude l'altra famiglia IP (`::/::` o
+  `0.0.0.0/0.0.0.0`) ed esclude tutti i nomi DNS tramite `dNSName` a lunghezza zero (`excluded;DNS:""`, CA/B Forum
+  §7.1.5). Verificato con `openssl verify -x509_strict`: qualsiasi certificato firmato per un altro IPv4, un IPv6 o un
+  dominio DNS (es. `banca.it`) viene respinto. Prima di sostituire i file esistenti, lo script verifica la catena e
+  aggiorna i file solo se il controllo passa.
+- **`ca.key` fuori dal container (difesa principale):** la guida indica come modalità consigliata la generazione dal PC di
+  fiducia, copiando sul container solo `ca.crt`, `pocketly.crt` e `pocketly.key` (oppure lo spostamento e la rimozione
+  immediata di `ca.key` dal container, o la sua eliminazione definitiva se non serve il rinnovo con la stessa CA). Se
+  `ca.crt` esiste già senza `ca.key`, lo script si ferma evitando rigenerazioni involontarie e supporta il rinnovo con
+  `CA_KEY=/percorso/ca.key` o la creazione esplicita di una nuova CA con `--new-ca`.
+- **Migrazione e prospettiva pubblica:** la nuova CA ha nome distinto (`Pocketly CA (<IP>)`) per riconoscerla dalla vecchia
+  (`Pocketly locale CA`); la guida documenta il passaggio sui dispositivi (backup prima, rimozione vecchia CA,
+  installazione della nuova verificando l'impronta SHA-256). Nota di difesa in profondità: per RFC 5280 §6.2 non tutti
+  gli stack mobile applicano in modo uniforme `nameConstraints` direttamente su un trust anchor, quindi **tenere
+  `ca.key` cifrata e fuori dal container resta la difesa primaria**; inoltre, quando l'app sarà distribuita su un dominio
+  pubblico con certificati automatici (ACME / Let's Encrypt), la CA privata non sarà più necessaria.
 
 ### 2. Intestazioni di sicurezza (medio, risolto)
 Né nginx né Vercel mandavano intestazioni di sicurezza. Ora le mandano entrambi
@@ -180,6 +192,7 @@ chiede di confrontarla con quella mostrata dal dispositivo prima di installarla.
 ## 4. Da ricontrollare
 
 - Dopo ogni `update.sh`: `curl -skI https://localhost/ | grep -i content-security` sul container deve mostrare la CSP.
+- Sul container Proxmox: verificare che `/etc/nginx/ssl/ca.key` **non** esista e che la catena passi `openssl verify -x509_strict -CAfile /etc/nginx/ssl/ca.crt -purpose sslserver /etc/nginx/ssl/pocketly.crt`; dopo la sostituzione della CA provare l'accesso HTTPS da iPhone, Android e PC.
 - Dopo un cambio di librerie: `npm audit --omit=dev` senza avvisi alti.
 - Quando si aggiunge una risorsa esterna (font, script, servizio): va aggiunta alla CSP in **entrambi** i file, nginx e
   Vercel, altrimenti il browser la blocca.
